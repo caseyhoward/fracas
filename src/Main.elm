@@ -1,4 +1,4 @@
-module Main exposing (BorderSegment(..), getEdgesForCountry, main, parseMap)
+module Main exposing (BorderSegment(..), getEdgesForArea, main, parseMap)
 
 import Browser
 import Collage
@@ -9,13 +9,17 @@ import Html exposing (Html, div)
 import Set
 
 
+type alias Area =
+    Set.Set ( Int, Int )
+
+
 type alias Country =
-    { coordinates : Set.Set ( Int, Int )
+    { coordinates : Area
     }
 
 
 type alias Water =
-    { coordinates : Set.Set ( Int, Int )
+    { coordinates : Area
     }
 
 
@@ -26,8 +30,8 @@ type alias GameMap =
 
 
 type alias ParsingGameMap =
-    { countries : Dict.Dict String (Set.Set ( Int, Int ))
-    , water : Dict.Dict String (Set.Set ( Int, Int ))
+    { countries : Dict.Dict String Area
+    , water : Dict.Dict String Area
     }
 
 
@@ -249,24 +253,24 @@ renderMap : GameMap -> Html Msg
 renderMap map =
     let
         countryCollages =
-            List.map renderCountry map.countries
+            List.map (\country -> renderArea country.coordinates Color.gray) map.countries
 
         waterCollages =
-            List.map renderBodyOfWater map.water
+            List.map (\bodyOfWater -> renderArea bodyOfWater.coordinates Color.blue) map.water
     in
     Collage.group (countryCollages ++ waterCollages)
         |> Collage.Render.svg
 
 
-renderCountry : Country -> Collage.Collage msg
-renderCountry country =
+renderArea : Area -> Color.Color -> Collage.Collage msg
+renderArea area color =
     let
         segments =
-            getEdgesForCountry country defaultScale
+            getEdgesForArea area defaultScale
                 |> List.map (\(BorderSegment p1 p2) -> Collage.segment p1 p2)
 
         blocks =
-            getBlocksForCountry country defaultScale
+            getBlocksForArea area defaultScale color
 
         borderSegments =
             List.map
@@ -278,64 +282,30 @@ renderCountry country =
     Collage.group (borderSegments ++ blocks)
 
 
-renderBodyOfWater : Water -> Collage.Collage msg
-renderBodyOfWater water =
-    let
-        segments =
-            getEdgesForCountry water defaultScale
-                |> List.map (\(BorderSegment p1 p2) -> Collage.segment p1 p2)
-
-        blocks =
-            getBlocksForWater water defaultScale
-
-        borderSegments =
-            List.map
-                (\segment ->
-                    Collage.traced Collage.defaultLineStyle segment
-                )
-                segments
-    in
-    Collage.group (borderSegments ++ blocks)
-
-
-getEdgesForCountry : Country -> Int -> List BorderSegment
-getEdgesForCountry country scale =
-    country.coordinates
+getEdgesForArea : Area -> Int -> List BorderSegment
+getEdgesForArea area scale =
+    area
         |> Set.foldl
             (\coordinate result ->
-                result ++ getEdgesForCountryForCoordinate country.coordinates coordinate scale
+                result ++ getEdgesForCountryForCoordinate area coordinate scale
             )
             []
 
 
-getBlocksForCountry : Country -> Int -> List (Collage.Collage msg)
-getBlocksForCountry country scale =
+getBlocksForArea : Area -> Int -> Color.Color -> List (Collage.Collage msg)
+getBlocksForArea area scale color =
     let
         block =
             Collage.square (toFloat scale)
-                |> Collage.filled (Collage.uniform Color.gray)
+                |> Collage.filled (Collage.uniform color)
     in
-    country.coordinates
+    area
         |> Set.foldl
             (\( x, y ) result ->
                 (block |> Collage.shift ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )) :: result
             )
             []
 
-
-getBlocksForWater : Country -> Int -> List (Collage.Collage msg)
-getBlocksForWater country scale =
-    let
-        block =
-            Collage.square (toFloat scale)
-                |> Collage.filled (Collage.uniform Color.blue)
-    in
-    country.coordinates
-        |> Set.foldl
-            (\( x, y ) result ->
-                (block |> Collage.shift ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )) :: result
-            )
-            []
 
 
 scaleCoordinate : Int -> ( Int, Int ) -> ( Float, Float )
