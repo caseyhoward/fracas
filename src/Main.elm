@@ -14,13 +14,20 @@ type alias Country =
     }
 
 
+type alias Water =
+    { coordinates : Set.Set ( Int, Int )
+    }
+
+
 type alias GameMap =
     { countries : List Country
+    , water : List Water
     }
 
 
 type alias ParsingGameMap =
     { countries : Dict.Dict String (Set.Set ( Int, Int ))
+    , water : Dict.Dict String (Set.Set ( Int, Int ))
     }
 
 
@@ -30,7 +37,7 @@ type BorderSegment
 
 defaultScale : Int
 defaultScale =
-    10
+    15
 
 
 
@@ -68,6 +75,13 @@ playMap : ParsingGameMap -> GameMap
 playMap parsingGameMap =
     { countries =
         parsingGameMap.countries
+            |> Dict.toList
+            |> List.map
+                (\( _, coordinates ) ->
+                    { coordinates = coordinates }
+                )
+    , water =
+        parsingGameMap.water
             |> Dict.toList
             |> List.map
                 (\( _, coordinates ) ->
@@ -129,21 +143,21 @@ parseMap text =
                 |> List.foldl
                     (\row result ->
                         case result of
-                            ( countries, rowIndex ) ->
+                            ( parsingGameMap, rowIndex ) ->
                                 if rowIndex /= -1 then
                                     if row /= "{Country Names}" then
-                                        ( parseCountryRow row rowIndex countries, rowIndex + 1 )
+                                        ( parseCountryRow row rowIndex parsingGameMap, rowIndex + 1 )
 
                                     else
-                                        ( countries, -1 )
+                                        ( parsingGameMap, -1 )
 
                                 else if row == "{Map}" then
-                                    ( countries, 0 )
+                                    ( parsingGameMap, 0 )
 
                                 else
-                                    ( countries, -1 )
+                                    ( parsingGameMap, -1 )
                     )
-                    ( { countries = Dict.empty }, -1 )
+                    ( { countries = Dict.empty, water = Dict.empty }, -1 )
                 |> Tuple.first
 
         mapHeight =
@@ -163,7 +177,7 @@ parseMap text =
                     )
                     0
 
-        map =
+        countries =
             Dict.toList upsideDownMap.countries
                 |> List.map
                     (\( name, coordinates ) ->
@@ -175,8 +189,21 @@ parseMap text =
                         )
                     )
                 |> Dict.fromList
+
+        water =
+            Dict.toList upsideDownMap.water
+                |> List.map
+                    (\( name, coordinates ) ->
+                        ( name
+                        , coordinates
+                            |> Set.toList
+                            |> List.map (\( x, y ) -> ( x, mapHeight - y ))
+                            |> Set.fromList
+                        )
+                    )
+                |> Dict.fromList
     in
-    { countries = map }
+    { countries = countries, water = water }
 
 
 parseCountryRow : String -> Int -> ParsingGameMap -> ParsingGameMap
@@ -187,28 +214,28 @@ parseCountryRow row rowIndex parsingGameMap =
         |> List.reverse
         |> List.indexedMap Tuple.pair
         |> List.foldr
-            (\( columnIndex, countryId ) result ->
-                if String.length countryId < 4 then
+            (\( columnIndex, name ) result ->
+                if String.length name < 4 then
                     { result
                         | countries =
-                            case Dict.get countryId result.countries of
+                            case Dict.get name result.countries of
                                 Just countryCoordinates ->
-                                    Dict.insert countryId (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result.countries
+                                    Dict.insert name (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result.countries
 
                                 Nothing ->
-                                    Dict.insert countryId (Set.singleton ( columnIndex, rowIndex )) result.countries
+                                    Dict.insert name (Set.singleton ( columnIndex, rowIndex )) result.countries
                     }
 
                 else
                     -- Water
                     { result
-                        | countries =
-                            case Dict.get countryId result.countries of
+                        | water =
+                            case Dict.get name result.water of
                                 Just countryCoordinates ->
-                                    Dict.insert countryId (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result.countries
+                                    Dict.insert name (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result.water
 
                                 Nothing ->
-                                    Dict.insert countryId (Set.singleton ( columnIndex, rowIndex )) result.countries
+                                    Dict.insert name (Set.singleton ( columnIndex, rowIndex )) result.water
                     }
             )
             parsingGameMap
@@ -223,8 +250,11 @@ renderMap map =
     let
         countryCollages =
             List.map renderCountry map.countries
+
+        waterCollages =
+            List.map renderBodyOfWater map.water
     in
-    Collage.group countryCollages
+    Collage.group (countryCollages ++ waterCollages)
         |> Collage.Render.svg
 
 
@@ -237,6 +267,26 @@ renderCountry country =
 
         blocks =
             getBlocksForCountry country defaultScale
+
+        borderSegments =
+            List.map
+                (\segment ->
+                    Collage.traced Collage.defaultLineStyle segment
+                )
+                segments
+    in
+    Collage.group (borderSegments ++ blocks)
+
+
+renderBodyOfWater : Water -> Collage.Collage msg
+renderBodyOfWater water =
+    let
+        segments =
+            getEdgesForCountry water defaultScale
+                |> List.map (\(BorderSegment p1 p2) -> Collage.segment p1 p2)
+
+        blocks =
+            getBlocksForWater water defaultScale
 
         borderSegments =
             List.map
@@ -264,6 +314,21 @@ getBlocksForCountry country scale =
         block =
             Collage.square (toFloat scale)
                 |> Collage.filled (Collage.uniform Color.gray)
+    in
+    country.coordinates
+        |> Set.foldl
+            (\( x, y ) result ->
+                (block |> Collage.shift ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )) :: result
+            )
+            []
+
+
+getBlocksForWater : Country -> Int -> List (Collage.Collage msg)
+getBlocksForWater country scale =
+    let
+        block =
+            Collage.square (toFloat scale)
+                |> Collage.filled (Collage.uniform Color.blue)
     in
     country.coordinates
         |> Set.foldl
