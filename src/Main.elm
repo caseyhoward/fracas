@@ -1,4 +1,4 @@
-module Main exposing (BorderSegment(..), getEdgesForCountry, parseMap)
+module Main exposing (BorderSegment(..), getEdgesForCountry, main, parseMap)
 
 import Browser
 import Collage
@@ -231,21 +231,21 @@ renderMap map =
 renderCountry : Country -> Collage.Collage msg
 renderCountry country =
     let
-        edges =
-            getEdgesForCountry country defaultScale
-
         segments =
-            edges
+            getEdgesForCountry country defaultScale
                 |> List.map (\(BorderSegment p1 p2) -> Collage.segment p1 p2)
 
-        collages =
+        blocks =
+            getBlocksForCountry country defaultScale
+
+        borderSegments =
             List.map
                 (\segment ->
                     Collage.traced Collage.defaultLineStyle segment
                 )
                 segments
     in
-    Collage.group collages
+    Collage.group (borderSegments ++ blocks)
 
 
 getEdgesForCountry : Country -> Int -> List BorderSegment
@@ -254,6 +254,21 @@ getEdgesForCountry country scale =
         |> Set.foldl
             (\coordinate result ->
                 result ++ getEdgesForCountryForCoordinate country.coordinates coordinate scale
+            )
+            []
+
+
+getBlocksForCountry : Country -> Int -> List (Collage.Collage msg)
+getBlocksForCountry country scale =
+    let
+        block =
+            Collage.square (toFloat scale)
+                |> Collage.filled (Collage.uniform Color.gray)
+    in
+    country.coordinates
+        |> Set.foldl
+            (\( x, y ) result ->
+                (block |> Collage.shift ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )) :: result
             )
             []
 
