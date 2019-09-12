@@ -2,6 +2,7 @@ module Main exposing (BorderSegment(..), getEdgesForArea, main, parseMap)
 
 import Browser
 import Collage
+import Collage.Events
 import Collage.Render
 import Color
 import Dict
@@ -51,7 +52,7 @@ defaultScale =
 
 
 type alias Model =
-    GameMap
+    { lastClickedAreaId : String, map : GameMap }
 
 
 playMap : ParsingGameMap -> GameMap
@@ -75,7 +76,7 @@ playMap parsingGameMap =
 
 init : ( Model, Cmd Msg )
 init =
-    ( parseMap mapFile |> playMap, Cmd.none )
+    ( { lastClickedAreaId = "", map = parseMap mapFile |> playMap }, Cmd.none )
 
 
 
@@ -84,11 +85,17 @@ init =
 
 type Msg
     = NoOp
+    | AreaClicked String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case msg of
+        AreaClicked id ->
+            ( { model | lastClickedAreaId = Debug.log "id" id }, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )
 
 
 
@@ -100,7 +107,7 @@ view model =
     div []
         [ -- , h1 [] [ text "Your Elm App is working!" ]
           -- , text (Debug.toString model)
-          renderMap model
+          renderMap model.map
         ]
 
 
@@ -255,7 +262,7 @@ renderMap map =
         |> Collage.Render.svg
 
 
-renderArea : Area -> Color.Color -> Collage.Collage msg
+renderArea : Area -> Color.Color -> Collage.Collage Msg
 renderArea area color =
     let
         segments =
@@ -273,6 +280,7 @@ renderArea area color =
                 segments
     in
     Collage.group (borderSegments ++ blocks)
+        |> Collage.Events.onClick (AreaClicked area.id)
 
 
 getEdgesForArea : Area -> Int -> List BorderSegment
