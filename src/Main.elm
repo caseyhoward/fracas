@@ -4,6 +4,7 @@ import Browser
 import Collage
 import Collage.Events
 import Collage.Render
+import Collage.Text
 import Color
 import Dict
 import Element
@@ -82,7 +83,7 @@ playMap parsingGameMap =
     { countries =
         parsingGameMap.countries
             |> Dict.map
-                (\countryId area ->
+                (\_ area ->
                     { area = area
                     }
                 )
@@ -196,11 +197,13 @@ nextPlayerTurn totalPlayers currentPlayer =
 
 view : Model -> Html Msg
 view model =
-    Element.layout []
+    Element.layout [ Element.width Element.fill ]
         (Element.row
-            []
-            [ renderMap model.players model.map
-                |> Element.html
+            [ Element.width Element.fill, Element.centerX ]
+            [ Element.el [ Element.centerX ]
+                (renderMap model.players model.map
+                    |> Element.html
+                )
             ]
         )
 
@@ -217,6 +220,7 @@ main =
 
 
 -- Parsing
+-- It's terrible, but it works. Eventually look into using a real parser.
 
 
 parseMap : String -> ParsingGameMap
@@ -256,10 +260,10 @@ parseMap text =
                 |> List.foldl
                     (\( _, y ) maxHeight ->
                         if y > maxHeight then
-                            maxHeight
+                            y
 
                         else
-                            y
+                            maxHeight
                     )
                     0
 
@@ -352,31 +356,31 @@ renderMap players map =
                 |> List.map
                     (\country ->
                         case findCountryOwner players country.area.id of
-                            Just player ->
+                            Just ( player, playerCountry ) ->
                                 case player.id of
                                     1 ->
-                                        renderArea country.area Color.red
+                                        renderCountry country.area Color.lightRed playerCountry.population
 
                                     2 ->
-                                        renderArea country.area Color.purple
+                                        renderCountry country.area Color.lightPurple playerCountry.population
 
                                     3 ->
-                                        renderArea country.area Color.yellow
+                                        renderCountry country.area Color.lightYellow playerCountry.population
 
                                     4 ->
-                                        renderArea country.area Color.green
+                                        renderCountry country.area Color.lightGreen playerCountry.population
 
                                     5 ->
-                                        renderArea country.area Color.orange
+                                        renderCountry country.area Color.lightOrange playerCountry.population
 
                                     6 ->
-                                        renderArea country.area Color.brown
+                                        renderCountry country.area Color.brown playerCountry.population
 
                                     _ ->
-                                        renderArea country.area Color.black
+                                        renderCountry country.area Color.black playerCountry.population
 
                             Nothing ->
-                                renderArea country.area Color.gray
+                                renderCountry country.area Color.gray 0
                     )
 
         waterCollages =
@@ -386,7 +390,7 @@ renderMap players map =
         |> Collage.Render.svg
 
 
-findCountryOwner : Dict.Dict Int Player -> String -> Maybe Player
+findCountryOwner : Dict.Dict Int Player -> String -> Maybe ( Player, PlayerCountry )
 findCountryOwner players countryId =
     players
         |> Dict.values
@@ -397,13 +401,46 @@ findCountryOwner players countryId =
                         result
 
                     Nothing ->
-                        if Dict.member countryId player.countries then
-                            Just player
-
-                        else
-                            Nothing
+                        Dict.get countryId player.countries
+                            |> Maybe.map (\playerCountry -> ( player, playerCountry ))
             )
             Nothing
+
+
+renderCountry : Area -> Color.Color -> Int -> Collage.Collage Msg
+renderCountry area color troopCount =
+    Collage.group
+        [ renderTroopCount area troopCount
+        , renderArea area color
+        ]
+
+
+renderTroopCount : Area -> Int -> Collage.Collage msg
+renderTroopCount area troopCount =
+    let
+        ( sumX, sumY ) =
+            area.coordinates
+                |> Set.foldl
+                    (\( x, y ) ( totalX, totalY ) ->
+                        ( x + totalX, y + totalY )
+                    )
+                    ( 0, 0 )
+
+        shift =
+            ( (toFloat sumX / toFloat (Set.size area.coordinates)) * (defaultScale |> toFloat)
+            , (toFloat sumY / toFloat (Set.size area.coordinates)) * (defaultScale |> toFloat)
+            )
+    in
+    Collage.Text.fromString (String.fromInt troopCount)
+        |> Collage.Text.color Color.black
+        |> Collage.Text.size Collage.Text.large
+        |> Collage.rendered
+        |> Collage.shift shift
+
+
+
+-- |> Collage.shift ( 86.02409638554218, 265.21084337349396 )
+-- |> Collage.shift ( 100, 100 )
 
 
 renderArea : Area -> Color.Color -> Collage.Collage Msg

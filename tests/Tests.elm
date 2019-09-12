@@ -83,10 +83,10 @@ all =
                     (Main.parseMap mapFile)
                     { countries =
                         Dict.fromList
-                            [ ( "1", Set.fromList [ ( 0, -1 ), ( 0, 0 ), ( 1, 0 ), ( 2, 0 ) ] )
-                            , ( "2", Set.fromList [ ( 1, -2 ), ( 1, -1 ), ( 2, -1 ) ] )
-                            , ( "3", Set.fromList [ ( 0, -2 ) ] )
-                            , ( "4", Set.fromList [ ( 2, -2 ) ] )
+                            [ ( "1", { coordinates = Set.fromList [ ( 0, -1 ), ( 0, 0 ), ( 1, 0 ), ( 2, 0 ) ], id = "1" } )
+                            , ( "2", { coordinates = Set.fromList [ ( 1, -2 ), ( 1, -1 ), ( 2, -1 ) ], id = "2" } )
+                            , ( "3", { coordinates = Set.fromList [ ( 0, -2 ) ], id = "3" } )
+                            , ( "4", { coordinates = Set.fromList [ ( 2, -2 ) ], id = "4" } )
                             ]
                     , water = Dict.empty
                     }
@@ -96,7 +96,7 @@ all =
                     (Main.getEdgesForArea
                         (Set.fromList [ ( 0, 1 ) ])
                         1
-                    )
+                    ).coordinates
                     [ Main.BorderSegment ( 0, 2 ) ( 1, 2 )
                     , Main.BorderSegment ( 0, 1 ) ( 1, 1 )
                     , Main.BorderSegment ( 1, 1 ) ( 1, 2 )
@@ -108,7 +108,7 @@ all =
                     (Main.getEdgesForArea
                         (Set.fromList [ ( 0, 1 ), ( 0, 2 ) ])
                         1
-                    )
+                    ).coordinates
                     [ Main.BorderSegment ( 0, 1 ) ( 1, 1 )
                     , Main.BorderSegment ( 1, 1 ) ( 1, 2 )
                     , Main.BorderSegment ( 0, 1 ) ( 0, 2 )
@@ -122,7 +122,7 @@ all =
                     (Main.getEdgesForArea
                         (Set.fromList [ ( 0, 1 ), ( 0, 2 ), ( 1, 1 ) ])
                         10
-                    )
+                    ).coordinates
                     [ Main.BorderSegment ( 0, 10 ) ( 10, 10 )
                     , Main.BorderSegment ( 0, 10 ) ( 0, 20 )
                     , Main.BorderSegment ( 0, 30 ) ( 10, 30 )
