@@ -6,7 +6,8 @@ import Collage.Events
 import Collage.Render
 import Color
 import Dict
-import Html exposing (Html, div)
+import Element
+import Html exposing (Html)
 import Set
 
 
@@ -195,11 +196,13 @@ nextPlayerTurn totalPlayers currentPlayer =
 
 view : Model -> Html Msg
 view model =
-    div []
-        [ -- , h1 [] [ text "Your Elm App is working!" ]
-          -- , text (Debug.toString model)
-          renderMap model.players model.map
-        ]
+    Element.layout []
+        (Element.row
+            []
+            [ renderMap model.players model.map
+                |> Element.html
+            ]
+        )
 
 
 main : Program () Model Msg
