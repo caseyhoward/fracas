@@ -1,13 +1,11 @@
-module Main exposing (..)
+module Main exposing (BorderSegment(..), getEdgesForCountry, parseMap)
 
 import Browser
-import Collage exposing (circle, filled, rectangle, uniform)
-import Collage.Layout
+import Collage
 import Collage.Render
 import Color
 import Dict
-import Html exposing (Html, div, h1, img, text)
-import Html.Attributes exposing (src)
+import Html exposing (Html, div, h1)
 import Set
 
 
@@ -21,6 +19,14 @@ type alias GameMap =
     }
 
 
+type alias ParsingGameMap =
+    Dict.Dict String (Set.Set ( Int, Int ))
+
+
+type BorderSegment
+    = BorderSegment ( Float, Float ) ( Float, Float )
+
+
 defaultScale : Int
 defaultScale =
     10
@@ -31,7 +37,7 @@ defaultScale =
 
 
 type alias Model =
-    ParsedMap
+    GameMap
 
 
 
@@ -57,9 +63,21 @@ type alias Model =
 --         }
 
 
+playMap : ParsingGameMap -> GameMap
+playMap parsingGameMap =
+    { countries =
+        parsingGameMap
+            |> Dict.toList
+            |> List.map
+                (\( _, coordinates ) ->
+                    { coordinates = coordinates }
+                )
+    }
+
+
 init : ( Model, Cmd Msg )
 init =
-    ( parseMap mapFile, Cmd.none )
+    ( parseMap mapFile |> playMap, Cmd.none )
 
 
 
@@ -88,53 +106,6 @@ view model =
         ]
 
 
-renderMap : ParsedMap -> Html Msg
-renderMap map =
-    let
-        edges =
-            Dict.toList map
-                |> List.map
-                    (\( _, coordinates ) ->
-                        getEdgesForCountry coordinates defaultScale |> Set.toList
-                    )
-                |> List.concat
-
-        rect =
-            rectangle 200 100
-                |> filled (uniform Color.blue)
-
-        segments =
-            edges
-                |> Debug.log "asdf"
-                |> List.map (\( p1, p2 ) -> Collage.segment p1 p2)
-
-        collages =
-            List.map
-                (\segment ->
-                    Collage.traced Collage.defaultLineStyle segment
-                )
-                segments
-    in
-    rect
-        |> Collage.Layout.at Collage.Layout.topLeft (Collage.group collages)
-        |> Collage.Render.svg
-
-
-
--- let
---     circ =
---         circle 50
---             |> filled (uniform Color.red)
---     rect =
---         rectangle 200 100
---             |> filled (uniform Color.blue)
--- in
--- rect
---     |> Collage.Layout.at Collage.Layout.topLeft circ
---     |> Collage.Render.svg
----- PROGRAM ----
-
-
 main : Program () Model Msg
 main =
     Browser.element
@@ -145,51 +116,130 @@ main =
         }
 
 
-type alias ParsedMap =
-    Dict.Dict String (Set.Set ( Int, Int ))
+
+-- Parsing
 
 
-parseMap : String -> ParsedMap
+parseMap : String -> ParsingGameMap
 parseMap text =
-    String.split "\n" text
-        |> List.foldl
-            (\row result ->
-                case result of
-                    ( countries, rowIndex ) ->
-                        if rowIndex /= -1 then
-                            if row /= "{Country Names}" then
-                                ( parseCountryRow row rowIndex countries, rowIndex + 1 )
+    let
+        upsideDownMap =
+            String.split "\n" text
+                |> List.foldl
+                    (\row result ->
+                        case result of
+                            ( countries, rowIndex ) ->
+                                if rowIndex /= -1 then
+                                    if row /= "{Country Names}" then
+                                        ( parseCountryRow row rowIndex countries, rowIndex + 1 )
 
-                            else
-                                ( countries, -1 )
+                                    else
+                                        ( countries, -1 )
 
-                        else if row == "{Map}" then
-                            ( countries, 0 )
+                                else if row == "{Map}" then
+                                    ( countries, 0 )
+
+                                else
+                                    ( countries, -1 )
+                    )
+                    ( Dict.empty, -1 )
+                |> Tuple.first
+
+        mapHeight =
+            Dict.toList upsideDownMap
+                |> List.map
+                    (\( _, coordinates ) ->
+                        Set.toList coordinates
+                    )
+                |> List.concat
+                |> List.foldl
+                    (\( _, y ) maxHeight ->
+                        if y > maxHeight then
+                            maxHeight
 
                         else
-                            ( countries, -1 )
+                            y
+                    )
+                    0
+
+        map =
+            Dict.toList upsideDownMap
+                |> List.map
+                    (\( name, coordinates ) ->
+                        ( name
+                        , coordinates
+                            |> Set.toList
+                            |> List.map (\( x, y ) -> ( x, mapHeight - y ))
+                            |> Set.fromList
+                        )
+                    )
+                |> Dict.fromList
+    in
+    map
+
+
+parseCountryRow : String -> Int -> ParsingGameMap -> ParsingGameMap
+parseCountryRow row rowIndex parsingGameMap =
+    String.split "." row
+        |> List.reverse
+        |> List.drop 1
+        |> List.reverse
+        |> List.indexedMap Tuple.pair
+        |> List.foldr
+            (\( columnIndex, countryId ) result ->
+                case Dict.get countryId result of
+                    Just countryCoordinates ->
+                        Dict.insert countryId (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result
+
+                    Nothing ->
+                        Dict.insert countryId (Set.singleton ( columnIndex, rowIndex )) result
             )
-            ( Dict.empty, -1 )
-        |> Tuple.first
+            parsingGameMap
 
 
-asdf : Set.Set ( Int, Int ) -> ( Int, Int ) -> ( Int, Int ) -> Set.Set ( ( Int, Int ), ( Int, Int ) )
-asdf coordinates adjacent original =
-    if Set.member adjacent coordinates then
-        Set.singleton ( original, adjacent )
 
-    else
-        Set.empty
+-- Rendering
 
 
-getEdgesForCountry : Set.Set ( Int, Int ) -> Int -> Set.Set ( ( Float, Float ), ( Float, Float ) )
-getEdgesForCountry allCoordinates scale =
-    allCoordinates
+renderMap : GameMap -> Html Msg
+renderMap map =
+    let
+        edges =
+            map.countries
+                |> List.map
+                    (\coordinates ->
+                        getEdgesForCountry coordinates defaultScale
+                    )
+                |> List.concat
+
+        segments =
+            edges
+                |> List.map (\(BorderSegment p1 p2) -> Collage.segment p1 p2)
+
+        collages =
+            List.map
+                (\segment ->
+                    Collage.traced Collage.defaultLineStyle segment
+                )
+                segments
+    in
+    Collage.group collages
+        |> Collage.Render.svg
+
+
+
+-- renderCountry : Country -> Collage.Collage
+-- renderCountry country =
+
+
+getEdgesForCountry : Country -> Int -> List BorderSegment
+getEdgesForCountry country scale =
+    country.coordinates
         |> Set.foldl
             (\coordinate result ->
-                Set.union result (getEdgesForCountryForCoordinate allCoordinates coordinate scale)
+                result ++ getEdgesForCountryForCoordinate country.coordinates coordinate scale
             )
-            Set.empty
+            []
 
 
 scaleCoordinate : Int -> ( Int, Int ) -> ( Float, Float )
@@ -197,14 +247,12 @@ scaleCoordinate scale ( x, y ) =
     ( x * scale |> toFloat, y * scale |> toFloat )
 
 
-scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> ( ( Float, Float ), ( Float, Float ) )
+scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> BorderSegment
 scaleEdge scale ( point1, point2 ) =
-    ( scaleCoordinate scale point1
-    , scaleCoordinate scale point2
-    )
+    BorderSegment (scaleCoordinate scale point1) (scaleCoordinate scale point2)
 
 
-getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Int -> Set.Set ( ( Float, Float ), ( Float, Float ) )
+getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Int -> List BorderSegment
 getEdgesForCountryForCoordinate allCoordinates ( x, y ) scaleFactor =
     let
         left =
@@ -245,42 +293,9 @@ getEdgesForCountryForCoordinate allCoordinates ( x, y ) scaleFactor =
                     result
 
                 else
-                    Set.insert (scaleEdge scaleFactor edge) result
+                    scaleEdge scaleFactor edge :: result
             )
-            Set.empty
-
-
-parseCountryRow : String -> Int -> ParsedMap -> ParsedMap
-parseCountryRow row rowIndex countries =
-    String.split "." row
-        |> List.reverse
-        |> List.drop 1
-        |> List.reverse
-        |> List.indexedMap Tuple.pair
-        |> List.foldr
-            (\( columnIndex, countryId ) result ->
-                let
-                    blah : ParsedMap
-                    blah =
-                        case Dict.get countryId result of
-                            Just countryCoordinates ->
-                                Dict.insert countryId (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result
-
-                            Nothing ->
-                                Dict.insert countryId (Set.singleton ( columnIndex, rowIndex )) result
-                in
-                blah
-            )
-            countries
-
-
-
--- TODO
--- { countries =
---     [ { coordinates = [ ( 0, 0 ) ]
---       }
---     ]
--- }
+            []
 
 
 mapFile : String

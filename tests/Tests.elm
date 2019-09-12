@@ -82,10 +82,10 @@ all =
                 Expect.equal
                     (Main.parseMap mapFile)
                     (Dict.fromList
-                        [ ( "1", Set.fromList [ ( 0, 0 ), ( 0, 1 ), ( 2, 0 ), ( 1, 0 ) ] )
-                        , ( "2", Set.fromList [ ( 1, 1 ), ( 1, 2 ), ( 2, 1 ) ] )
-                        , ( "3", Set.fromList [ ( 0, 2 ) ] )
-                        , ( "4", Set.fromList [ ( 2, 2 ) ] )
+                        [ ( "1", Set.fromList [ ( 0, -1 ), ( 0, 0 ), ( 1, 0 ), ( 2, 0 ) ] )
+                        , ( "2", Set.fromList [ ( 1, -2 ), ( 1, -1 ), ( 2, -1 ) ] )
+                        , ( "3", Set.fromList [ ( 0, -2 ) ] )
+                        , ( "4", Set.fromList [ ( 2, -2 ) ] )
                         ]
                     )
         , test ".getEdges 1x1 1 scale" <|
@@ -95,13 +95,11 @@ all =
                         (Set.fromList [ ( 0, 1 ) ])
                         1
                     )
-                    (Set.fromList
-                        [ ( ( 1, 0 ), ( 1, 1 ) )
-                        , ( ( 1, 0 ), ( 2, 0 ) )
-                        , ( ( 1, 1 ), ( 2, 1 ) )
-                        , ( ( 2, 0 ), ( 2, 1 ) )
-                        ]
-                    )
+                    [ Main.BorderSegment ( 0, 2 ) ( 1, 2 )
+                    , Main.BorderSegment ( 0, 1 ) ( 1, 1 )
+                    , Main.BorderSegment ( 1, 1 ) ( 1, 2 )
+                    , Main.BorderSegment ( 0, 1 ) ( 0, 2 )
+                    ]
         , test ".getEdges 2x1 1 scale" <|
             \_ ->
                 Expect.equal
@@ -109,13 +107,13 @@ all =
                         (Set.fromList [ ( 0, 1 ), ( 0, 2 ) ])
                         1
                     )
-                    (Set.fromList
-                        [ ( ( 1, 0 ), ( 1, 1 ) )
-                        , ( ( 1, 0 ), ( 2, 0 ) )
-                        , ( ( 1, 1 ), ( 2, 1 ) )
-                        , ( ( 2, 0 ), ( 2, 1 ) )
-                        ]
-                    )
+                    [ Main.BorderSegment ( 0, 1 ) ( 1, 1 )
+                    , Main.BorderSegment ( 1, 1 ) ( 1, 2 )
+                    , Main.BorderSegment ( 0, 1 ) ( 0, 2 )
+                    , Main.BorderSegment ( 0, 3 ) ( 1, 3 )
+                    , Main.BorderSegment ( 1, 2 ) ( 1, 3 )
+                    , Main.BorderSegment ( 0, 2 ) ( 0, 3 )
+                    ]
         , test ".getEdges" <|
             \_ ->
                 Expect.equal
@@ -123,17 +121,15 @@ all =
                         (Set.fromList [ ( 0, 1 ), ( 0, 2 ), ( 1, 1 ) ])
                         10
                     )
-                    (Set.fromList
-                        [ ( ( 0, 10 ), ( 0, 20 ) )
-                        , ( ( 0, 20 ), ( 0, 30 ) )
-                        , ( ( 0, 30 ), ( 10, 30 ) )
-                        , ( ( 10, 30 ), ( 10, 20 ) )
-                        , ( ( 10, 20 ), ( 20, 20 ) )
-                        , ( ( 20, 20 ), ( 20, 10 ) )
-                        , ( ( 20, 10 ), ( 10, 10 ) )
-                        , ( ( 10, 10 ), ( 0, 10 ) )
-                        ]
-                    )
+                    [ Main.BorderSegment ( 0, 10 ) ( 10, 10 )
+                    , Main.BorderSegment ( 0, 10 ) ( 0, 20 )
+                    , Main.BorderSegment ( 0, 30 ) ( 10, 30 )
+                    , Main.BorderSegment ( 10, 20 ) ( 10, 30 )
+                    , Main.BorderSegment ( 0, 20 ) ( 0, 30 )
+                    , Main.BorderSegment ( 10, 20 ) ( 20, 20 )
+                    , Main.BorderSegment ( 10, 10 ) ( 20, 10 )
+                    , Main.BorderSegment ( 20, 10 ) ( 20, 20 )
+                    ]
 
         -- , test ".scaleMap"
         --     |< (\_ ->
