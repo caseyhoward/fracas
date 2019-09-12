@@ -132,19 +132,4 @@ all =
                     , Main.BorderSegment ( 10, 10 ) ( 20, 10 )
                     , Main.BorderSegment ( 20, 10 ) ( 20, 20 )
                     ]
-
-        -- , test ".scaleMap"
-        --     |< (\_ ->
-        --             Expect.equal
-        --                 (Main.scaleMap
-        --                     5
-        --                     (Dict.fromList
-        --                         [ ( "1", Set.fromList [ ( 0, 0 ), ( 0, 1 ), ( 0, 2 ), ( 1, 0 ) ] )
-        --                         , ( "2", Set.fromList [ ( 1, 1 ), ( 1, 2 ), ( 2, 1 ) ] )
-        --                         , ( "3", Set.fromList [ ( 2, 0 ) ] )
-        --                         , ( "4", Set.fromList [ ( 2, 2 ) ] )
-        --                         ]
-        --                     )
-        --                 )
-        --        )
         ]

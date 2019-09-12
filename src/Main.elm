@@ -10,6 +10,10 @@ import Html exposing (Html, div)
 import Set
 
 
+
+---- MODEL ----
+
+
 type alias Area =
     { id : String
     , coordinates : Set.Set ( Int, Int )
@@ -42,17 +46,33 @@ type BorderSegment
     = BorderSegment ( Float, Float ) ( Float, Float )
 
 
+type alias Player =
+    { id : Int
+    , countries : Dict.Dict String PlayerCountry
+    }
+
+
+type alias PlayerCountry =
+    { countryId : String
+    , population : Int
+    }
+
+
+numberOfPlayers =
+    2
+
+
 defaultScale : Int
 defaultScale =
     15
 
 
-
----- MODEL ----
-
-
 type alias Model =
-    { lastClickedAreaId : String, map : GameMap }
+    { lastClickedAreaId : String
+    , currentPlayerTurn : Int
+    , map : GameMap
+    , players : Dict.Dict Int Player
+    }
 
 
 playMap : ParsingGameMap -> GameMap
@@ -76,7 +96,23 @@ playMap parsingGameMap =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { lastClickedAreaId = "", map = parseMap mapFile |> playMap }, Cmd.none )
+    ( { lastClickedAreaId = ""
+      , map = parseMap mapFile |> playMap
+      , players =
+            List.range 1 numberOfPlayers
+                |> List.map
+                    (\playerId ->
+                        ( playerId
+                        , { id = playerId
+                          , countries = Dict.empty
+                          }
+                        )
+                    )
+                |> Dict.fromList
+      , currentPlayerTurn = 1
+      }
+    , Cmd.none
+    )
 
 
 
@@ -92,8 +128,39 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         AreaClicked id ->
-            ( { model | lastClickedAreaId = Debug.log "id" id }, Cmd.none )
+            case
+                List.filter
+                    (\country ->
+                        country.area.id == id
+                    )
+                    model.map.countries
+                    |> List.head
+            of
+                Just country ->
+                    case Dict.get model.currentPlayerTurn model.players of
+                        Just player ->
+                            case Dict.get country.area.id player.countries of
+                                Just playerCountry ->
+                                    let
+                                        updatedPlayer =
+                                            { player | countries = Dict.insert country.area.id { playerCountry | population = playerCountry.population + 1 } player.countries }
+                                    in
+                                    ( { model | players = Dict.insert player.id updatedPlayer model.players }, Cmd.none )
 
+                                Nothing ->
+                                    let
+                                        updatedPlayer =
+                                            { player | countries = Dict.insert country.area.id { countryId = country.area.id, population = 1 } player.countries }
+                                    in
+                                    ( { model | players = Dict.insert player.id updatedPlayer model.players }, Cmd.none )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
+        -- ( { model | lastClickedAreaId = id }, Cmd.none )
         _ ->
             ( model, Cmd.none )
 
@@ -253,13 +320,21 @@ renderMap : GameMap -> Html Msg
 renderMap map =
     let
         countryCollages =
-            List.map (\country -> renderArea country.area Color.gray) map.countries
+            List.map
+                (\country ->
+                    renderArea country.area Color.gray
+                )
+                map.countries
 
         waterCollages =
             List.map (\bodyOfWater -> renderArea bodyOfWater.area Color.blue) map.water
     in
     Collage.group (countryCollages ++ waterCollages)
         |> Collage.Render.svg
+
+
+
+-- findCountryOwner countries players =
 
 
 renderArea : Area -> Color.Color -> Collage.Collage Msg
