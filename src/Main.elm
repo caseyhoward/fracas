@@ -5,7 +5,7 @@ import Collage
 import Collage.Render
 import Color
 import Dict
-import Html exposing (Html, div, h1)
+import Html exposing (Html, div)
 import Set
 
 
@@ -20,7 +20,8 @@ type alias GameMap =
 
 
 type alias ParsingGameMap =
-    Dict.Dict String (Set.Set ( Int, Int ))
+    { countries : Dict.Dict String (Set.Set ( Int, Int ))
+    }
 
 
 type BorderSegment
@@ -66,7 +67,7 @@ type alias Model =
 playMap : ParsingGameMap -> GameMap
 playMap parsingGameMap =
     { countries =
-        parsingGameMap
+        parsingGameMap.countries
             |> Dict.toList
             |> List.map
                 (\( _, coordinates ) ->
@@ -142,11 +143,11 @@ parseMap text =
                                 else
                                     ( countries, -1 )
                     )
-                    ( Dict.empty, -1 )
+                    ( { countries = Dict.empty }, -1 )
                 |> Tuple.first
 
         mapHeight =
-            Dict.toList upsideDownMap
+            Dict.toList upsideDownMap.countries
                 |> List.map
                     (\( _, coordinates ) ->
                         Set.toList coordinates
@@ -163,7 +164,7 @@ parseMap text =
                     0
 
         map =
-            Dict.toList upsideDownMap
+            Dict.toList upsideDownMap.countries
                 |> List.map
                     (\( name, coordinates ) ->
                         ( name
@@ -175,7 +176,7 @@ parseMap text =
                     )
                 |> Dict.fromList
     in
-    map
+    { countries = map }
 
 
 parseCountryRow : String -> Int -> ParsingGameMap -> ParsingGameMap
@@ -187,12 +188,28 @@ parseCountryRow row rowIndex parsingGameMap =
         |> List.indexedMap Tuple.pair
         |> List.foldr
             (\( columnIndex, countryId ) result ->
-                case Dict.get countryId result of
-                    Just countryCoordinates ->
-                        Dict.insert countryId (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result
+                if String.length countryId < 4 then
+                    { result
+                        | countries =
+                            case Dict.get countryId result.countries of
+                                Just countryCoordinates ->
+                                    Dict.insert countryId (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result.countries
 
-                    Nothing ->
-                        Dict.insert countryId (Set.singleton ( columnIndex, rowIndex )) result
+                                Nothing ->
+                                    Dict.insert countryId (Set.singleton ( columnIndex, rowIndex )) result.countries
+                    }
+
+                else
+                    -- Water
+                    { result
+                        | countries =
+                            case Dict.get countryId result.countries of
+                                Just countryCoordinates ->
+                                    Dict.insert countryId (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result.countries
+
+                                Nothing ->
+                                    Dict.insert countryId (Set.singleton ( columnIndex, rowIndex )) result.countries
+                    }
             )
             parsingGameMap
 
@@ -204,13 +221,18 @@ parseCountryRow row rowIndex parsingGameMap =
 renderMap : GameMap -> Html Msg
 renderMap map =
     let
+        countryCollages =
+            List.map renderCountry map.countries
+    in
+    Collage.group countryCollages
+        |> Collage.Render.svg
+
+
+renderCountry : Country -> Collage.Collage msg
+renderCountry country =
+    let
         edges =
-            map.countries
-                |> List.map
-                    (\coordinates ->
-                        getEdgesForCountry coordinates defaultScale
-                    )
-                |> List.concat
+            getEdgesForCountry country defaultScale
 
         segments =
             edges
@@ -224,12 +246,6 @@ renderMap map =
                 segments
     in
     Collage.group collages
-        |> Collage.Render.svg
-
-
-
--- renderCountry : Country -> Collage.Collage
--- renderCountry country =
 
 
 getEdgesForCountry : Country -> Int -> List BorderSegment
