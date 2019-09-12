@@ -93,26 +93,20 @@ renderMap map =
     let
         edges =
             Dict.toList map
-                |> List.head
-                |> Maybe.map
+                |> List.map
                     (\( _, coordinates ) ->
-                        getEdgesForCountry coordinates defaultScale
+                        getEdgesForCountry coordinates defaultScale |> Set.toList
                     )
+                |> List.concat
 
         rect =
             rectangle 200 100
                 |> filled (uniform Color.blue)
 
         segments =
-            case edges of
-                Just e ->
-                    e
-                        |> Set.toList
-                        |> Debug.log "asdf"
-                        |> List.map (\( p1, p2 ) -> Collage.segment p1 p2)
-
-                Nothing ->
-                    []
+            edges
+                |> Debug.log "asdf"
+                |> List.map (\( p1, p2 ) -> Collage.segment p1 p2)
 
         collages =
             List.map
