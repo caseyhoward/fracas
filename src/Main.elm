@@ -10,16 +10,18 @@ import Set
 
 
 type alias Area =
-    Set.Set ( Int, Int )
+    { id : String
+    , coordinates : Set.Set ( Int, Int )
+    }
 
 
 type alias Country =
-    { coordinates : Area
+    { area : Area
     }
 
 
 type alias Water =
-    { coordinates : Area
+    { area : Area
     }
 
 
@@ -52,44 +54,21 @@ type alias Model =
     GameMap
 
 
-
--- = PlayingGame PlayingGameAttributes
--- | NotPlayingGame
--- | GameFinished
--- type alias PlayingGameAttributes =
---     { unoccupiedCountries : List Country
---     , players : List Player
---     }
--- type alias Model2 =
---     { countries : List Country
---     , players : List Player
---     }
--- type alias Player =
---     { color : String
---     }
--- type Country
---     = Country
---         { name : String
---         , neighboringCountries : List Country
---         , bodiesOfWater : List BodyOfWater
---         }
-
-
 playMap : ParsingGameMap -> GameMap
 playMap parsingGameMap =
     { countries =
         parsingGameMap.countries
             |> Dict.toList
             |> List.map
-                (\( _, coordinates ) ->
-                    { coordinates = coordinates }
+                (\( _, area ) ->
+                    { area = area }
                 )
     , water =
         parsingGameMap.water
             |> Dict.toList
             |> List.map
-                (\( _, coordinates ) ->
-                    { coordinates = coordinates }
+                (\( _, area ) ->
+                    { area = area }
                 )
     }
 
@@ -142,6 +121,7 @@ main =
 parseMap : String -> ParsingGameMap
 parseMap text =
     let
+        upsideDownMap : ParsingGameMap
         upsideDownMap =
             String.split "\n" text
                 |> List.foldl
@@ -164,11 +144,12 @@ parseMap text =
                     ( { countries = Dict.empty, water = Dict.empty }, -1 )
                 |> Tuple.first
 
+        mapHeight : Int
         mapHeight =
             Dict.toList upsideDownMap.countries
                 |> List.map
-                    (\( _, coordinates ) ->
-                        Set.toList coordinates
+                    (\( _, area ) ->
+                        Set.toList area.coordinates
                     )
                 |> List.concat
                 |> List.foldl
@@ -181,33 +162,45 @@ parseMap text =
                     )
                     0
 
+        countries : Dict.Dict String Area
         countries =
             Dict.toList upsideDownMap.countries
                 |> List.map
-                    (\( name, coordinates ) ->
-                        ( name
-                        , coordinates
-                            |> Set.toList
-                            |> List.map (\( x, y ) -> ( x, mapHeight - y ))
-                            |> Set.fromList
+                    (\( id, area ) ->
+                        ( id
+                        , { area
+                            | coordinates =
+                                area.coordinates
+                                    |> Set.toList
+                                    |> List.map (\( x, y ) -> ( x, mapHeight - y ))
+                                    |> Set.fromList
+                          }
                         )
                     )
                 |> Dict.fromList
 
+        water : Dict.Dict String Area
         water =
             Dict.toList upsideDownMap.water
                 |> List.map
-                    (\( name, coordinates ) ->
-                        ( name
-                        , coordinates
-                            |> Set.toList
-                            |> List.map (\( x, y ) -> ( x, mapHeight - y ))
-                            |> Set.fromList
+                    (\( id, area ) ->
+                        ( id
+                        , { area
+                            | coordinates =
+                                area.coordinates
+                                    |> Set.toList
+                                    |> List.map (\( x, y ) -> ( x, mapHeight - y ))
+                                    |> Set.fromList
+                          }
                         )
                     )
                 |> Dict.fromList
     in
     { countries = countries, water = water }
+
+
+
+-- This is dumb. Clean it up someday.
 
 
 parseCountryRow : String -> Int -> ParsingGameMap -> ParsingGameMap
@@ -218,28 +211,28 @@ parseCountryRow row rowIndex parsingGameMap =
         |> List.reverse
         |> List.indexedMap Tuple.pair
         |> List.foldr
-            (\( columnIndex, name ) result ->
-                if String.length name < 4 then
+            (\( columnIndex, id ) result ->
+                if String.length id < 4 then
                     { result
                         | countries =
-                            case Dict.get name result.countries of
-                                Just countryCoordinates ->
-                                    Dict.insert name (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result.countries
+                            case Dict.get id result.countries of
+                                Just area ->
+                                    Dict.insert id { area | coordinates = Set.insert ( columnIndex, rowIndex ) area.coordinates } result.countries
 
                                 Nothing ->
-                                    Dict.insert name (Set.singleton ( columnIndex, rowIndex )) result.countries
+                                    Dict.insert id { id = id, coordinates = Set.singleton ( columnIndex, rowIndex ) } result.countries
                     }
 
                 else
                     -- Water
                     { result
                         | water =
-                            case Dict.get name result.water of
-                                Just countryCoordinates ->
-                                    Dict.insert name (Set.insert ( columnIndex, rowIndex ) countryCoordinates) result.water
+                            case Dict.get id result.water of
+                                Just area ->
+                                    Dict.insert id { area | coordinates = Set.insert ( columnIndex, rowIndex ) area.coordinates } result.water
 
                                 Nothing ->
-                                    Dict.insert name (Set.singleton ( columnIndex, rowIndex )) result.water
+                                    Dict.insert id { id = id, coordinates = Set.singleton ( columnIndex, rowIndex ) } result.water
                     }
             )
             parsingGameMap
@@ -253,10 +246,10 @@ renderMap : GameMap -> Html Msg
 renderMap map =
     let
         countryCollages =
-            List.map (\country -> renderArea country.coordinates Color.gray) map.countries
+            List.map (\country -> renderArea country.area Color.gray) map.countries
 
         waterCollages =
-            List.map (\bodyOfWater -> renderArea bodyOfWater.coordinates Color.blue) map.water
+            List.map (\bodyOfWater -> renderArea bodyOfWater.area Color.blue) map.water
     in
     Collage.group (countryCollages ++ waterCollages)
         |> Collage.Render.svg
@@ -284,10 +277,10 @@ renderArea area color =
 
 getEdgesForArea : Area -> Int -> List BorderSegment
 getEdgesForArea area scale =
-    area
+    area.coordinates
         |> Set.foldl
             (\coordinate result ->
-                result ++ getEdgesForCountryForCoordinate area coordinate scale
+                result ++ getEdgesForCountryForCoordinate area.coordinates coordinate scale
             )
             []
 
@@ -299,13 +292,12 @@ getBlocksForArea area scale color =
             Collage.square (toFloat scale)
                 |> Collage.filled (Collage.uniform color)
     in
-    area
+    area.coordinates
         |> Set.foldl
             (\( x, y ) result ->
                 (block |> Collage.shift ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )) :: result
             )
             []
-
 
 
 scaleCoordinate : Int -> ( Int, Int ) -> ( Float, Float )
@@ -319,7 +311,7 @@ scaleEdge scale ( point1, point2 ) =
 
 
 getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Int -> List BorderSegment
-getEdgesForCountryForCoordinate allCoordinates ( x, y ) scaleFactor =
+getEdgesForCountryForCoordinate allAreas ( x, y ) scaleFactor =
     let
         left =
             ( x - 1, y )
@@ -355,7 +347,7 @@ getEdgesForCountryForCoordinate allCoordinates ( x, y ) scaleFactor =
     adjacentEdges
         |> List.foldl
             (\( adjacent, edge ) result ->
-                if Set.member adjacent allCoordinates then
+                if Set.member adjacent allAreas then
                     result
 
                 else

@@ -81,17 +81,19 @@ all =
             \_ ->
                 Expect.equal
                     (Main.parseMap mapFile)
-                    (Dict.fromList
-                        [ ( "1", Set.fromList [ ( 0, -1 ), ( 0, 0 ), ( 1, 0 ), ( 2, 0 ) ] )
-                        , ( "2", Set.fromList [ ( 1, -2 ), ( 1, -1 ), ( 2, -1 ) ] )
-                        , ( "3", Set.fromList [ ( 0, -2 ) ] )
-                        , ( "4", Set.fromList [ ( 2, -2 ) ] )
-                        ]
-                    )
+                    { countries =
+                        Dict.fromList
+                            [ ( "1", Set.fromList [ ( 0, -1 ), ( 0, 0 ), ( 1, 0 ), ( 2, 0 ) ] )
+                            , ( "2", Set.fromList [ ( 1, -2 ), ( 1, -1 ), ( 2, -1 ) ] )
+                            , ( "3", Set.fromList [ ( 0, -2 ) ] )
+                            , ( "4", Set.fromList [ ( 2, -2 ) ] )
+                            ]
+                    , water = Dict.empty
+                    }
         , test ".getEdges 1x1 1 scale" <|
             \_ ->
                 Expect.equal
-                    (Main.getEdgesForCountry
+                    (Main.getEdgesForArea
                         (Set.fromList [ ( 0, 1 ) ])
                         1
                     )
@@ -103,7 +105,7 @@ all =
         , test ".getEdges 2x1 1 scale" <|
             \_ ->
                 Expect.equal
-                    (Main.getEdgesForCountry
+                    (Main.getEdgesForArea
                         (Set.fromList [ ( 0, 1 ), ( 0, 2 ) ])
                         1
                     )
@@ -117,7 +119,7 @@ all =
         , test ".getEdges" <|
             \_ ->
                 Expect.equal
-                    (Main.getEdgesForCountry
+                    (Main.getEdgesForArea
                         (Set.fromList [ ( 0, 1 ), ( 0, 2 ), ( 1, 1 ) ])
                         10
                     )
