@@ -31,7 +31,7 @@ type alias Water =
 
 
 type alias GameMap =
-    { countries : List Country
+    { countries : Dict.Dict String Country
     , water : List Water
     }
 
@@ -58,8 +58,9 @@ type alias PlayerCountry =
     }
 
 
+numberOfPlayers : Int
 numberOfPlayers =
-    2
+    6
 
 
 defaultScale : Int
@@ -79,10 +80,10 @@ playMap : ParsingGameMap -> GameMap
 playMap parsingGameMap =
     { countries =
         parsingGameMap.countries
-            |> Dict.toList
-            |> List.map
-                (\( _, area ) ->
-                    { area = area }
+            |> Dict.map
+                (\countryId area ->
+                    { area = area
+                    }
                 )
     , water =
         parsingGameMap.water
@@ -129,11 +130,13 @@ update msg model =
     case msg of
         AreaClicked id ->
             case
-                List.filter
-                    (\country ->
-                        country.area.id == id
-                    )
-                    model.map.countries
+                model.map.countries
+                    |> Dict.toList
+                    |> List.map (\( _, country ) -> country)
+                    |> List.filter
+                        (\country ->
+                            country.area.id == id
+                        )
                     |> List.head
             of
                 Just country ->
@@ -143,16 +146,32 @@ update msg model =
                                 Just playerCountry ->
                                     let
                                         updatedPlayer =
-                                            { player | countries = Dict.insert country.area.id { playerCountry | population = playerCountry.population + 1 } player.countries }
+                                            { player
+                                                | countries =
+                                                    Dict.insert country.area.id { playerCountry | population = playerCountry.population + 1 } player.countries
+                                            }
                                     in
-                                    ( { model | players = Dict.insert player.id updatedPlayer model.players }, Cmd.none )
+                                    ( { model
+                                        | players = Dict.insert player.id updatedPlayer model.players
+                                        , currentPlayerTurn = nextPlayerTurn numberOfPlayers model.currentPlayerTurn
+                                      }
+                                    , Cmd.none
+                                    )
 
                                 Nothing ->
                                     let
                                         updatedPlayer =
-                                            { player | countries = Dict.insert country.area.id { countryId = country.area.id, population = 1 } player.countries }
+                                            { player
+                                                | countries =
+                                                    Dict.insert country.area.id { countryId = country.area.id, population = 1 } player.countries
+                                            }
                                     in
-                                    ( { model | players = Dict.insert player.id updatedPlayer model.players }, Cmd.none )
+                                    ( { model
+                                        | players = Dict.insert player.id updatedPlayer model.players
+                                        , currentPlayerTurn = nextPlayerTurn numberOfPlayers model.currentPlayerTurn
+                                      }
+                                    , Cmd.none
+                                    )
 
                         Nothing ->
                             ( model, Cmd.none )
@@ -165,6 +184,11 @@ update msg model =
             ( model, Cmd.none )
 
 
+nextPlayerTurn : Int -> Int -> Int
+nextPlayerTurn totalPlayers currentPlayer =
+    remainderBy totalPlayers currentPlayer + 1
+
+
 
 ---- VIEW ----
 
@@ -174,7 +198,7 @@ view model =
     div []
         [ -- , h1 [] [ text "Your Elm App is working!" ]
           -- , text (Debug.toString model)
-          renderMap model.map
+          renderMap model.players model.map
         ]
 
 
@@ -316,15 +340,41 @@ parseCountryRow row rowIndex parsingGameMap =
 -- Rendering
 
 
-renderMap : GameMap -> Html Msg
-renderMap map =
+renderMap : Dict.Dict Int Player -> GameMap -> Html Msg
+renderMap players map =
     let
         countryCollages =
-            List.map
-                (\country ->
-                    renderArea country.area Color.gray
-                )
-                map.countries
+            map.countries
+                |> Dict.values
+                |> List.map
+                    (\country ->
+                        case findCountryOwner players country.area.id of
+                            Just player ->
+                                case player.id of
+                                    1 ->
+                                        renderArea country.area Color.red
+
+                                    2 ->
+                                        renderArea country.area Color.purple
+
+                                    3 ->
+                                        renderArea country.area Color.yellow
+
+                                    4 ->
+                                        renderArea country.area Color.green
+
+                                    5 ->
+                                        renderArea country.area Color.orange
+
+                                    6 ->
+                                        renderArea country.area Color.brown
+
+                                    _ ->
+                                        renderArea country.area Color.black
+
+                            Nothing ->
+                                renderArea country.area Color.gray
+                    )
 
         waterCollages =
             List.map (\bodyOfWater -> renderArea bodyOfWater.area Color.blue) map.water
@@ -333,8 +383,24 @@ renderMap map =
         |> Collage.Render.svg
 
 
+findCountryOwner : Dict.Dict Int Player -> String -> Maybe Player
+findCountryOwner players countryId =
+    players
+        |> Dict.values
+        |> List.foldl
+            (\player result ->
+                case result of
+                    Just _ ->
+                        result
 
--- findCountryOwner countries players =
+                    Nothing ->
+                        if Dict.member countryId player.countries then
+                            Just player
+
+                        else
+                            Nothing
+            )
+            Nothing
 
 
 renderArea : Area -> Color.Color -> Collage.Collage Msg
