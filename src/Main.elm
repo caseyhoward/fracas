@@ -1,4 +1,4 @@
-module Main exposing (BorderSegment(..), getEdgesForArea, getMapDimensions, getNeighborCoordinates, main, parseMap, parseRawMap)
+module Main exposing (BorderSegment(..), Country, getEdgesForArea, getMapDimensions, getNeighborCoordinates, main, parseMap, parseRawMap, updateCountry)
 
 import Browser
 import Collage
@@ -142,7 +142,7 @@ main =
 init : ( Model, Cmd Msg )
 init =
     ( { lastClickedAreaId = ""
-      , map = parseMap Maps.SuperSimple.map
+      , map = parseMap Maps.Big.map
 
       --   , map = parseMap mapFile |> playMap
       , players =
@@ -388,81 +388,103 @@ parseMap text =
         |> Dict.foldl
             (\coordinates areaId gameMap ->
                 if isCountry areaId then
-                    addNeighborsToCountry coordinates areaId dimensions map gameMap
+                    let
+                        country =
+                            case Dict.get areaId gameMap.countries of
+                                Just existingCountry ->
+                                    existingCountry
+
+                                Nothing ->
+                                    { neighboringCountries = Set.empty
+                                    , neighboringBodiesOfWater = Set.empty
+                                    , coordinates = Set.singleton coordinates
+                                    }
+                    in
+                    { gameMap
+                        | countries = Dict.insert areaId (updateCountry areaId country coordinates dimensions map) gameMap.countries
+                    }
 
                 else
-                    addNeighborsToBodyOfWater coordinates areaId dimensions map gameMap
+                    let
+                        bodyOfWater =
+                            case Dict.get areaId gameMap.bodiesOfWater of
+                                Just existingBodyOfWater ->
+                                    existingBodyOfWater
+
+                                Nothing ->
+                                    { neighboringCountries = Set.empty
+                                    , coordinates = Set.singleton coordinates
+                                    }
+                    in
+                    { gameMap
+                        | bodiesOfWater = Dict.insert areaId (updateBodyOfWater areaId bodyOfWater coordinates dimensions map) gameMap.bodiesOfWater
+                    }
             )
             { countries = Dict.empty, bodiesOfWater = Dict.empty }
 
 
-addNeighborsToCountry : ( Int, Int ) -> String -> ( Int, Int ) -> RawGameMap -> GameMap -> GameMap
-addNeighborsToCountry coordinates countryId mapDimensions rawMap gameMap =
-    getNeighborCoordinates coordinates mapDimensions
-        |> Set.foldl
-            (\neighborCoordinate innerGameMap ->
-                case Dict.get neighborCoordinate rawMap of
-                    Just neighborAreaId ->
-                        if isCountry (Debug.log "1" neighborAreaId) then
-                            case Dict.get neighborAreaId innerGameMap.countries of
-                                Just country ->
-                                    let
-                                        newCountries : Dict.Dict String Country
-                                        newCountries =
-                                            Dict.insert
-                                                countryId
-                                                { country
-                                                    | neighboringCountries =
-                                                        Set.insert neighborAreaId country.neighboringCountries
-                                                        , coordinates = Set.insert coordinates country.coordinates
-                                                }
-                                                innerGameMap.countries
-                                    in
-                                    { innerGameMap
-                                        | countries = newCountries
-                                    }
+updateCountry : String -> Country -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Country
+updateCountry countryId country coordinates mapDimensions rawMap =
+    let
+        ( neighboringCountries, neighboringBodiesOfWater ) =
+            getNeighborCoordinates coordinates mapDimensions
+                |> Set.foldl
+                    (\neighborCoordinate ( countries, bodiesOfWater ) ->
+                        case Dict.get neighborCoordinate rawMap of
+                            Just neighborId ->
+                                if neighborId /= countryId then
+                                    if isCountry neighborId then
+                                        ( Set.insert neighborId countries, bodiesOfWater )
 
-                                Nothing ->
-                                    let
-                                        newCountries : Dict.Dict String Country
-                                        newCountries =
-                                            Dict.insert
-                                                countryId
-                                                { neighboringCountries = Set.singleton neighborAreaId
-                                                , neighboringBodiesOfWater = Set.empty
-                                                , coordinates = Set.empty
-                                                }
-                                                innerGameMap.countries
-                                    in
-                                    { innerGameMap
-                                        | countries = newCountries
-                                    }
+                                    else
+                                        ( countries, Set.insert neighborId bodiesOfWater )
 
-                        else
-                            case Dict.get neighborAreaId innerGameMap.countries of
-                                Just country ->
-                                    let
-                                        newCountries : Dict.Dict String Country
-                                        newCountries =
-                                            Dict.insert
-                                                countryId
-                                                { country
-                                                    | neighboringBodiesOfWater =
-                                                        Set.insert neighborAreaId country.neighboringBodiesOfWater
-                                                }
-                                                innerGameMap.countries
-                                    in
-                                    { innerGameMap
-                                        | countries = newCountries
-                                    }
+                                else
+                                    ( countries, bodiesOfWater )
 
-                                Nothing ->
-                                    Debug.todo "this shoudln't happen"
+                            Nothing ->
+                                Debug.log (Debug.toString neighborCoordinate) ( countries, bodiesOfWater )
+                    )
+                    ( Set.empty, Set.empty )
+    in
+    { country
+        | neighboringCountries =
+            Set.union neighboringCountries country.neighboringCountries
+        , neighboringBodiesOfWater =
+            Set.union neighboringBodiesOfWater country.neighboringBodiesOfWater
+        , coordinates = Set.insert coordinates country.coordinates
+    }
 
-                    Nothing ->
-                        innerGameMap
-            )
-            gameMap
+
+updateBodyOfWater : String -> BodyOfWater -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> BodyOfWater
+updateBodyOfWater bodyOfWaterId bodyOfWater coordinates mapDimensions rawMap =
+    let
+        ( neighboringCountries, neighboringBodiesOfWater ) =
+            getNeighborCoordinates coordinates mapDimensions
+                |> Set.foldl
+                    (\neighborCoordinate ( countries, bodiesOfWater ) ->
+                        case Dict.get neighborCoordinate rawMap of
+                            Just neighborId ->
+                                if neighborId /= bodyOfWaterId then
+                                    if isCountry neighborId then
+                                        ( Set.insert neighborId countries, bodiesOfWater )
+
+                                    else
+                                        ( countries, Set.insert neighborId bodiesOfWater )
+
+                                else
+                                    ( countries, bodiesOfWater )
+
+                            Nothing ->
+                                Debug.log (Debug.toString neighborCoordinate) ( countries, bodiesOfWater )
+                    )
+                    ( Set.empty, Set.empty )
+    in
+    { bodyOfWater
+        | neighboringCountries =
+            Set.union neighboringCountries bodyOfWater.neighboringCountries
+        , coordinates = Set.insert coordinates bodyOfWater.coordinates
+    }
 
 
 addNeighborsToBodyOfWater : ( Int, Int ) -> String -> ( Int, Int ) -> RawGameMap -> GameMap -> GameMap
@@ -491,14 +513,26 @@ addNeighborsToBodyOfWater coordinates bodyOfWaterId mapDimensions rawMap gameMap
                                     }
 
                                 Nothing ->
-                                    Debug.todo "this shoudln't happen"
+                                    let
+                                        newBodiesOfWater : Dict.Dict String BodyOfWater
+                                        newBodiesOfWater =
+                                            Dict.insert
+                                                bodyOfWaterId
+                                                { neighboringCountries = Set.singleton neighborAreaId
+                                                , coordinates = Set.singleton coordinates
+                                                }
+                                                innerGameMap.bodiesOfWater
+                                    in
+                                    { innerGameMap
+                                        | bodiesOfWater = newBodiesOfWater
+                                    }
 
                         else
                             innerGameMap
 
                     -- There shouldn't be water neighboring water
                     Nothing ->
-                        Debug.todo "this shoudln't happen"
+                        Debug.log "this shouldn't happen" innerGameMap
             )
             gameMap
 

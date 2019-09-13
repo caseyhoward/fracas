@@ -141,21 +141,51 @@ all =
                               )
                             , ( "4"
                               , { coordinates = Set.fromList [ ( 2, 0 ) ]
-                                , neighboringCountries = Set.fromList [ "2", "3" ]
+                                , neighboringCountries = Set.fromList [ "2" ]
                                 , neighboringBodiesOfWater = Set.fromList [ "1000" ]
                                 }
                               )
                             ]
                     , bodiesOfWater =
                         Dict.fromList
-                            [ ( "4"
+                            [ ( "1000"
                               , { coordinates = Set.fromList [ ( 2, 2 ) ]
                                 , neighboringCountries = Set.fromList [ "1", "2" ]
                                 }
                               )
                             ]
                     }
+        , test ".updateCountry" <|
+            \_ ->
+                let
+                    country : Main.Country
+                    country =
+                        { coordinates = Set.fromList [ ( 1, 1 ) ]
+                        , neighboringBodiesOfWater = Set.fromList [ "1001" ]
+                        , neighboringCountries = Set.fromList [ "5" ]
+                        }
 
+                    rawGameMap =
+                        Dict.fromList
+                            [ ( ( 0, 0 ), "3" )
+                            , ( ( 0, 1 ), "1" )
+                            , ( ( 0, 2 ), "1" )
+                            , ( ( 1, 0 ), "2" )
+                            , ( ( 1, 1 ), "1000" )
+                            , ( ( 1, 2 ), "1" )
+                            , ( ( 2, 0 ), "4" )
+                            , ( ( 2, 1 ), "2" )
+                            , ( ( 2, 2 ), "1002" )
+                            ]
+                in
+                Expect.equal
+                    (Main.updateCountry "1" country ( 0, 1 ) ( 2, 2 ) rawGameMap)
+                    { coordinates = Set.fromList [ ( 1, 1 ), ( 0, 1 ) ]
+                    , neighboringBodiesOfWater = Set.fromList [ "1001", "1000" ]
+                    , neighboringCountries = Set.fromList [ "3", "5" ]
+                    }
+
+        -- updateCountry : Country -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Country
         -- , test ".getEdges 1x1 1 scale" <|
         --     \_ ->
         --         Expect.equal
