@@ -16,23 +16,6 @@ import Set
 
 
 ---- MODEL ----
--- type alias Area =
---     { id : String
---     , coordinates : Set.Set ( Int, Int )
---     -- , neighborIds : Set.Set String
---     -- , neighborCountries : Set.Set String
---     -- , neighborBodiesOfWater : Set.Set String
---     }
--- type alias Country =
---     { area : Area
---     }
--- type alias Water =
---     { area : Area
---     }
--- type alias GameMap =
---     { countries : Dict.Dict String Country
---     , water : List Water
---     }
 
 
 type alias Area =
@@ -62,14 +45,6 @@ type alias RawGameMap =
     Dict.Dict ( Int, Int ) String
 
 
-type alias ParsingArea =
-    { id : String
-    , coordinates : Set.Set ( Int, Int )
-
-    -- , neighborIds : Set.Set String
-    }
-
-
 type alias PlayerCountry =
     { countryId : String
     , population : Int
@@ -78,7 +53,7 @@ type alias PlayerCountry =
 
 numberOfPlayers : Int
 numberOfPlayers =
-    6
+    4
 
 
 troopsPerCountry : Int
@@ -92,41 +67,33 @@ defaultScale =
 
 
 type alias Model =
-    { lastClickedAreaId : String
-    , currentPlayerTurn : Int
+    { currentPlayerTurn : PlayerTurn
     , map : GameMap
     , players : Dict.Dict Int Player
+    , error : Maybe String
     }
+
+
+
+-- type GameStage = PlacingCapitals {}
+
+
+type PlayerTurn
+    = PlayerTurn Int PlayerTurnStage
+
+
+type PlayerTurnStage
+    = CapitolPlacement
+    | TroopPlacement
+    | AttackAnnexOrPort
+    | TroopMovement
 
 
 type alias Player =
-    { id : Int
+    { name : String
     , countries : Dict.Dict String PlayerCountry
+    , capitolId : Maybe String
     }
-
-
-
--- playMap : ParsedGameMap -> GameMap
--- playMap parsedGameMap =
---     { countries =
---         parsedGameMap.countries
---             |> Dict.map
---                 (\_ area ->
---                     { area = area
---                     }
---                 )
---     , water =
---         parsedGameMap.water
---             |> Dict.toList
---             |> List.map
---                 (\( _, area ) ->
---                     { area = area }
---                 )
---     }
--- parsingArea.coordinates
---     |> Set.foldl (\coordinate ->
---     )
---     Set.empty
 
 
 main : Program () Model Msg
@@ -141,8 +108,7 @@ main =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { lastClickedAreaId = ""
-      , map = parseMap Maps.Big.map
+    ( { map = parseMap Maps.Big.map
 
       --   , map = parseMap mapFile |> playMap
       , players =
@@ -150,13 +116,15 @@ init =
                 |> List.map
                     (\playerId ->
                         ( playerId
-                        , { id = playerId
-                          , countries = Dict.empty
+                        , { countries = Dict.empty
+                          , name = "Player " ++ String.fromInt playerId
+                          , capitolId = Nothing
                           }
                         )
                     )
                 |> Dict.fromList
-      , currentPlayerTurn = 1
+      , currentPlayerTurn = PlayerTurn 1 CapitolPlacement
+      , error = Nothing
       }
     , Cmd.none
     )
@@ -177,14 +145,16 @@ update msg model =
         CountryClicked id ->
             case Dict.get id model.map.countries of
                 Just country ->
-                    case Dict.get model.currentPlayerTurn model.players of
-                        Just currentPlayer ->
-                            ( handleCountryClickFromPlayer id country currentPlayer model
-                            , Cmd.none
-                            )
+                    case model.currentPlayerTurn of
+                        PlayerTurn playerId playerTurnStage ->
+                            case Dict.get playerId model.players of
+                                Just currentPlayer ->
+                                    ( handleCountryClickFromPlayer id country model
+                                    , Cmd.none
+                                    )
 
-                        Nothing ->
-                            ( model, Cmd.none )
+                                Nothing ->
+                                    ( model, Cmd.none )
 
                 Nothing ->
                     ( model, Cmd.none )
@@ -193,41 +163,87 @@ update msg model =
             ( model, Cmd.none )
 
 
-handleCountryClickFromPlayer : String -> Country -> Player -> Model -> Model
-handleCountryClickFromPlayer countryId country currentPlayer model =
-    case getCountryStatus countryId country currentPlayer model.players of
-        OccupiedByCurrentPlayer playerCountry ->
-            let
-                updatedPlayer =
-                    { currentPlayer
-                        | countries =
-                            Dict.insert countryId { playerCountry | population = playerCountry.population + 1 } currentPlayer.countries
-                    }
-            in
-            { model
-                | players = Dict.insert currentPlayer.id updatedPlayer model.players
-                , currentPlayerTurn = nextPlayerTurn numberOfPlayers model.currentPlayerTurn
-            }
+handleCountryClickFromPlayer : String -> Country -> Model -> Model
+handleCountryClickFromPlayer countryId country model =
+    case model.currentPlayerTurn of
+        PlayerTurn playerId playerTurnStage ->
+            case Dict.get playerId model.players of
+                Just currentPlayer ->
+                    case playerTurnStage of
+                        CapitolPlacement ->
+                            case getCountryStatus countryId currentPlayer model.players of
+                                OccupiedByCurrentPlayer _ ->
+                                    { model | error = Just "Error: Somehow you are placing a second capitol" }
 
-        OccupiedByOpponent player playerCountry ->
-            Debug.todo ""
+                                OccupiedByOpponent _ _ ->
+                                    { model | error = Just "You must select an unoccuppied country" }
 
-        Unoccupied ->
-            let
-                updatedPlayer =
-                    { currentPlayer
-                        | countries =
-                            Dict.insert countryId { countryId = countryId, population = 1 } currentPlayer.countries
-                    }
-            in
-            { model
-                | players = Dict.insert currentPlayer.id updatedPlayer model.players
-                , currentPlayerTurn = nextPlayerTurn numberOfPlayers model.currentPlayerTurn
-            }
+                                Unoccupied ->
+                                    let
+                                        updatedPlayer =
+                                            { currentPlayer
+                                                | countries =
+                                                    Dict.insert countryId { countryId = countryId, population = 0 } currentPlayer.countries
+                                            }
+                                    in
+                                    { model
+                                        | players = Dict.insert playerId updatedPlayer model.players
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers
+                                    }
+
+                        TroopPlacement ->
+                            case getCountryStatus countryId currentPlayer model.players of
+                                OccupiedByCurrentPlayer playerCountry ->
+                                    let
+                                        updatedPlayer =
+                                            { currentPlayer
+                                                | countries =
+                                                    Dict.insert countryId { playerCountry | population = playerCountry.population + troopsPerCountry } currentPlayer.countries
+                                            }
+                                    in
+                                    { model
+                                        | players = Dict.insert playerId updatedPlayer model.players
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers
+                                        , error = Nothing
+                                    }
+
+                                OccupiedByOpponent _ _ ->
+                                    { model | error = Just "You must put troops in your own country" }
+
+                                Unoccupied ->
+                                    { model | error = Just "You must put troops in your own country" }
+
+                        AttackAnnexOrPort ->
+                            case getCountryStatus countryId currentPlayer model.players of
+                                OccupiedByCurrentPlayer playerCountry ->
+                                    { model | error = Just "TODO: Implement attack", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers }
+
+                                OccupiedByOpponent player playerCountry ->
+                                    { model | error = Just "TODO: Implement attack", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers }
+
+                                Unoccupied ->
+                                    let
+                                        updatedPlayer =
+                                            { currentPlayer
+                                                | countries =
+                                                    Dict.insert countryId { countryId = countryId, population = 0 } currentPlayer.countries
+                                            }
+                                    in
+                                    { model
+                                        | players = Dict.insert playerId updatedPlayer model.players
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers
+                                        , error = Nothing
+                                    }
+
+                        TroopMovement ->
+                            { model | error = Just "TODO: Implement troop movement", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers }
+
+                Nothing ->
+                    model
 
 
-getCountryStatus : String -> Country -> Player -> Dict.Dict Int Player -> CountryStatus
-getCountryStatus countryId country currentPlayer players =
+getCountryStatus : String -> Player -> Dict.Dict Int Player -> CountryStatus
+getCountryStatus countryId currentPlayer players =
     case Dict.get countryId currentPlayer.countries of
         Just playerCountry ->
             OccupiedByCurrentPlayer playerCountry
@@ -259,9 +275,29 @@ getCountryStatus countryId country currentPlayer players =
                     Unoccupied
 
 
-nextPlayerTurn : Int -> Int -> Int
-nextPlayerTurn totalPlayers currentPlayer =
-    remainderBy totalPlayers currentPlayer + 1
+nextPlayerTurn : PlayerTurn -> Int -> PlayerTurn
+nextPlayerTurn (PlayerTurn currentPlayer playerTurnStage) totalPlayers =
+    case playerTurnStage of
+        TroopPlacement ->
+            PlayerTurn currentPlayer AttackAnnexOrPort
+
+        AttackAnnexOrPort ->
+            PlayerTurn currentPlayer TroopMovement
+
+        TroopMovement ->
+            PlayerTurn (remainderBy totalPlayers currentPlayer + 1) TroopPlacement
+
+        CapitolPlacement ->
+            if currentPlayer == totalPlayers then
+                PlayerTurn (remainderBy totalPlayers currentPlayer + 1) TroopPlacement
+
+            else
+                PlayerTurn (remainderBy totalPlayers currentPlayer + 1) CapitolPlacement
+
+
+getCurrentPlayer : PlayerTurn -> Int
+getCurrentPlayer (PlayerTurn currentPlayer _) =
+    currentPlayer
 
 
 type CountryStatus
@@ -277,13 +313,40 @@ type CountryStatus
 view : Model -> Html Msg
 view model =
     Element.layout [ Element.width Element.fill ]
-        (Element.row
+        (Element.column
             [ Element.width Element.fill, Element.centerX ]
-            [ Element.el [ Element.centerX ]
+            ([ Element.el [ Element.centerX ]
                 (renderMap model.players model.map
                     |> Element.html
                 )
-            ]
+             ]
+                ++ (case model.error of
+                        Just error ->
+                            [ Element.text error ]
+
+                        Nothing ->
+                            []
+                   )
+                ++ [ playerTurnStatus model.currentPlayerTurn ]
+            )
+        )
+
+
+playerTurnStatus : PlayerTurn -> Element.Element Msg
+playerTurnStatus (PlayerTurn playerId playerTurnStage) =
+    Element.text
+        (case playerTurnStage of
+            CapitolPlacement ->
+                "Player " ++ String.fromInt playerId ++ " is placing capitol"
+
+            TroopPlacement ->
+                "Player " ++ String.fromInt playerId ++ " is placing troops"
+
+            AttackAnnexOrPort ->
+                "Player " ++ String.fromInt playerId ++ " is attacking, annexing, or building a port"
+
+            TroopMovement ->
+                "Player " ++ String.fromInt playerId ++ " is moving troops"
         )
 
 
@@ -487,56 +550,6 @@ updateBodyOfWater bodyOfWaterId bodyOfWater coordinates mapDimensions rawMap =
     }
 
 
-addNeighborsToBodyOfWater : ( Int, Int ) -> String -> ( Int, Int ) -> RawGameMap -> GameMap -> GameMap
-addNeighborsToBodyOfWater coordinates bodyOfWaterId mapDimensions rawMap gameMap =
-    getNeighborCoordinates coordinates mapDimensions
-        |> Set.foldl
-            (\neighborCoordinate innerGameMap ->
-                case Dict.get neighborCoordinate rawMap of
-                    Just neighborAreaId ->
-                        if isCountry neighborAreaId then
-                            case Dict.get neighborAreaId innerGameMap.bodiesOfWater of
-                                Just country ->
-                                    let
-                                        newBodiesOfWater : Dict.Dict String BodyOfWater
-                                        newBodiesOfWater =
-                                            Dict.insert
-                                                bodyOfWaterId
-                                                { country
-                                                    | neighboringCountries =
-                                                        Set.insert neighborAreaId country.neighboringCountries
-                                                }
-                                                innerGameMap.bodiesOfWater
-                                    in
-                                    { innerGameMap
-                                        | bodiesOfWater = newBodiesOfWater
-                                    }
-
-                                Nothing ->
-                                    let
-                                        newBodiesOfWater : Dict.Dict String BodyOfWater
-                                        newBodiesOfWater =
-                                            Dict.insert
-                                                bodyOfWaterId
-                                                { neighboringCountries = Set.singleton neighborAreaId
-                                                , coordinates = Set.singleton coordinates
-                                                }
-                                                innerGameMap.bodiesOfWater
-                                    in
-                                    { innerGameMap
-                                        | bodiesOfWater = newBodiesOfWater
-                                    }
-
-                        else
-                            innerGameMap
-
-                    -- There shouldn't be water neighboring water
-                    Nothing ->
-                        Debug.log "this shouldn't happen" innerGameMap
-            )
-            gameMap
-
-
 getNeighborCoordinates : ( Int, Int ) -> ( Int, Int ) -> Set.Set ( Int, Int )
 getNeighborCoordinates ( x, y ) ( width, height ) =
     [ ( -1, 0 ), ( 1, 0 ), ( 0, -1 ), ( 0, 1 ) ]
@@ -558,110 +571,6 @@ getNeighborCoordinates ( x, y ) ( width, height ) =
             Set.empty
 
 
-
--- let
---     upsideDownMap : ParsedGameMap
---     upsideDownMap =
---         String.split "\n" text
---             |> List.foldl
---                 (\row result ->
---                     case result of
---                         ( parsedGameMap, rowIndex ) ->
---                             if rowIndex /= -1 then
---                                 if row /= "{Country Names}" then
---                                     ( parseCountryRow row rowIndex parsedGameMap, rowIndex + 1 )
---                                 else
---                                     ( parsedGameMap, -1 )
---                             else if row == "{Map}" then
---                                 ( parsedGameMap, 0 )
---                             else
---                                 ( parsedGameMap, -1 )
---                 )
---                 ( { countries = Dict.empty, water = Dict.empty }, -1 )
---             |> Tuple.first
---     mapHeight : Int
---     mapHeight =
---         Dict.toList upsideDownMap.countries
---             |> List.map
---                 (\( _, area ) ->
---                     Set.toList area.coordinates
---                 )
---             |> List.concat
---             |> List.foldl
---                 (\( _, y ) maxHeight ->
---                     if y > maxHeight then
---                         y
---                     else
---                         maxHeight
---                 )
---                 0
---     countries : Dict.Dict String ParsingArea
---     countries =
---         Dict.toList upsideDownMap.countries
---             |> List.map
---                 (\( id, area ) ->
---                     ( id
---                     , { area
---                         | coordinates =
---                             area.coordinates
---                                 |> Set.toList
---                                 |> List.map (\( x, y ) -> ( x, mapHeight - y ))
---                                 |> Set.fromList
---                       }
---                     )
---                 )
---             |> Dict.fromList
---     water : Dict.Dict String ParsingArea
---     water =
---         Dict.toList upsideDownMap.water
---             |> List.map
---                 (\( id, area ) ->
---                     ( id
---                     , { area
---                         | coordinates =
---                             area.coordinates
---                                 |> Set.toList
---                                 |> List.map (\( x, y ) -> ( x, mapHeight - y ))
---                                 |> Set.fromList
---                       }
---                     )
---                 )
---             |> Dict.fromList
--- in
--- { countries = countries, water = water }
--- This is dumb. Clean it up someday.
--- parseCountryRow : String -> Int -> GameMap -> GameMap
--- parseCountryRow row rowIndex parsedGameMap =
---     String.split "." row
---         |> List.reverse
---         |> List.drop 1
---         |> List.reverse
---         |> List.indexedMap Tuple.pair
---         |> List.foldr
---             (\( columnIndex, id ) result ->
---                 if isCountry id then
---                     { result
---                         | countries =
---                             case Dict.get id result.countries of
---                                 Just area ->
---                                     Dict.insert id { area | coordinates = Set.insert ( columnIndex, rowIndex ) area.coordinates } result.countries
---                                 Nothing ->
---                                     Dict.insert id { id = id, coordinates = Set.singleton ( columnIndex, rowIndex ) } result.countries
---                     }
---                 else
---                     -- Water
---                     { result
---                         | water =
---                             case Dict.get id result.water of
---                                 Just area ->
---                                     Dict.insert id { area | coordinates = Set.insert ( columnIndex, rowIndex ) area.coordinates } result.water
---                                 Nothing ->
---                                     Dict.insert id { id = id, coordinates = Set.singleton ( columnIndex, rowIndex ) } result.water
---                     }
---             )
---             parsedGameMap
-
-
 isCountry : String -> Bool
 isCountry areaId =
     String.length areaId < 4
@@ -680,8 +589,8 @@ renderMap players map =
                 |> Dict.map
                     (\countryId country ->
                         case findCountryOwner players countryId of
-                            Just ( player, playerCountry ) ->
-                                case player.id of
+                            Just ( playerId, player, playerCountry ) ->
+                                case playerId of
                                     1 ->
                                         renderCountry countryId country.coordinates Color.lightRed playerCountry.population
 
@@ -718,19 +627,18 @@ renderMap players map =
         |> Collage.Render.svg
 
 
-findCountryOwner : Dict.Dict Int Player -> String -> Maybe ( Player, PlayerCountry )
+findCountryOwner : Dict.Dict Int Player -> String -> Maybe ( Int, Player, PlayerCountry )
 findCountryOwner players countryId =
     players
-        |> Dict.values
-        |> List.foldl
-            (\player result ->
+        |> Dict.foldl
+            (\playerId player result ->
                 case result of
                     Just _ ->
                         result
 
                     Nothing ->
                         Dict.get countryId player.countries
-                            |> Maybe.map (\playerCountry -> ( player, playerCountry ))
+                            |> Maybe.map (\playerCountry -> ( playerId, player, playerCountry ))
             )
             Nothing
 
@@ -768,8 +676,15 @@ renderTroopCount area troopCount =
                             |> List.head
                             |> Maybe.withDefault 0
                     )
+
+        troopCountDisplay =
+            if troopCount > 0 then
+                String.fromInt troopCount
+
+            else
+                ""
     in
-    Collage.Text.fromString (String.fromInt troopCount)
+    Collage.Text.fromString troopCountDisplay
         |> Collage.Text.color Color.black
         |> Collage.Text.size Collage.Text.small
         |> Collage.rendered
