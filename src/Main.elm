@@ -25,7 +25,7 @@ numberOfPlayers =
 
 troopsPerCountryPerTurn : Int
 troopsPerCountryPerTurn =
-    3
+    1
 
 
 defaultScale : Int
@@ -175,7 +175,7 @@ handleCountryClickFromPlayer countryId country model =
                                 OccupiedByCurrentPlayer _ ->
                                     { model | error = Just "Error: Somehow you are placing a second capitol" }
 
-                                OccupiedByOpponent _ _ _ _ ->
+                                OccupiedByOpponent _ _ _ ->
                                     { model | error = Just "You must select an unoccuppied country" }
 
                                 Unoccupied ->
@@ -214,7 +214,7 @@ handleCountryClickFromPlayer countryId country model =
                                         , error = Nothing
                                     }
 
-                                OccupiedByOpponent _ _ _ _ ->
+                                OccupiedByOpponent _ _ _ ->
                                     { model | error = Just "You must put troops in your own country" }
 
                                 Unoccupied ->
@@ -228,7 +228,7 @@ handleCountryClickFromPlayer countryId country model =
                                         , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players
                                     }
 
-                                OccupiedByOpponent opponentPlayerId opponentPlayer opponentPlayerCountryId opponentPlayerCountry ->
+                                OccupiedByOpponent opponentPlayerId opponentPlayer opponentPlayerCountry ->
                                     let
                                         ( attackStrength, defenseStrength ) =
                                             country.neighboringCountries
@@ -238,7 +238,7 @@ handleCountryClickFromPlayer countryId country model =
                                                             OccupiedByCurrentPlayer neighboringPlayerCountry ->
                                                                 ( attack + neighboringPlayerCountry.population, defense )
 
-                                                            OccupiedByOpponent neigborPlayerId _ _ neighboringPlayerCountry ->
+                                                            OccupiedByOpponent neigborPlayerId _ neighboringPlayerCountry ->
                                                                 if neigborPlayerId == opponentPlayerId then
                                                                     ( attack, defense + neighboringPlayerCountry.population )
 
@@ -248,7 +248,7 @@ handleCountryClickFromPlayer countryId country model =
                                                             _ ->
                                                                 ( attack, defense )
                                                     )
-                                                    ( 0, 0 )
+                                                    ( 0, opponentPlayerCountry.population )
 
                                         remainingTroops =
                                             opponentPlayerCountry.population + defenseStrength - attackStrength
@@ -261,7 +261,7 @@ handleCountryClickFromPlayer countryId country model =
                                                         | countries =
                                                             opponentPlayer.countries
                                                                 |> Dict.insert
-                                                                    opponentPlayerCountryId
+                                                                    countryId
                                                                     { opponentPlayerCountry | population = remainingTroops }
                                                       }
                                                     , currentPlayer
@@ -270,14 +270,14 @@ handleCountryClickFromPlayer countryId country model =
                                                 else
                                                     ( { opponentPlayer
                                                         | countries =
-                                                            currentPlayer.countries
-                                                                |> Dict.remove opponentPlayerCountryId
+                                                            opponentPlayer.countries
+                                                                |> Dict.remove countryId
                                                       }
                                                     , { currentPlayer
                                                         | countries =
                                                             currentPlayer.countries
                                                                 |> Dict.insert
-                                                                    opponentPlayerCountryId
+                                                                    countryId
                                                                     { population = 0 }
                                                       }
                                                     )
@@ -296,11 +296,6 @@ handleCountryClickFromPlayer countryId country model =
                                     else
                                         { model
                                             | error = Just ("Not enough to attack (" ++ String.fromInt attackStrength ++ " < " ++ String.fromInt defenseStrength ++ ")")
-                                            , currentPlayerTurn =
-                                                nextPlayerTurn model.currentPlayerTurn
-                                                    numberOfPlayers
-                                                    countryId
-                                                    model.players
                                         }
 
                                 Unoccupied ->
@@ -324,7 +319,12 @@ handleCountryClickFromPlayer countryId country model =
                                         }
 
                         TroopMovement ->
-                            { model | currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players }
+                            case getCountryStatus countryId currentPlayer model.players of
+                                OccupiedByCurrentPlayer _ ->
+                                    { model | currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players }
+
+                                _ ->
+                                    { model | error = Just "You must move troops from your own country" }
 
                         TroopMovementFromSelected fromCountryId ->
                             case ( getCountryStatus fromCountryId currentPlayer model.players, getCountryStatus countryId currentPlayer model.players ) of
@@ -405,7 +405,7 @@ getCountryStatus countryId currentPlayer players =
                                 Nothing ->
                                     case Dict.get countryId player.countries of
                                         Just playerCountry ->
-                                            Just (OccupiedByOpponent playerId player countryId playerCountry)
+                                            Just (OccupiedByOpponent playerId player playerCountry)
 
                                         Nothing ->
                                             Nothing
@@ -467,7 +467,7 @@ getCurrentPlayer (PlayerTurn currentPlayer _) =
 
 type CountryStatus
     = Unoccupied
-    | OccupiedByOpponent Int Player String PlayerCountry
+    | OccupiedByOpponent Int Player PlayerCountry
     | OccupiedByCurrentPlayer PlayerCountry
 
 
@@ -858,7 +858,7 @@ renderTroopCount area troopCount =
     in
     Collage.Text.fromString troopCountDisplay
         |> Collage.Text.color Color.black
-        |> Collage.Text.size Collage.Text.small
+        |> Collage.Text.size (defaultScale * 100 // 120)
         |> Collage.rendered
         |> Collage.shift ( (toFloat shiftX + 0.5) * toFloat defaultScale, (toFloat shiftY + 0.5) * toFloat defaultScale )
 
