@@ -20,7 +20,7 @@ import Set
 
 numberOfPlayers : Int
 numberOfPlayers =
-    4
+    2
 
 
 troopsPerCountryPerTurn : Int
@@ -30,7 +30,7 @@ troopsPerCountryPerTurn =
 
 defaultScale : Int
 defaultScale =
-    8
+    12
 
 
 
@@ -61,8 +61,7 @@ type alias RawGameMap =
 
 
 type alias PlayerCountry =
-    { countryId : String
-    , population : Int
+    { population : Int
     }
 
 
@@ -87,6 +86,7 @@ type PlayerTurnStage
     | TroopPlacement Int
     | AttackAnnexOrPort
     | TroopMovement
+    | TroopMovementFromSelected String
 
 
 type alias Player =
@@ -175,7 +175,7 @@ handleCountryClickFromPlayer countryId country model =
                                 OccupiedByCurrentPlayer _ ->
                                     { model | error = Just "Error: Somehow you are placing a second capitol" }
 
-                                OccupiedByOpponent _ _ ->
+                                OccupiedByOpponent _ _ _ _ ->
                                     { model | error = Just "You must select an unoccuppied country" }
 
                                 Unoccupied ->
@@ -183,12 +183,12 @@ handleCountryClickFromPlayer countryId country model =
                                         updatedPlayer =
                                             { currentPlayer
                                                 | countries =
-                                                    Dict.insert countryId { countryId = countryId, population = 0 } currentPlayer.countries
+                                                    Dict.insert countryId { population = 0 } currentPlayer.countries
                                             }
                                     in
                                     { model
                                         | players = Dict.insert playerId updatedPlayer model.players
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers model.players
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players
                                         , error = Nothing
                                     }
 
@@ -199,7 +199,10 @@ handleCountryClickFromPlayer countryId country model =
                                         updatedPlayer =
                                             { currentPlayer
                                                 | countries =
-                                                    Dict.insert countryId { playerCountry | population = playerCountry.population + numberOfTroops } currentPlayer.countries
+                                                    Dict.insert
+                                                        countryId
+                                                        { playerCountry | population = playerCountry.population + numberOfTroops }
+                                                        currentPlayer.countries
                                             }
 
                                         updatedPlayers =
@@ -207,11 +210,11 @@ handleCountryClickFromPlayer countryId country model =
                                     in
                                     { model
                                         | players = updatedPlayers
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers updatedPlayers
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId updatedPlayers
                                         , error = Nothing
                                     }
 
-                                OccupiedByOpponent _ _ ->
+                                OccupiedByOpponent _ _ _ _ ->
                                     { model | error = Just "You must put troops in your own country" }
 
                                 Unoccupied ->
@@ -220,10 +223,85 @@ handleCountryClickFromPlayer countryId country model =
                         AttackAnnexOrPort ->
                             case getCountryStatus countryId currentPlayer model.players of
                                 OccupiedByCurrentPlayer playerCountry ->
-                                    { model | error = Just "TODO: Implement building port", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers model.players }
+                                    { model
+                                        | error = Just "TODO: Implement building port"
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players
+                                    }
 
-                                OccupiedByOpponent player playerCountry ->
-                                    { model | error = Just "TODO: Implement attack", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers model.players }
+                                OccupiedByOpponent opponentPlayerId opponentPlayer opponentPlayerCountryId opponentPlayerCountry ->
+                                    let
+                                        ( attackStrength, defenseStrength ) =
+                                            country.neighboringCountries
+                                                |> Set.foldl
+                                                    (\neighboringCountryId ( attack, defense ) ->
+                                                        case getCountryStatus neighboringCountryId currentPlayer model.players of
+                                                            OccupiedByCurrentPlayer neighboringPlayerCountry ->
+                                                                ( attack + neighboringPlayerCountry.population, defense )
+
+                                                            OccupiedByOpponent neigborPlayerId _ _ neighboringPlayerCountry ->
+                                                                if neigborPlayerId == opponentPlayerId then
+                                                                    ( attack, defense + neighboringPlayerCountry.population )
+
+                                                                else
+                                                                    ( attack, defense )
+
+                                                            _ ->
+                                                                ( attack, defense )
+                                                    )
+                                                    ( 0, 0 )
+
+                                        remainingTroops =
+                                            opponentPlayerCountry.population + defenseStrength - attackStrength
+                                    in
+                                    if attackStrength > defenseStrength then
+                                        let
+                                            ( updatedOpponentPlayer, updatedCurrentPlayer ) =
+                                                if remainingTroops >= 0 then
+                                                    ( { opponentPlayer
+                                                        | countries =
+                                                            opponentPlayer.countries
+                                                                |> Dict.insert
+                                                                    opponentPlayerCountryId
+                                                                    { opponentPlayerCountry | population = remainingTroops }
+                                                      }
+                                                    , currentPlayer
+                                                    )
+
+                                                else
+                                                    ( { opponentPlayer
+                                                        | countries =
+                                                            currentPlayer.countries
+                                                                |> Dict.remove opponentPlayerCountryId
+                                                      }
+                                                    , { currentPlayer
+                                                        | countries =
+                                                            currentPlayer.countries
+                                                                |> Dict.insert
+                                                                    opponentPlayerCountryId
+                                                                    { population = 0 }
+                                                      }
+                                                    )
+
+                                            updatedPlayers =
+                                                model.players
+                                                    |> Dict.insert opponentPlayerId updatedOpponentPlayer
+                                                    |> Dict.insert playerId updatedCurrentPlayer
+                                        in
+                                        { model
+                                            | players = updatedPlayers
+                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId updatedPlayers
+                                            , error = Nothing
+                                        }
+
+                                    else
+                                        { model
+                                            | error = Just ("Not enough to attack (" ++ String.fromInt attackStrength ++ " < " ++ String.fromInt defenseStrength ++ ")")
+                                            , currentPlayerTurn =
+                                                nextPlayerTurn model.currentPlayerTurn
+                                                    numberOfPlayers
+                                                    countryId
+                                                    model.players
+                                        }
 
                                 Unoccupied ->
                                     if canAnnexCountry model.map currentPlayer countryId then
@@ -231,12 +309,12 @@ handleCountryClickFromPlayer countryId country model =
                                             updatedPlayer =
                                                 { currentPlayer
                                                     | countries =
-                                                        Dict.insert countryId { countryId = countryId, population = 0 } currentPlayer.countries
+                                                        Dict.insert countryId { population = 0 } currentPlayer.countries
                                                 }
                                         in
                                         { model
                                             | players = Dict.insert playerId updatedPlayer model.players
-                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers model.players
+                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players
                                             , error = Nothing
                                         }
 
@@ -246,7 +324,35 @@ handleCountryClickFromPlayer countryId country model =
                                         }
 
                         TroopMovement ->
-                            { model | error = Just "TODO: Implement troop movement", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers model.players }
+                            { model | currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players }
+
+                        TroopMovementFromSelected fromCountryId ->
+                            case ( getCountryStatus fromCountryId currentPlayer model.players, getCountryStatus countryId currentPlayer model.players ) of
+                                ( OccupiedByCurrentPlayer playerCountryFrom, OccupiedByCurrentPlayer playerCountryTo ) ->
+                                    let
+                                        updatedPlayer =
+                                            { currentPlayer
+                                                | countries =
+                                                    currentPlayer.countries
+                                                        |> Dict.insert
+                                                            fromCountryId
+                                                            { playerCountryFrom | population = 0 }
+                                                        |> Dict.insert
+                                                            countryId
+                                                            { playerCountryFrom | population = playerCountryFrom.population + playerCountryTo.population }
+                                            }
+
+                                        updatedPlayers =
+                                            Dict.insert playerId updatedPlayer model.players
+                                    in
+                                    { model
+                                        | players = updatedPlayers
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId updatedPlayers
+                                        , error = Nothing
+                                    }
+
+                                _ ->
+                                    { model | error = Just "You must move troops to your own country" }
 
                 Nothing ->
                     model
@@ -290,9 +396,8 @@ getCountryStatus countryId currentPlayer players =
         Nothing ->
             case
                 players
-                    |> Dict.values
-                    |> List.foldl
-                        (\player result ->
+                    |> Dict.foldl
+                        (\playerId player result ->
                             case result of
                                 Just _ ->
                                     result
@@ -300,7 +405,7 @@ getCountryStatus countryId currentPlayer players =
                                 Nothing ->
                                     case Dict.get countryId player.countries of
                                         Just playerCountry ->
-                                            Just (OccupiedByOpponent player playerCountry)
+                                            Just (OccupiedByOpponent playerId player countryId playerCountry)
 
                                         Nothing ->
                                             Nothing
@@ -314,8 +419,8 @@ getCountryStatus countryId currentPlayer players =
                     Unoccupied
 
 
-nextPlayerTurn : PlayerTurn -> Int -> Dict.Dict Int Player -> PlayerTurn
-nextPlayerTurn (PlayerTurn currentPlayer playerTurnStage) totalPlayers players =
+nextPlayerTurn : PlayerTurn -> Int -> String -> Dict.Dict Int Player -> PlayerTurn
+nextPlayerTurn (PlayerTurn currentPlayer playerTurnStage) totalPlayers countryId players =
     case playerTurnStage of
         TroopPlacement _ ->
             PlayerTurn currentPlayer AttackAnnexOrPort
@@ -324,6 +429,9 @@ nextPlayerTurn (PlayerTurn currentPlayer playerTurnStage) totalPlayers players =
             PlayerTurn currentPlayer TroopMovement
 
         TroopMovement ->
+            PlayerTurn currentPlayer (TroopMovementFromSelected countryId)
+
+        TroopMovementFromSelected _ ->
             let
                 nextPlayer =
                     remainderBy totalPlayers currentPlayer + 1
@@ -345,8 +453,12 @@ nextPlayerTurn (PlayerTurn currentPlayer playerTurnStage) totalPlayers players =
 numberOfTroopsToPlace : Int -> Dict.Dict Int Player -> Int
 numberOfTroopsToPlace playerId players =
     case Dict.get playerId players of
-        Just player -> (Dict.size player.countries) * troopsPerCountryPerTurn
-        Nothing -> -1
+        Just player ->
+            Dict.size player.countries * troopsPerCountryPerTurn
+
+        Nothing ->
+            -1
+
 
 getCurrentPlayer : PlayerTurn -> Int
 getCurrentPlayer (PlayerTurn currentPlayer _) =
@@ -355,7 +467,7 @@ getCurrentPlayer (PlayerTurn currentPlayer _) =
 
 type CountryStatus
     = Unoccupied
-    | OccupiedByOpponent Player PlayerCountry
+    | OccupiedByOpponent Int Player String PlayerCountry
     | OccupiedByCurrentPlayer PlayerCountry
 
 
@@ -400,6 +512,9 @@ playerTurnStatus (PlayerTurn playerId playerTurnStage) =
 
             TroopMovement ->
                 "Player " ++ String.fromInt playerId ++ " is moving troops"
+
+            TroopMovementFromSelected fromCountryId ->
+                "Player " ++ String.fromInt playerId ++ " is moving from " ++ fromCountryId
         )
 
 
@@ -559,7 +674,7 @@ updateCountry countryId country coordinates mapDimensions rawMap =
                                     ( countries, bodiesOfWater )
 
                             Nothing ->
-                                Debug.log (Debug.toString neighborCoordinate) ( countries, bodiesOfWater )
+                                ( countries, bodiesOfWater )
                     )
                     ( Set.empty, Set.empty )
     in
@@ -575,26 +690,26 @@ updateCountry countryId country coordinates mapDimensions rawMap =
 updateBodyOfWater : String -> BodyOfWater -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> BodyOfWater
 updateBodyOfWater bodyOfWaterId bodyOfWater coordinates mapDimensions rawMap =
     let
-        ( neighboringCountries, neighboringBodiesOfWater ) =
+        neighboringCountries =
             getNeighborCoordinates coordinates mapDimensions
                 |> Set.foldl
-                    (\neighborCoordinate ( countries, bodiesOfWater ) ->
+                    (\neighborCoordinate countries ->
                         case Dict.get neighborCoordinate rawMap of
                             Just neighborId ->
                                 if neighborId /= bodyOfWaterId then
                                     if isCountry neighborId then
-                                        ( Set.insert neighborId countries, bodiesOfWater )
+                                        Set.insert neighborId countries
 
                                     else
-                                        ( countries, Set.insert neighborId bodiesOfWater )
+                                        countries
 
                                 else
-                                    ( countries, bodiesOfWater )
+                                    countries
 
                             Nothing ->
-                                Debug.log (Debug.toString neighborCoordinate) ( countries, bodiesOfWater )
+                                countries
                     )
-                    ( Set.empty, Set.empty )
+                    Set.empty
     in
     { bodyOfWater
         | neighboringCountries =
