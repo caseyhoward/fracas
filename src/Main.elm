@@ -87,6 +87,7 @@ type PlayerTurnStage
     | AttackAnnexOrPort
     | TroopMovement
     | TroopMovementFromSelected String
+    | Gameover Int
 
 
 type alias Player =
@@ -164,14 +165,14 @@ update msg model =
 
 
 handleCountryClickFromPlayer : String -> Country -> Model -> Model
-handleCountryClickFromPlayer countryId country model =
+handleCountryClickFromPlayer clickedCountryId country model =
     case model.currentPlayerTurn of
         PlayerTurn playerId playerTurnStage ->
             case Dict.get playerId model.players of
                 Just currentPlayer ->
                     case playerTurnStage of
                         CapitolPlacement ->
-                            case getCountryStatus countryId currentPlayer model.players of
+                            case getCountryStatus clickedCountryId currentPlayer model.players of
                                 OccupiedByCurrentPlayer _ ->
                                     { model | error = Just "Error: Somehow you are placing a second capitol" }
 
@@ -183,24 +184,25 @@ handleCountryClickFromPlayer countryId country model =
                                         updatedPlayer =
                                             { currentPlayer
                                                 | countries =
-                                                    Dict.insert countryId { population = 0 } currentPlayer.countries
+                                                    Dict.insert clickedCountryId { population = 0 } currentPlayer.countries
+                                                , capitolId = Just clickedCountryId
                                             }
                                     in
                                     { model
                                         | players = Dict.insert playerId updatedPlayer model.players
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId model.players
                                         , error = Nothing
                                     }
 
                         TroopPlacement numberOfTroops ->
-                            case getCountryStatus countryId currentPlayer model.players of
+                            case getCountryStatus clickedCountryId currentPlayer model.players of
                                 OccupiedByCurrentPlayer playerCountry ->
                                     let
                                         updatedPlayer =
                                             { currentPlayer
                                                 | countries =
                                                     Dict.insert
-                                                        countryId
+                                                        clickedCountryId
                                                         { playerCountry | population = playerCountry.population + numberOfTroops }
                                                         currentPlayer.countries
                                             }
@@ -210,7 +212,7 @@ handleCountryClickFromPlayer countryId country model =
                                     in
                                     { model
                                         | players = updatedPlayers
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId updatedPlayers
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId updatedPlayers
                                         , error = Nothing
                                     }
 
@@ -221,11 +223,11 @@ handleCountryClickFromPlayer countryId country model =
                                     { model | error = Just "You must put troops in your own country" }
 
                         AttackAnnexOrPort ->
-                            case getCountryStatus countryId currentPlayer model.players of
+                            case getCountryStatus clickedCountryId currentPlayer model.players of
                                 OccupiedByCurrentPlayer playerCountry ->
                                     { model
                                         | error = Just "TODO: Implement building port"
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId model.players
                                     }
 
                                 OccupiedByOpponent opponentPlayerId opponentPlayer opponentPlayerCountry ->
@@ -261,23 +263,31 @@ handleCountryClickFromPlayer countryId country model =
                                                         | countries =
                                                             opponentPlayer.countries
                                                                 |> Dict.insert
-                                                                    countryId
+                                                                    clickedCountryId
                                                                     { opponentPlayerCountry | population = remainingTroops }
                                                       }
                                                     , currentPlayer
                                                     )
 
                                                 else
-                                                    ( { opponentPlayer
-                                                        | countries =
-                                                            opponentPlayer.countries
-                                                                |> Dict.remove countryId
-                                                      }
+                                                    ( if isCountryIdCapitol opponentPlayer clickedCountryId then
+                                                        { opponentPlayer
+                                                            | countries =
+                                                                Dict.empty
+                                                            , capitolId = Nothing
+                                                        }
+
+                                                      else
+                                                        { opponentPlayer
+                                                            | countries =
+                                                                opponentPlayer.countries
+                                                                    |> Dict.remove clickedCountryId
+                                                        }
                                                     , { currentPlayer
                                                         | countries =
                                                             currentPlayer.countries
                                                                 |> Dict.insert
-                                                                    countryId
+                                                                    clickedCountryId
                                                                     { population = 0 }
                                                       }
                                                     )
@@ -289,7 +299,7 @@ handleCountryClickFromPlayer countryId country model =
                                         in
                                         { model
                                             | players = updatedPlayers
-                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId updatedPlayers
+                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId updatedPlayers
                                             , error = Nothing
                                         }
 
@@ -299,17 +309,17 @@ handleCountryClickFromPlayer countryId country model =
                                         }
 
                                 Unoccupied ->
-                                    if canAnnexCountry model.map currentPlayer countryId then
+                                    if canAnnexCountry model.map currentPlayer clickedCountryId then
                                         let
                                             updatedPlayer =
                                                 { currentPlayer
                                                     | countries =
-                                                        Dict.insert countryId { population = 0 } currentPlayer.countries
+                                                        Dict.insert clickedCountryId { population = 0 } currentPlayer.countries
                                                 }
                                         in
                                         { model
                                             | players = Dict.insert playerId updatedPlayer model.players
-                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players
+                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId model.players
                                             , error = Nothing
                                         }
 
@@ -319,43 +329,60 @@ handleCountryClickFromPlayer countryId country model =
                                         }
 
                         TroopMovement ->
-                            case getCountryStatus countryId currentPlayer model.players of
+                            case getCountryStatus clickedCountryId currentPlayer model.players of
                                 OccupiedByCurrentPlayer _ ->
-                                    { model | currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId model.players }
+                                    { model | currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId model.players }
 
                                 _ ->
                                     { model | error = Just "You must move troops from your own country" }
 
                         TroopMovementFromSelected fromCountryId ->
-                            case ( getCountryStatus fromCountryId currentPlayer model.players, getCountryStatus countryId currentPlayer model.players ) of
+                            case ( getCountryStatus fromCountryId currentPlayer model.players, getCountryStatus clickedCountryId currentPlayer model.players ) of
                                 ( OccupiedByCurrentPlayer playerCountryFrom, OccupiedByCurrentPlayer playerCountryTo ) ->
-                                    let
-                                        updatedPlayer =
-                                            { currentPlayer
-                                                | countries =
-                                                    currentPlayer.countries
-                                                        |> Dict.insert
-                                                            fromCountryId
-                                                            { playerCountryFrom | population = 0 }
-                                                        |> Dict.insert
-                                                            countryId
-                                                            { playerCountryFrom | population = playerCountryFrom.population + playerCountryTo.population }
-                                            }
+                                    if canMoveTroops model.map currentPlayer fromCountryId clickedCountryId then
+                                        let
+                                            updatedPlayer =
+                                                { currentPlayer
+                                                    | countries =
+                                                        currentPlayer.countries
+                                                            |> Dict.insert
+                                                                fromCountryId
+                                                                { playerCountryFrom | population = 0 }
+                                                            |> Dict.insert
+                                                                clickedCountryId
+                                                                { playerCountryFrom | population = playerCountryFrom.population + playerCountryTo.population }
+                                                }
 
-                                        updatedPlayers =
-                                            Dict.insert playerId updatedPlayer model.players
-                                    in
-                                    { model
-                                        | players = updatedPlayers
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers countryId updatedPlayers
-                                        , error = Nothing
-                                    }
+                                            updatedPlayers =
+                                                Dict.insert playerId updatedPlayer model.players
+                                        in
+                                        { model
+                                            | players = updatedPlayers
+                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId updatedPlayers
+                                            , error = Nothing
+                                        }
+
+                                    else
+                                        { model | error = Just "You can't move troops between those countries" }
 
                                 _ ->
                                     { model | error = Just "You must move troops to your own country" }
 
+                        Gameover _ ->
+                                    { model | error = Nothing }
+
                 Nothing ->
                     model
+
+
+canMoveTroops : GameMap -> Player -> String -> String -> Bool
+canMoveTroops gameMap player fromCountryId toCountryId =
+    case Dict.get fromCountryId gameMap.countries of
+        Just fromCountry ->
+            Set.member toCountryId fromCountry.neighboringCountries
+
+        Nothing ->
+            False
 
 
 canAnnexCountry : GameMap -> Player -> String -> Bool
@@ -426,7 +453,26 @@ nextPlayerTurn (PlayerTurn currentPlayer playerTurnStage) totalPlayers countryId
             PlayerTurn currentPlayer AttackAnnexOrPort
 
         AttackAnnexOrPort ->
-            PlayerTurn currentPlayer TroopMovement
+            let
+                capitolsRemaining =
+                    players
+                        |> Dict.values
+                        |> List.foldl
+                            (\player capitols ->
+                                case player.capitolId of
+                                    Just capitolId ->
+                                        capitolId :: capitols
+
+                                    Nothing ->
+                                        capitols
+                            )
+                            []
+            in
+            if List.length capitolsRemaining == 1 then
+                PlayerTurn -1 (Gameover currentPlayer)
+
+            else
+                PlayerTurn currentPlayer TroopMovement
 
         TroopMovement ->
             PlayerTurn currentPlayer (TroopMovementFromSelected countryId)
@@ -448,6 +494,9 @@ nextPlayerTurn (PlayerTurn currentPlayer playerTurnStage) totalPlayers countryId
 
             else
                 PlayerTurn nextPlayer CapitolPlacement
+
+        Gameover _ ->
+            PlayerTurn -1 playerTurnStage
 
 
 numberOfTroopsToPlace : Int -> Dict.Dict Int Player -> Int
@@ -515,6 +564,9 @@ playerTurnStatus (PlayerTurn playerId playerTurnStage) =
 
             TroopMovementFromSelected fromCountryId ->
                 "Player " ++ String.fromInt playerId ++ " is moving from " ++ fromCountryId
+
+            Gameover winnerPlayerId ->
+                "Player " ++ String.fromInt winnerPlayerId ++ " wins!!!"
         )
 
 
@@ -762,30 +814,34 @@ renderMap players map =
                     (\countryId country ->
                         case findCountryOwner players countryId of
                             Just ( playerId, player, playerCountry ) ->
+                                let
+                                    isCapitol =
+                                        isCountryIdCapitol player countryId
+                                in
                                 case playerId of
                                     1 ->
-                                        renderCountry countryId country.coordinates Color.lightRed playerCountry.population
+                                        renderCountry countryId country.coordinates Color.lightRed playerCountry.population isCapitol
 
                                     2 ->
-                                        renderCountry countryId country.coordinates Color.lightPurple playerCountry.population
+                                        renderCountry countryId country.coordinates Color.lightPurple playerCountry.population isCapitol
 
                                     3 ->
-                                        renderCountry countryId country.coordinates Color.lightYellow playerCountry.population
+                                        renderCountry countryId country.coordinates Color.lightYellow playerCountry.population isCapitol
 
                                     4 ->
-                                        renderCountry countryId country.coordinates Color.lightGreen playerCountry.population
+                                        renderCountry countryId country.coordinates Color.lightGreen playerCountry.population isCapitol
 
                                     5 ->
-                                        renderCountry countryId country.coordinates Color.lightOrange playerCountry.population
+                                        renderCountry countryId country.coordinates Color.lightOrange playerCountry.population isCapitol
 
                                     6 ->
-                                        renderCountry countryId country.coordinates Color.brown playerCountry.population
+                                        renderCountry countryId country.coordinates Color.brown playerCountry.population isCapitol
 
                                     _ ->
-                                        renderCountry countryId country.coordinates Color.black playerCountry.population
+                                        renderCountry countryId country.coordinates Color.black playerCountry.population isCapitol
 
                             Nothing ->
-                                renderCountry countryId country.coordinates Color.gray 0
+                                renderCountry countryId country.coordinates Color.gray 0 False
                     )
                 |> Dict.values
 
@@ -793,10 +849,20 @@ renderMap players map =
             map.bodiesOfWater
                 |> Dict.values
                 |> List.map
-                    (\bodyOfWater -> renderArea bodyOfWater.coordinates Color.blue)
+                    (\bodyOfWater -> renderArea bodyOfWater.coordinates Color.blue False)
     in
     Collage.group (countryCollages ++ waterCollages)
         |> Collage.Render.svg
+
+
+isCountryIdCapitol : Player -> String -> Bool
+isCountryIdCapitol player countryId =
+    case player.capitolId of
+        Just capitolId ->
+            capitolId == countryId
+
+        Nothing ->
+            False
 
 
 findCountryOwner : Dict.Dict Int Player -> String -> Maybe ( Int, Player, PlayerCountry )
@@ -815,11 +881,11 @@ findCountryOwner players countryId =
             Nothing
 
 
-renderCountry : String -> Area -> Color.Color -> Int -> Collage.Collage Msg
-renderCountry countryId area color troopCount =
+renderCountry : String -> Area -> Color.Color -> Int -> Bool -> Collage.Collage Msg
+renderCountry countryId area color troopCount isCapitol =
     Collage.group
         [ renderTroopCount area troopCount
-        , renderArea area color
+        , renderArea area color isCapitol
         ]
         |> Collage.Events.onClick (CountryClicked countryId)
 
@@ -827,7 +893,7 @@ renderCountry countryId area color troopCount =
 renderTroopCount : Area -> Int -> Collage.Collage msg
 renderTroopCount area troopCount =
     let
-        ( shiftX, shiftY ) =
+        ( medianX, medianY ) =
             area
                 |> Set.foldl
                     (\( x, y ) ( xs, ys ) ->
@@ -860,18 +926,18 @@ renderTroopCount area troopCount =
         |> Collage.Text.color Color.black
         |> Collage.Text.size (defaultScale * 100 // 120)
         |> Collage.rendered
-        |> Collage.shift ( (toFloat shiftX + 0.5) * toFloat defaultScale, (toFloat shiftY + 0.5) * toFloat defaultScale )
+        |> Collage.shift ( (toFloat medianX + 0.5) * toFloat defaultScale, (toFloat medianY + 0.5) * toFloat defaultScale )
 
 
-renderArea : Area -> Color.Color -> Collage.Collage msg
-renderArea area color =
+renderArea : Area -> Color.Color -> Bool -> Collage.Collage msg
+renderArea area color isCapitol =
     let
         segments =
             getEdgesForArea area defaultScale
                 |> List.map (\(BorderSegment p1 p2) -> Collage.segment p1 p2)
 
         blocks =
-            getBlocksForArea area defaultScale color
+            getBlocksForArea area defaultScale color isCapitol
 
         borderSegments =
             List.map
@@ -893,12 +959,25 @@ getEdgesForArea area scale =
             []
 
 
-getBlocksForArea : Area -> Int -> Color.Color -> List (Collage.Collage msg)
-getBlocksForArea area scale color =
+getBlocksForArea : Area -> Int -> Color.Color -> Bool -> List (Collage.Collage msg)
+getBlocksForArea area scale color isCapitol =
     let
+        capitolDot =
+            if isCapitol then
+                [ Collage.square (toFloat scale / 10.0)
+                    |> Collage.filled (Collage.uniform Color.black)
+                ]
+
+            else
+                []
+
         block =
-            Collage.square (toFloat scale)
-                |> Collage.filled (Collage.uniform color)
+            Collage.group
+                (capitolDot
+                    ++ [ Collage.square (toFloat scale)
+                            |> Collage.filled (Collage.uniform color)
+                       ]
+                )
     in
     area
         |> Set.foldl
