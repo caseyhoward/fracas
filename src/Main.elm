@@ -507,25 +507,40 @@ nextPlayerTurn (PlayerTurn currentPlayer playerTurnStage) totalPlayers countryId
             PlayerTurn currentPlayer (TroopMovementFromSelected countryId)
 
         TroopMovementFromSelected _ ->
-            let
-                nextPlayer =
-                    remainderBy totalPlayers currentPlayer + 1
-            in
-            PlayerTurn nextPlayer (TroopPlacement (numberOfTroopsToPlace nextPlayer players))
+            PlayerTurn (nextPlayerCheckForDeadPlayers currentPlayer players) (TroopPlacement (numberOfTroopsToPlace (nextPlayerCheckForDeadPlayers currentPlayer players) players))
 
         CapitolPlacement ->
             let
-                nextPlayer =
-                    remainderBy totalPlayers currentPlayer + 1
+                nextPlayerId =
+                    remainderBy (Dict.size players) currentPlayer + 1
             in
             if currentPlayer == totalPlayers then
-                PlayerTurn nextPlayer (TroopPlacement (numberOfTroopsToPlace nextPlayer players))
+                PlayerTurn nextPlayerId (TroopPlacement (numberOfTroopsToPlace nextPlayerId players))
 
             else
-                PlayerTurn nextPlayer CapitolPlacement
+                PlayerTurn nextPlayerId CapitolPlacement
 
         Gameover _ ->
             PlayerTurn -1 playerTurnStage
+
+
+nextPlayerCheckForDeadPlayers : Int -> Dict.Dict Int Player -> Int
+nextPlayerCheckForDeadPlayers currentPlayerId players =
+    let
+        nextPlayerId =
+            remainderBy (Dict.size players) currentPlayerId + 1
+    in
+    case Dict.get nextPlayerId players of
+        Just newCurrentPlayer ->
+            case newCurrentPlayer.capitolId of
+                Just _ ->
+                    nextPlayerId
+
+                Nothing ->
+                    nextPlayerCheckForDeadPlayers nextPlayerId players
+
+        Nothing ->
+            currentPlayerId
 
 
 numberOfTroopsToPlace : Int -> Dict.Dict Int Player -> Int
