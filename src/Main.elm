@@ -189,6 +189,7 @@ handleCountryClickFromPlayer countryId country model =
                                     { model
                                         | players = Dict.insert playerId updatedPlayer model.players
                                         , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers
+                                        , error = Nothing
                                     }
 
                         TroopPlacement ->
@@ -222,24 +223,63 @@ handleCountryClickFromPlayer countryId country model =
                                     { model | error = Just "TODO: Implement attack", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers }
 
                                 Unoccupied ->
-                                    let
-                                        updatedPlayer =
-                                            { currentPlayer
-                                                | countries =
-                                                    Dict.insert countryId { countryId = countryId, population = 0 } currentPlayer.countries
-                                            }
-                                    in
-                                    { model
-                                        | players = Dict.insert playerId updatedPlayer model.players
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers
-                                        , error = Nothing
-                                    }
+                                    if canAnnexCountry model.map currentPlayer countryId then
+                                        let
+                                            updatedPlayer =
+                                                { currentPlayer
+                                                    | countries =
+                                                        Dict.insert countryId { countryId = countryId, population = 0 } currentPlayer.countries
+                                                }
+                                        in
+                                        { model
+                                            | players = Dict.insert playerId updatedPlayer model.players
+                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers
+                                            , error = Nothing
+                                        }
+
+                                    else
+                                        { model
+                                            | error = Just "You can't annex that country"
+                                        }
 
                         TroopMovement ->
                             { model | error = Just "TODO: Implement troop movement", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers }
 
                 Nothing ->
                     model
+
+
+
+-- This should return a Result
+
+
+canAnnexCountry : GameMap -> Player -> String -> Bool
+canAnnexCountry gameMap player countryIdToAnnex =
+    let
+        playerCountries : List Country
+        playerCountries =
+            player.countries
+                |> Dict.foldl
+                    (\playerCountryId _ countries ->
+                        case Dict.get playerCountryId gameMap.countries of
+                            Just country ->
+                                country :: countries
+
+                            Nothing ->
+                                countries
+                    )
+                    []
+
+        playerNeighborCountries : List String
+        playerNeighborCountries =
+            playerCountries
+                |> List.map
+                    (\country ->
+                        country.neighboringCountries |> Set.toList
+                    )
+                |> List.concat
+    in
+    List.member countryIdToAnnex playerNeighborCountries
 
 
 getCountryStatus : String -> Player -> Dict.Dict Int Player -> CountryStatus
