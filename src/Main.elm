@@ -8,6 +8,7 @@ import Collage.Text
 import Color
 import Dict
 import Element
+import Element.Input
 import Html exposing (Html)
 import Maps.Big
 import Maps.SuperSimple
@@ -16,11 +17,6 @@ import Set
 
 
 -- Settings
-
-
-numberOfPlayers : Int
-numberOfPlayers =
-    2
 
 
 troopsPerCountryPerTurn : Int
@@ -65,11 +61,21 @@ type alias PlayerCountry =
     }
 
 
-type alias Model =
+type Model
+    = ConfiguringGame ConfigurationAttributes
+    | PlayingGame PlayingGameAttributes
+
+
+type alias ConfigurationAttributes =
+    { numberOfPlayers : String }
+
+
+type alias PlayingGameAttributes =
     { currentPlayerTurn : PlayerTurn
     , map : GameMap
     , players : Dict.Dict Int Player
     , error : Maybe String
+    , numberOfPlayers : Int
     }
 
 
@@ -109,24 +115,7 @@ main =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { map = parseMap Maps.Big.map
-
-      --   , map = parseMap mapFile |> playMap
-      , players =
-            List.range 1 numberOfPlayers
-                |> List.map
-                    (\playerId ->
-                        ( playerId
-                        , { countries = Dict.empty
-                          , name = "Player " ++ String.fromInt playerId
-                          , capitolId = Nothing
-                          }
-                        )
-                    )
-                |> Dict.fromList
-      , currentPlayerTurn = PlayerTurn 1 CapitolPlacement
-      , error = Nothing
-      }
+    ( ConfiguringGame { numberOfPlayers = "6" }
     , Cmd.none
     )
 
@@ -138,33 +127,73 @@ init =
 type Msg
     = NoOp
     | CountryClicked String
+    | NumberOfPlayersChanged String
+    | StartGameClicked
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        CountryClicked id ->
-            case Dict.get id model.map.countries of
-                Just country ->
-                    case model.currentPlayerTurn of
-                        PlayerTurn playerId playerTurnStage ->
-                            case Dict.get playerId model.players of
-                                Just currentPlayer ->
-                                    ( handleCountryClickFromPlayer id country model
-                                    , Cmd.none
+    case model of
+        ConfiguringGame configurationOptions ->
+            case msg of
+                NumberOfPlayersChanged numberOfPlayers ->
+                    ( ConfiguringGame { configurationOptions | numberOfPlayers = numberOfPlayers }, Cmd.none )
+
+                StartGameClicked ->
+                    let
+                        numberOfPlayers =
+                            configurationOptions.numberOfPlayers
+                                |> String.toInt
+                                |> Maybe.withDefault 6
+                    in
+                    ( PlayingGame
+                        { map = parseMap Maps.Big.map
+                        , players =
+                            List.range 1 numberOfPlayers
+                                |> List.map
+                                    (\playerId ->
+                                        ( playerId
+                                        , { countries = Dict.empty
+                                          , name = "Player " ++ String.fromInt playerId
+                                          , capitolId = Nothing
+                                          }
+                                        )
                                     )
+                                |> Dict.fromList
+                        , currentPlayerTurn = PlayerTurn 1 CapitolPlacement
+                        , error = Nothing
+                        , numberOfPlayers = numberOfPlayers
+                        }
+                    , Cmd.none
+                    )
 
-                                Nothing ->
-                                    ( model, Cmd.none )
-
-                Nothing ->
+                _ ->
                     ( model, Cmd.none )
 
-        _ ->
-            ( model, Cmd.none )
+        PlayingGame attributes ->
+            case msg of
+                CountryClicked id ->
+                    case Dict.get id attributes.map.countries of
+                        Just country ->
+                            case attributes.currentPlayerTurn of
+                                PlayerTurn playerId playerTurnStage ->
+                                    case Dict.get playerId attributes.players of
+                                        Just currentPlayer ->
+                                            ( PlayingGame (handleCountryClickFromPlayer id country attributes)
+                                            , Cmd.none
+                                            )
+
+                                        Nothing ->
+                                            ( PlayingGame attributes, Cmd.none )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
-handleCountryClickFromPlayer : String -> Country -> Model -> Model
+handleCountryClickFromPlayer : String -> Country -> PlayingGameAttributes -> PlayingGameAttributes
 handleCountryClickFromPlayer clickedCountryId country model =
     case model.currentPlayerTurn of
         PlayerTurn playerId playerTurnStage ->
@@ -190,7 +219,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                     in
                                     { model
                                         | players = Dict.insert playerId updatedPlayer model.players
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId model.players
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn model.numberOfPlayers clickedCountryId model.players
                                         , error = Nothing
                                     }
 
@@ -212,7 +241,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                     in
                                     { model
                                         | players = updatedPlayers
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId updatedPlayers
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn model.numberOfPlayers clickedCountryId updatedPlayers
                                         , error = Nothing
                                     }
 
@@ -227,7 +256,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                 OccupiedByCurrentPlayer playerCountry ->
                                     { model
                                         | error = Just "TODO: Implement building port"
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId model.players
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn model.numberOfPlayers clickedCountryId model.players
                                     }
 
                                 OccupiedByOpponent opponentPlayerId opponentPlayer opponentPlayerCountry ->
@@ -299,7 +328,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                         in
                                         { model
                                             | players = updatedPlayers
-                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId updatedPlayers
+                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn model.numberOfPlayers clickedCountryId updatedPlayers
                                             , error = Nothing
                                         }
 
@@ -319,7 +348,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                         in
                                         { model
                                             | players = Dict.insert playerId updatedPlayer model.players
-                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId model.players
+                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn model.numberOfPlayers clickedCountryId model.players
                                             , error = Nothing
                                         }
 
@@ -331,7 +360,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                         TroopMovement ->
                             case getCountryStatus clickedCountryId currentPlayer model.players of
                                 OccupiedByCurrentPlayer _ ->
-                                    { model | currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId model.players }
+                                    { model | currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn model.numberOfPlayers clickedCountryId model.players }
 
                                 _ ->
                                     { model | error = Just "You must move troops from your own country" }
@@ -358,7 +387,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                         in
                                         { model
                                             | players = updatedPlayers
-                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers clickedCountryId updatedPlayers
+                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn model.numberOfPlayers clickedCountryId updatedPlayers
                                             , error = Nothing
                                         }
 
@@ -369,7 +398,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                     { model | error = Just "You must move troops to your own country" }
 
                         Gameover _ ->
-                                    { model | error = Nothing }
+                            { model | error = Nothing }
 
                 Nothing ->
                     model
@@ -526,24 +555,50 @@ type CountryStatus
 
 view : Model -> Html Msg
 view model =
-    Element.layout [ Element.width Element.fill ]
-        (Element.column
-            [ Element.width Element.fill, Element.centerX ]
-            ([ Element.el [ Element.centerX ]
-                (renderMap model.players model.map
-                    |> Element.html
+    case model of
+        ConfiguringGame configuringGameSettings ->
+            Element.layout [ Element.width Element.fill ]
+                (Element.column
+                    [ Element.width Element.fill, Element.centerX ]
+                    [ Element.el [ Element.centerX ]
+                        (viewConfiguration configuringGameSettings)
+                    ]
                 )
-             ]
-                ++ (case model.error of
-                        Just error ->
-                            [ Element.text error ]
 
-                        Nothing ->
-                            []
-                   )
-                ++ [ playerTurnStatus model.currentPlayerTurn ]
-            )
-        )
+        PlayingGame attributes ->
+            Element.layout [ Element.width Element.fill ]
+                (Element.column
+                    [ Element.width Element.fill, Element.centerX ]
+                    ([ Element.el [ Element.centerX ]
+                        (renderMap attributes.players attributes.map
+                            |> Element.html
+                        )
+                     ]
+                        ++ (case attributes.error of
+                                Just error ->
+                                    [ Element.text error ]
+
+                                Nothing ->
+                                    []
+                           )
+                        ++ [ playerTurnStatus attributes.currentPlayerTurn ]
+                    )
+                )
+
+
+viewConfiguration : ConfigurationAttributes -> Element.Element Msg
+viewConfiguration configurationAttributes =
+    Element.row
+        [ Element.width Element.fill ]
+        [ Element.Input.text
+            []
+            { onChange = NumberOfPlayersChanged
+            , text = configurationAttributes.numberOfPlayers
+            , placeholder = Nothing
+            , label = Element.Input.labelLeft [] (Element.text "Number of players")
+            }
+        , Element.Input.button [] { onPress = Just StartGameClicked, label = Element.text "Start Game" }
+        ]
 
 
 playerTurnStatus : PlayerTurn -> Element.Element Msg
