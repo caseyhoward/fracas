@@ -15,11 +15,26 @@ import Set
 
 
 
+-- Settings
+
+
+numberOfPlayers : Int
+numberOfPlayers =
+    4
+
+
+troopsPerCountryPerTurn : Int
+troopsPerCountryPerTurn =
+    3
+
+
+defaultScale : Int
+defaultScale =
+    8
+
+
+
 ---- MODEL ----
-
-
-type alias Area =
-    Set.Set ( Int, Int )
 
 
 type alias GameMap =
@@ -51,21 +66,6 @@ type alias PlayerCountry =
     }
 
 
-numberOfPlayers : Int
-numberOfPlayers =
-    4
-
-
-troopsPerCountry : Int
-troopsPerCountry =
-    3
-
-
-defaultScale : Int
-defaultScale =
-    15
-
-
 type alias Model =
     { currentPlayerTurn : PlayerTurn
     , map : GameMap
@@ -84,7 +84,7 @@ type PlayerTurn
 
 type PlayerTurnStage
     = CapitolPlacement
-    | TroopPlacement
+    | TroopPlacement Int
     | AttackAnnexOrPort
     | TroopMovement
 
@@ -188,23 +188,26 @@ handleCountryClickFromPlayer countryId country model =
                                     in
                                     { model
                                         | players = Dict.insert playerId updatedPlayer model.players
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers model.players
                                         , error = Nothing
                                     }
 
-                        TroopPlacement ->
+                        TroopPlacement numberOfTroops ->
                             case getCountryStatus countryId currentPlayer model.players of
                                 OccupiedByCurrentPlayer playerCountry ->
                                     let
                                         updatedPlayer =
                                             { currentPlayer
                                                 | countries =
-                                                    Dict.insert countryId { playerCountry | population = playerCountry.population + troopsPerCountry } currentPlayer.countries
+                                                    Dict.insert countryId { playerCountry | population = playerCountry.population + numberOfTroops } currentPlayer.countries
                                             }
+
+                                        updatedPlayers =
+                                            Dict.insert playerId updatedPlayer model.players
                                     in
                                     { model
-                                        | players = Dict.insert playerId updatedPlayer model.players
-                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers
+                                        | players = updatedPlayers
+                                        , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers updatedPlayers
                                         , error = Nothing
                                     }
 
@@ -217,10 +220,10 @@ handleCountryClickFromPlayer countryId country model =
                         AttackAnnexOrPort ->
                             case getCountryStatus countryId currentPlayer model.players of
                                 OccupiedByCurrentPlayer playerCountry ->
-                                    { model | error = Just "TODO: Implement attack", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers }
+                                    { model | error = Just "TODO: Implement building port", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers model.players }
 
                                 OccupiedByOpponent player playerCountry ->
-                                    { model | error = Just "TODO: Implement attack", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers }
+                                    { model | error = Just "TODO: Implement attack", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers model.players }
 
                                 Unoccupied ->
                                     if canAnnexCountry model.map currentPlayer countryId then
@@ -233,7 +236,7 @@ handleCountryClickFromPlayer countryId country model =
                                         in
                                         { model
                                             | players = Dict.insert playerId updatedPlayer model.players
-                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers
+                                            , currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers model.players
                                             , error = Nothing
                                         }
 
@@ -243,14 +246,10 @@ handleCountryClickFromPlayer countryId country model =
                                         }
 
                         TroopMovement ->
-                            { model | error = Just "TODO: Implement troop movement", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers }
+                            { model | error = Just "TODO: Implement troop movement", currentPlayerTurn = nextPlayerTurn model.currentPlayerTurn numberOfPlayers model.players }
 
                 Nothing ->
                     model
-
-
-
--- This should return a Result
 
 
 canAnnexCountry : GameMap -> Player -> String -> Bool
@@ -315,25 +314,39 @@ getCountryStatus countryId currentPlayer players =
                     Unoccupied
 
 
-nextPlayerTurn : PlayerTurn -> Int -> PlayerTurn
-nextPlayerTurn (PlayerTurn currentPlayer playerTurnStage) totalPlayers =
+nextPlayerTurn : PlayerTurn -> Int -> Dict.Dict Int Player -> PlayerTurn
+nextPlayerTurn (PlayerTurn currentPlayer playerTurnStage) totalPlayers players =
     case playerTurnStage of
-        TroopPlacement ->
+        TroopPlacement _ ->
             PlayerTurn currentPlayer AttackAnnexOrPort
 
         AttackAnnexOrPort ->
             PlayerTurn currentPlayer TroopMovement
 
         TroopMovement ->
-            PlayerTurn (remainderBy totalPlayers currentPlayer + 1) TroopPlacement
+            let
+                nextPlayer =
+                    remainderBy totalPlayers currentPlayer + 1
+            in
+            PlayerTurn nextPlayer (TroopPlacement (numberOfTroopsToPlace nextPlayer players))
 
         CapitolPlacement ->
+            let
+                nextPlayer =
+                    remainderBy totalPlayers currentPlayer + 1
+            in
             if currentPlayer == totalPlayers then
-                PlayerTurn (remainderBy totalPlayers currentPlayer + 1) TroopPlacement
+                PlayerTurn nextPlayer (TroopPlacement (numberOfTroopsToPlace nextPlayer players))
 
             else
-                PlayerTurn (remainderBy totalPlayers currentPlayer + 1) CapitolPlacement
+                PlayerTurn nextPlayer CapitolPlacement
 
+
+numberOfTroopsToPlace : Int -> Dict.Dict Int Player -> Int
+numberOfTroopsToPlace playerId players =
+    case Dict.get playerId players of
+        Just player -> (Dict.size player.countries) * troopsPerCountryPerTurn
+        Nothing -> -1
 
 getCurrentPlayer : PlayerTurn -> Int
 getCurrentPlayer (PlayerTurn currentPlayer _) =
@@ -379,8 +392,8 @@ playerTurnStatus (PlayerTurn playerId playerTurnStage) =
             CapitolPlacement ->
                 "Player " ++ String.fromInt playerId ++ " is placing capitol"
 
-            TroopPlacement ->
-                "Player " ++ String.fromInt playerId ++ " is placing troops"
+            TroopPlacement numberOfTroops ->
+                "Player " ++ String.fromInt playerId ++ " is placing " ++ String.fromInt numberOfTroops ++ " troops"
 
             AttackAnnexOrPort ->
                 "Player " ++ String.fromInt playerId ++ " is attacking, annexing, or building a port"
@@ -618,6 +631,10 @@ isCountry areaId =
 
 
 -- Rendering
+
+
+type alias Area =
+    Set.Set ( Int, Int )
 
 
 renderMap : Dict.Dict Int Player -> GameMap -> Html Msg
