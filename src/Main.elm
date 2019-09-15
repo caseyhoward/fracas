@@ -1,4 +1,4 @@
-module Main exposing (BorderSegment(..), Country, getEdgesForArea, getMapDimensions, getNeighborCoordinates, main, parseMap, parseRawMap, updateCountry)
+module Main exposing (BorderSegment, Country, coordinatesToPolygon, getEdgesForArea, getMapDimensions, getNeighborCoordinates, main, parseMap, parseRawMap, updateCountry)
 
 import Browser
 import Collage
@@ -54,6 +54,9 @@ type alias GameMap =
 
 type alias Country =
     { coordinates : Set.Set ( Int, Int )
+    , polygon : List ( Float, Float )
+    , center : ( Int, Int )
+    , borderEdges : Set.Set BorderSegment
     , neighboringCountries : Set.Set String
     , neighboringBodiesOfWater : Set.Set String
     }
@@ -61,6 +64,8 @@ type alias Country =
 
 type alias BodyOfWater =
     { coordinates : Set.Set ( Int, Int )
+    , borderEdges : Set.Set BorderSegment
+    , polygon : List ( Float, Float )
     , neighboringCountries : Set.Set String
     }
 
@@ -108,9 +113,14 @@ type PlayerTurnStage
 type alias Player =
     { name : String
     , countries : Dict.Dict String PlayerCountry
-    , capitolId : Maybe String
+    , capitolStatus : CapitolStatus
     , color : Color.Color
     }
+
+
+type CapitolStatus
+    = NoCapitol
+    | Capitol String (Set.Set ( Float, Float ))
 
 
 main : Program () Model Msg
@@ -165,7 +175,7 @@ update msg model =
                                         ( playerId
                                         , { countries = Dict.empty
                                           , name = "Player " ++ String.fromInt playerId
-                                          , capitolId = Nothing
+                                          , capitolStatus = NoCapitol
                                           , color = getDefaultColor playerId
                                           }
                                         )
@@ -280,7 +290,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                             { currentPlayer
                                                 | countries =
                                                     Dict.insert clickedCountryId { population = 0 } currentPlayer.countries
-                                                , capitolId = Just clickedCountryId
+                                                , capitolStatus = Capitol clickedCountryId (capitolDotsCoordinates country.coordinates defaultScale)
                                             }
                                     in
                                     { model
@@ -352,7 +362,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                     if attackStrength > defenseStrength then
                                         let
                                             ( updatedOpponentPlayer, updatedCurrentPlayer ) =
-                                                if remainingTroops >= 0 then
+                                                if remainingTroops > 0 then
                                                     ( { opponentPlayer
                                                         | countries =
                                                             opponentPlayer.countries
@@ -368,7 +378,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                                         { opponentPlayer
                                                             | countries =
                                                                 Dict.empty
-                                                            , capitolId = Nothing
+                                                            , capitolStatus = NoCapitol
                                                         }
 
                                                       else
@@ -553,11 +563,11 @@ nextPlayerTurn totalPlayers countryId players (PlayerTurn currentPlayer playerTu
                         |> Dict.values
                         |> List.foldl
                             (\player capitols ->
-                                case player.capitolId of
-                                    Just capitolId ->
+                                case player.capitolStatus of
+                                    Capitol capitolId _ ->
                                         capitolId :: capitols
 
-                                    Nothing ->
+                                    NoCapitol ->
                                         capitols
                             )
                             []
@@ -597,11 +607,11 @@ nextPlayerCheckForDeadPlayers currentPlayerId players =
     in
     case Dict.get nextPlayerId players of
         Just newCurrentPlayer ->
-            case newCurrentPlayer.capitolId of
-                Just _ ->
+            case newCurrentPlayer.capitolStatus of
+                Capitol _ _ ->
                     nextPlayerId
 
-                Nothing ->
+                NoCapitol ->
                     nextPlayerCheckForDeadPlayers nextPlayerId players
 
         Nothing ->
@@ -765,8 +775,8 @@ colorToElementColor color =
     color |> Color.toRgba |> Element.fromRgb
 
 
-type BorderSegment
-    = BorderSegment ( Float, Float ) ( Float, Float )
+type alias BorderSegment =
+    ( ( Float, Float ), ( Float, Float ) )
 
 
 
@@ -861,46 +871,73 @@ parseMap text =
 
         dimensions =
             getMapDimensions map
+
+        gameMapWithoutPolygons =
+            map
+                |> Dict.foldl
+                    (\coordinates areaId gameMap ->
+                        if isCountry areaId then
+                            let
+                                country =
+                                    case Dict.get areaId gameMap.countries of
+                                        Just existingCountry ->
+                                            existingCountry
+
+                                        Nothing ->
+                                            { neighboringCountries = Set.empty
+                                            , neighboringBodiesOfWater = Set.empty
+                                            , coordinates = Set.singleton coordinates
+                                            , polygon = []
+                                            , borderEdges = Set.empty
+                                            , center = ( 0, 0 )
+                                            }
+
+                                updatedCountry =
+                                    country
+                                        |> updateCountry areaId coordinates dimensions map
+                            in
+                            { gameMap | countries = Dict.insert areaId updatedCountry gameMap.countries }
+
+                        else
+                            let
+                                bodyOfWater =
+                                    case Dict.get areaId gameMap.bodiesOfWater of
+                                        Just existingBodyOfWater ->
+                                            existingBodyOfWater
+
+                                        Nothing ->
+                                            { neighboringCountries = Set.empty
+                                            , borderEdges = Set.empty
+                                            , coordinates = Set.singleton coordinates
+                                            , polygon = []
+                                            }
+                            in
+                            { gameMap
+                                | bodiesOfWater = Dict.insert areaId (updateBodyOfWater areaId bodyOfWater coordinates dimensions map) gameMap.bodiesOfWater
+                            }
+                    )
+                    { countries = Dict.empty, bodiesOfWater = Dict.empty }
     in
-    map
-        |> Dict.foldl
-            (\coordinates areaId gameMap ->
-                if isCountry areaId then
-                    let
-                        country =
-                            case Dict.get areaId gameMap.countries of
-                                Just existingCountry ->
-                                    existingCountry
-
-                                Nothing ->
-                                    { neighboringCountries = Set.empty
-                                    , neighboringBodiesOfWater = Set.empty
-                                    , coordinates = Set.singleton coordinates
-                                    }
-
-                        updatedCountry =
-                            country
-                                |> updateCountry areaId coordinates dimensions map
-                    in
-                    { gameMap | countries = Dict.insert areaId updatedCountry gameMap.countries }
-
-                else
-                    let
-                        bodyOfWater =
-                            case Dict.get areaId gameMap.bodiesOfWater of
-                                Just existingBodyOfWater ->
-                                    existingBodyOfWater
-
-                                Nothing ->
-                                    { neighboringCountries = Set.empty
-                                    , coordinates = Set.singleton coordinates
-                                    }
-                    in
-                    { gameMap
-                        | bodiesOfWater = Dict.insert areaId (updateBodyOfWater areaId bodyOfWater coordinates dimensions map) gameMap.bodiesOfWater
+    { countries =
+        gameMapWithoutPolygons.countries
+            |> Dict.map
+                (\_ country ->
+                    { country
+                        | polygon = coordinatesToPolygon country.coordinates
+                        , center = getMedianCoordinates country.coordinates
+                        , borderEdges = getEdgesForArea  country.coordinates defaultScale
                     }
-            )
-            { countries = Dict.empty, bodiesOfWater = Dict.empty }
+                )
+    , bodiesOfWater =
+        gameMapWithoutPolygons.bodiesOfWater
+            |> Dict.map
+                (\_ bodyOfWater ->
+                    { bodyOfWater
+                        | polygon = coordinatesToPolygon bodyOfWater.coordinates
+                        , borderEdges = getEdgesForArea  bodyOfWater.coordinates defaultScale
+                    }
+                )
+    }
 
 
 updateCountry : String -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Country -> Country
@@ -1010,35 +1047,11 @@ renderMap players map =
                 |> Dict.map
                     (\countryId country ->
                         case findCountryOwner players countryId of
-                            Just ( playerId, player, playerCountry ) ->
-                                let
-                                    isCapitol =
-                                        isCountryIdCapitol player countryId
-                                in
-                                case playerId of
-                                    1 ->
-                                        renderCountry countryId country.coordinates Color.lightRed playerCountry.population isCapitol
-
-                                    2 ->
-                                        renderCountry countryId country.coordinates Color.lightPurple playerCountry.population isCapitol
-
-                                    3 ->
-                                        renderCountry countryId country.coordinates Color.lightYellow playerCountry.population isCapitol
-
-                                    4 ->
-                                        renderCountry countryId country.coordinates Color.lightGreen playerCountry.population isCapitol
-
-                                    5 ->
-                                        renderCountry countryId country.coordinates Color.lightOrange playerCountry.population isCapitol
-
-                                    6 ->
-                                        renderCountry countryId country.coordinates Color.brown playerCountry.population isCapitol
-
-                                    _ ->
-                                        renderCountry countryId country.coordinates Color.black playerCountry.population isCapitol
+                            Just ( _, player, playerCountry ) ->
+                                renderCountry countryId country.polygon country.center country.coordinates player.color playerCountry.population player.capitolStatus
 
                             Nothing ->
-                                renderCountry countryId country.coordinates Color.gray 0 False
+                                renderCountry countryId country.polygon country.center country.coordinates Color.gray 0 NoCapitol
                     )
                 |> Dict.values
 
@@ -1046,7 +1059,7 @@ renderMap players map =
             map.bodiesOfWater
                 |> Dict.values
                 |> List.map
-                    (\bodyOfWater -> renderArea bodyOfWater.coordinates Color.blue False)
+                    (\bodyOfWater -> renderArea bodyOfWater.polygon Color.blue NoCapitol "-1")
     in
     Collage.group (countryCollages ++ waterCollages)
         |> Collage.Render.svg
@@ -1054,11 +1067,11 @@ renderMap players map =
 
 isCountryIdCapitol : Player -> String -> Bool
 isCountryIdCapitol player countryId =
-    case player.capitolId of
-        Just capitolId ->
+    case player.capitolStatus of
+        Capitol capitolId _ ->
             capitolId == countryId
 
-        Nothing ->
+        NoCapitol ->
             False
 
 
@@ -1078,41 +1091,18 @@ findCountryOwner players countryId =
             Nothing
 
 
-renderCountry : String -> Area -> Color.Color -> Int -> Bool -> Collage.Collage Msg
-renderCountry countryId area color troopCount isCapitol =
+renderCountry : String -> List ( Float, Float ) -> ( Int, Int ) -> Area -> Color.Color -> Int -> CapitolStatus -> Collage.Collage Msg
+renderCountry countryId polygon medianCoordinates area color troopCount capitolStatus =
     Collage.group
-        [ renderTroopCount area troopCount
-        , renderArea area color isCapitol
+        [ renderTroopCount medianCoordinates troopCount
+        , renderArea polygon color capitolStatus countryId
         ]
         |> Collage.Events.onClick (CountryClicked countryId)
 
 
-renderTroopCount : Area -> Int -> Collage.Collage msg
-renderTroopCount area troopCount =
+renderTroopCount : ( Int, Int ) -> Int -> Collage.Collage msg
+renderTroopCount ( medianX, medianY ) troopCount =
     if troopCount > 0 then
-        let
-            ( medianX, medianY ) =
-                area
-                    |> Set.foldl
-                        (\( x, y ) ( xs, ys ) ->
-                            ( x :: xs, y :: ys )
-                        )
-                        ( [], [] )
-                    |> Tuple.mapBoth List.sort List.sort
-                    |> Tuple.mapBoth
-                        (\xs ->
-                            xs
-                                |> List.drop (Set.size area // 2)
-                                |> List.head
-                                |> Maybe.withDefault 0
-                        )
-                        (\ys ->
-                            ys
-                                |> List.drop (Set.size area // 2)
-                                |> List.head
-                                |> Maybe.withDefault 0
-                        )
-        in
         troopCount
             |> String.fromInt
             |> Collage.Text.fromString
@@ -1125,65 +1115,143 @@ renderTroopCount area troopCount =
         Collage.group []
 
 
-renderArea : Area -> Color.Color -> Bool -> Collage.Collage msg
-renderArea area color isCapitol =
+getMedianCoordinates : Area -> ( Int, Int )
+getMedianCoordinates area =
+    area
+        |> Set.foldl
+            (\( x, y ) ( xs, ys ) ->
+                ( x :: xs, y :: ys )
+            )
+            ( [], [] )
+        |> Tuple.mapBoth List.sort List.sort
+        |> Tuple.mapBoth
+            (\xs ->
+                xs
+                    |> List.drop (Set.size area // 2)
+                    |> List.head
+                    |> Maybe.withDefault 0
+            )
+            (\ys ->
+                ys
+                    |> List.drop (Set.size area // 2)
+                    |> List.head
+                    |> Maybe.withDefault 0
+            )
+
+
+renderArea : List ( Float, Float ) -> Color.Color -> CapitolStatus -> String -> Collage.Collage msg
+renderArea polygonPoints color capitolStatus countryId =
     let
-        segments =
-            getEdgesForArea area defaultScale
-                |> List.map (\(BorderSegment p1 p2) -> Collage.segment p1 p2)
+        scale =
+            defaultScale
 
-        blocks =
-            getBlocksForArea area defaultScale color isCapitol
+        ( capitolDot, capitolDotsCoords ) =
+            case capitolStatus of
+                Capitol capitolId coords ->
+                    if countryId == capitolId then
+                        ( [ Collage.square (toFloat scale / 10.0)
+                                |> Collage.filled (Collage.uniform Color.black)
+                          ]
+                        , coords
+                        )
 
-        borderSegments =
-            List.map
-                (\segment ->
-                    Collage.traced Collage.defaultLineStyle segment
-                )
-                segments
+                    else
+                        ( [], Set.empty )
+
+                NoCapitol ->
+                    ( [], Set.empty )
+
+        renderedDot =
+            capitolDot
+                |> Collage.group
+
+        polygon =
+            Collage.polygon polygonPoints
+
+        polygonBorder =
+            polygon |> Collage.outlined (Collage.solid (toFloat defaultScale / 3.0) (Collage.uniform Color.black))
+
+        polygonFill =
+            polygon
+                |> Collage.filled (Collage.uniform color)
+
+        drawnDots =
+            capitolDotsCoords
+                |> Set.foldl
+                    (\coordinates result ->
+                        (renderedDot |> Collage.shift coordinates) :: result
+                    )
+                    []
     in
-    Collage.group (borderSegments ++ blocks)
+    Collage.group (drawnDots ++ [ polygonFill, polygonBorder ])
 
 
-getEdgesForArea : Area -> Int -> List BorderSegment
+capitolDotsCoordinates : Area -> Int -> Set.Set ( Float, Float )
+capitolDotsCoordinates area scale =
+    area
+        |> Set.map
+            (\( x, y ) ->
+                ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
+            )
+
+
+coordinatesToPolygon : Set.Set ( Int, Int ) -> List ( Float, Float )
+coordinatesToPolygon area =
+    case getEdgesForArea area defaultScale of
+        segments ->
+            case segments |> Set.toList of
+                (point1, point2) :: _ ->
+                    recursiveStuff (Set.remove (point1, point2) segments) point2 [point1, point2]
+                _ -> []
+
+
+
+recursiveStuff : Set.Set BorderSegment -> ( Float, Float ) -> List ( Float, Float ) -> List ( Float, Float )
+recursiveStuff borderSegments currentPoint result =
+    let
+        maybeSegment =
+            borderSegments
+                |> Set.filter
+                    (\( point1, point2 ) -> point1 == currentPoint || point2 == currentPoint)
+                |> Set.toList
+                |> List.head
+    in
+    case maybeSegment of
+        Just ( point1, point2 ) ->
+            let
+                remainingSegments =
+                    borderSegments
+                        |> Set.filter
+                            (\( p1, p2 ) ->
+                                p1 /= currentPoint && p2 /= currentPoint
+                            )
+            in
+            recursiveStuff remainingSegments
+                (if currentPoint == point1 then
+                    point2
+
+                 else
+                    point1
+                )
+                (currentPoint :: result)
+
+        Nothing ->
+            currentPoint :: result
+
+
+
+--should never happen
+-- Should never happen
+
+
+getEdgesForArea : Area -> Int -> Set.Set BorderSegment
 getEdgesForArea area scale =
     area
         |> Set.foldl
             (\coordinate result ->
-                result ++ getEdgesForCountryForCoordinate area coordinate scale
+                Set.union result (getEdgesForCountryForCoordinate area coordinate scale)
             )
-            []
-
-
-getBlocksForArea : Area -> Int -> Color.Color -> Bool -> List (Collage.Collage msg)
-getBlocksForArea area scale color isCapitol =
-    let
-        capitolDot =
-            if isCapitol then
-                [ Collage.square (toFloat scale / 10.0)
-                    |> Collage.filled (Collage.uniform Color.black)
-                ]
-
-            else
-                []
-
-        block =
-            Collage.group
-                (capitolDot
-                    ++ [ Collage.square (toFloat scale)
-                            |> Collage.filled (Collage.uniform color)
-                       ]
-                )
-    in
-    area
-        |> Set.foldl
-            (\( x, y ) result ->
-                (block
-                    |> Collage.shift ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
-                )
-                    :: result
-            )
-            []
+            Set.empty
 
 
 scaleCoordinate : Int -> ( Int, Int ) -> ( Float, Float )
@@ -1193,10 +1261,10 @@ scaleCoordinate scale ( x, y ) =
 
 scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> BorderSegment
 scaleEdge scale ( point1, point2 ) =
-    BorderSegment (scaleCoordinate scale point1) (scaleCoordinate scale point2)
+    ( scaleCoordinate scale point1, scaleCoordinate scale point2 )
 
 
-getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Int -> List BorderSegment
+getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Int -> Set.Set BorderSegment
 getEdgesForCountryForCoordinate allAreas ( x, y ) scaleFactor =
     let
         left =
@@ -1237,6 +1305,6 @@ getEdgesForCountryForCoordinate allAreas ( x, y ) scaleFactor =
                     result
 
                 else
-                    scaleEdge scaleFactor edge :: result
+                    Set.insert (scaleEdge scaleFactor edge) result
             )
-            []
+            Set.empty
