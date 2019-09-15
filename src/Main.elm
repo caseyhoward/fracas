@@ -680,11 +680,12 @@ viewSideBar playingGameAttributes =
             Element.column [ Element.width (Element.px 200), Element.alignTop ]
                 (if canPass playerTurnStage then
                     [ Element.Input.button
-                        (defaultButtonAttributes ++ [ 
-                         Element.width (Element.px 100)
-                        , Element.centerX
-                        , Element.Background.color (Element.rgb255 0 100 100)
-                        ])
+                        (defaultButtonAttributes
+                            ++ [ Element.width (Element.px 100)
+                               , Element.centerX
+                               , Element.Background.color (Element.rgb255 0 100 100)
+                               ]
+                        )
                         { onPress = Just Pass, label = Element.text "Pass" }
                     ]
 
@@ -693,6 +694,7 @@ viewSideBar playingGameAttributes =
                 )
 
 
+defaultButtonAttributes : List (Element.Attribute msg)
 defaultButtonAttributes =
     [ Element.Border.solid
     , Element.Border.width 1
@@ -726,9 +728,9 @@ viewConfiguration configurationAttributes =
             { onChange = NumberOfPlayersChanged
             , text = configurationAttributes.numberOfPlayers
             , placeholder = Nothing
-            , label = Element.Input.labelLeft [Element.centerY] (Element.text "Number of players")
+            , label = Element.Input.labelLeft [ Element.centerY ] (Element.text "Number of players")
             }
-        , Element.Input.button (defaultButtonAttributes ++ [Element.Background.color (Element.rgb255 0 150 0)]) { onPress = Just StartGameClicked, label = Element.text "Start Game" }
+        , Element.Input.button (defaultButtonAttributes ++ [ Element.Background.color (Element.rgb255 0 150 0) ]) { onPress = Just StartGameClicked, label = Element.text "Start Game" }
         ]
 
 
@@ -845,7 +847,7 @@ getMapDimensions map =
                     y + 1
 
                   else
-                    width
+                    height
                 )
             )
             ( 0, 0 )
@@ -875,10 +877,12 @@ parseMap text =
                                     , neighboringBodiesOfWater = Set.empty
                                     , coordinates = Set.singleton coordinates
                                     }
+
+                        updatedCountry =
+                            country
+                                |> updateCountry areaId coordinates dimensions map
                     in
-                    { gameMap
-                        | countries = Dict.insert areaId (updateCountry areaId country coordinates dimensions map) gameMap.countries
-                    }
+                    { gameMap | countries = Dict.insert areaId updatedCountry  gameMap.countries}
 
                 else
                     let
@@ -899,8 +903,8 @@ parseMap text =
             { countries = Dict.empty, bodiesOfWater = Dict.empty }
 
 
-updateCountry : String -> Country -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Country
-updateCountry countryId country coordinates mapDimensions rawMap =
+updateCountry : String -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Country -> Country
+updateCountry countryId coordinates mapDimensions rawMap country =
     let
         ( neighboringCountries, neighboringBodiesOfWater ) =
             getNeighborCoordinates coordinates mapDimensions
