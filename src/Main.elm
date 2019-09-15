@@ -882,7 +882,7 @@ parseMap text =
                             country
                                 |> updateCountry areaId coordinates dimensions map
                     in
-                    { gameMap | countries = Dict.insert areaId updatedCountry  gameMap.countries}
+                    { gameMap | countries = Dict.insert areaId updatedCountry gameMap.countries }
 
                 else
                     let
@@ -1089,41 +1089,40 @@ renderCountry countryId area color troopCount isCapitol =
 
 renderTroopCount : Area -> Int -> Collage.Collage msg
 renderTroopCount area troopCount =
-    let
-        ( medianX, medianY ) =
-            area
-                |> Set.foldl
-                    (\( x, y ) ( xs, ys ) ->
-                        ( x :: xs, y :: ys )
-                    )
-                    ( [], [] )
-                |> Tuple.mapBoth List.sort List.sort
-                |> Tuple.mapBoth
-                    (\xs ->
-                        xs
-                            |> List.drop (Set.size area // 2)
-                            |> List.head
-                            |> Maybe.withDefault 0
-                    )
-                    (\ys ->
-                        ys
-                            |> List.drop (Set.size area // 2)
-                            |> List.head
-                            |> Maybe.withDefault 0
-                    )
+    if troopCount > 0 then
+        let
+            ( medianX, medianY ) =
+                area
+                    |> Set.foldl
+                        (\( x, y ) ( xs, ys ) ->
+                            ( x :: xs, y :: ys )
+                        )
+                        ( [], [] )
+                    |> Tuple.mapBoth List.sort List.sort
+                    |> Tuple.mapBoth
+                        (\xs ->
+                            xs
+                                |> List.drop (Set.size area // 2)
+                                |> List.head
+                                |> Maybe.withDefault 0
+                        )
+                        (\ys ->
+                            ys
+                                |> List.drop (Set.size area // 2)
+                                |> List.head
+                                |> Maybe.withDefault 0
+                        )
+        in
+        troopCount
+            |> String.fromInt
+            |> Collage.Text.fromString
+            |> Collage.Text.color Color.black
+            |> Collage.Text.size (defaultScale * 100 // 120)
+            |> Collage.rendered
+            |> Collage.shift ( (toFloat medianX + 0.5) * toFloat defaultScale, (toFloat medianY + 0.5) * toFloat defaultScale )
 
-        troopCountDisplay =
-            if troopCount > 0 then
-                String.fromInt troopCount
-
-            else
-                ""
-    in
-    Collage.Text.fromString troopCountDisplay
-        |> Collage.Text.color Color.black
-        |> Collage.Text.size (defaultScale * 100 // 120)
-        |> Collage.rendered
-        |> Collage.shift ( (toFloat medianX + 0.5) * toFloat defaultScale, (toFloat medianY + 0.5) * toFloat defaultScale )
+    else
+        Collage.group []
 
 
 renderArea : Area -> Color.Color -> Bool -> Collage.Collage msg
@@ -1179,7 +1178,10 @@ getBlocksForArea area scale color isCapitol =
     area
         |> Set.foldl
             (\( x, y ) result ->
-                (block |> Collage.shift ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )) :: result
+                (block
+                    |> Collage.shift ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
+                )
+                    :: result
             )
             []
 
