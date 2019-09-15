@@ -13,6 +13,7 @@ import Element.Border
 import Element.Input
 import Html exposing (Html)
 import Maps.Big
+import Maps.Simple
 import Maps.SuperSimple
 import Set
 
@@ -31,6 +32,7 @@ defaultScale =
     12
 
 
+defaultPlayerColors : Dict.Dict Int Color.Color
 defaultPlayerColors =
     Dict.fromList
         [ ( 1, Color.lightRed )
@@ -49,6 +51,7 @@ defaultPlayerColors =
 type alias GameMap =
     { countries : Dict.Dict String Country
     , bodiesOfWater : Dict.Dict String BodyOfWater
+    , dimensions : ( Float, Float )
     }
 
 
@@ -200,9 +203,9 @@ update msg model =
                     case Dict.get id attributes.map.countries of
                         Just country ->
                             case attributes.currentPlayerTurn of
-                                PlayerTurn playerId playerTurnStage ->
+                                PlayerTurn playerId _ ->
                                     case Dict.get playerId attributes.players of
-                                        Just currentPlayer ->
+                                        Just _ ->
                                             ( PlayingGame (handleCountryClickFromPlayer id country attributes)
                                             , Cmd.none
                                             )
@@ -215,7 +218,7 @@ update msg model =
 
                 Pass ->
                     case attributes.currentPlayerTurn of
-                        PlayerTurn playerId (TroopMovementFromSelected _) ->
+                        PlayerTurn _ (TroopMovementFromSelected _) ->
                             ( PlayingGame
                                 { attributes
                                     | currentPlayerTurn =
@@ -227,7 +230,7 @@ update msg model =
                             , Cmd.none
                             )
 
-                        PlayerTurn playerId TroopMovement ->
+                        PlayerTurn _ TroopMovement ->
                             ( PlayingGame
                                 { attributes
                                     | currentPlayerTurn =
@@ -253,13 +256,14 @@ update msg model =
                         _ ->
                             ( model, Cmd.none )
 
-                NumberOfPlayersChanged numberOfPlayers ->
+                NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
 
                 StartGameClicked ->
                     ( model, Cmd.none )
 
 
+getDefaultColor : Int -> Color.Color
 getDefaultColor playerId =
     case Dict.get playerId defaultPlayerColors of
         Just color ->
@@ -916,27 +920,39 @@ parseMap text =
                                 | bodiesOfWater = Dict.insert areaId (updateBodyOfWater areaId bodyOfWater coordinates dimensions map) gameMap.bodiesOfWater
                             }
                     )
-                    { countries = Dict.empty, bodiesOfWater = Dict.empty }
+                    { countries = Dict.empty, bodiesOfWater = Dict.empty, dimensions = dimensions }
     in
     { countries =
         gameMapWithoutPolygons.countries
             |> Dict.map
                 (\_ country ->
+                    let
+                        edges =
+                            getEdgesForArea country.coordinates defaultScale
+                    in
                     { country
-                        | polygon = coordinatesToPolygon country.coordinates
+                        | polygon = coordinatesToPolygon edges
                         , center = getMedianCoordinates country.coordinates
-                        , borderEdges = getEdgesForArea  country.coordinates defaultScale
+                        , borderEdges = edges
                     }
                 )
     , bodiesOfWater =
         gameMapWithoutPolygons.bodiesOfWater
             |> Dict.map
                 (\_ bodyOfWater ->
+                    let
+                        edges =
+                            getEdgesForArea bodyOfWater.coordinates defaultScale
+                    in
                     { bodyOfWater
-                        | polygon = coordinatesToPolygon bodyOfWater.coordinates
-                        , borderEdges = getEdgesForArea  bodyOfWater.coordinates defaultScale
+                        | polygon = coordinatesToPolygon edges
+                        , borderEdges = getEdgesForArea bodyOfWater.coordinates defaultScale
                     }
                 )
+    , dimensions =
+        ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * defaultScale |> toFloat
+        , (gameMapWithoutPolygons.dimensions |> Tuple.second) * defaultScale |> toFloat
+        )
     }
 
 
@@ -1048,20 +1064,30 @@ renderMap players map =
                     (\countryId country ->
                         case findCountryOwner players countryId of
                             Just ( _, player, playerCountry ) ->
-                                renderCountry countryId country.polygon country.center country.coordinates player.color playerCountry.population player.capitolStatus
+                                renderCountry countryId country.polygon country.borderEdges country.center country.coordinates player.color playerCountry.population player.capitolStatus
 
                             Nothing ->
-                                renderCountry countryId country.polygon country.center country.coordinates Color.gray 0 NoCapitol
+                                renderCountry countryId country.polygon country.borderEdges country.center country.coordinates Color.gray 0 NoCapitol
                     )
                 |> Dict.values
 
-        waterCollages =
-            map.bodiesOfWater
-                |> Dict.values
-                |> List.map
-                    (\bodyOfWater -> renderArea bodyOfWater.polygon Color.blue NoCapitol "-1")
+        background =
+            Collage.polygon
+                [ ( 0, 0 )
+                , ( 0, map.dimensions |> Tuple.second )
+                , ( map.dimensions |> Tuple.first, map.dimensions |> Tuple.second )
+                , ( map.dimensions |> Tuple.first, 0 )
+                ]
+
+        backgroundWater =
+            background
+                |> Collage.filled (Collage.uniform Color.blue)
+
+        backgroundBorder =
+            background
+                |> Collage.outlined (Collage.solid (toFloat defaultScale / 8.0) (Collage.uniform Color.black))
     in
-    Collage.group (countryCollages ++ waterCollages)
+    Collage.group (countryCollages ++ [ backgroundBorder ,backgroundWater ])
         |> Collage.Render.svg
 
 
@@ -1091,11 +1117,11 @@ findCountryOwner players countryId =
             Nothing
 
 
-renderCountry : String -> List ( Float, Float ) -> ( Int, Int ) -> Area -> Color.Color -> Int -> CapitolStatus -> Collage.Collage Msg
-renderCountry countryId polygon medianCoordinates area color troopCount capitolStatus =
+renderCountry : String -> List ( Float, Float ) -> Set.Set ( ( Float, Float ), ( Float, Float ) ) -> ( Int, Int ) -> Area -> Color.Color -> Int -> CapitolStatus -> Collage.Collage Msg
+renderCountry countryId polygon borderSegments medianCoordinates area color troopCount capitolStatus =
     Collage.group
         [ renderTroopCount medianCoordinates troopCount
-        , renderArea polygon color capitolStatus countryId
+        , renderArea polygon borderSegments color capitolStatus countryId
         ]
         |> Collage.Events.onClick (CountryClicked countryId)
 
@@ -1139,8 +1165,8 @@ getMedianCoordinates area =
             )
 
 
-renderArea : List ( Float, Float ) -> Color.Color -> CapitolStatus -> String -> Collage.Collage msg
-renderArea polygonPoints color capitolStatus countryId =
+renderArea : List ( Float, Float ) -> Set.Set BorderSegment -> Color.Color -> CapitolStatus -> String -> Collage.Collage msg
+renderArea polygonPoints segments color capitolStatus countryId =
     let
         scale =
             defaultScale
@@ -1169,7 +1195,8 @@ renderArea polygonPoints color capitolStatus countryId =
             Collage.polygon polygonPoints
 
         polygonBorder =
-            polygon |> Collage.outlined (Collage.solid (toFloat defaultScale / 3.0) (Collage.uniform Color.black))
+            polygon
+                |> Collage.outlined (Collage.solid (toFloat defaultScale / 8.0) (Collage.uniform Color.black))
 
         polygonFill =
             polygon
@@ -1183,7 +1210,11 @@ renderArea polygonPoints color capitolStatus countryId =
                     )
                     []
     in
-    Collage.group (drawnDots ++ [ polygonFill, polygonBorder ])
+    Collage.group (drawnDots ++ [ polygonBorder, polygonFill ])
+
+
+
+-- Collage.group (drawnDots ++ borderSegments ++ [ polygonFill ])
 
 
 capitolDotsCoordinates : Area -> Int -> Set.Set ( Float, Float )
@@ -1195,15 +1226,14 @@ capitolDotsCoordinates area scale =
             )
 
 
-coordinatesToPolygon : Set.Set ( Int, Int ) -> List ( Float, Float )
-coordinatesToPolygon area =
-    case getEdgesForArea area defaultScale of
-        segments ->
-            case segments |> Set.toList of
-                (point1, point2) :: _ ->
-                    recursiveStuff (Set.remove (point1, point2) segments) point2 [point1, point2]
-                _ -> []
+coordinatesToPolygon : Set.Set ( ( Float, Float ), ( Float, Float ) ) -> List ( Float, Float )
+coordinatesToPolygon edges =
+    case edges |> Set.toList of
+        ( point1, point2 ) :: _ ->
+            recursiveStuff (Set.remove ( point1, point2 ) edges) point2 []
 
+        _ ->
+            []
 
 
 recursiveStuff : Set.Set BorderSegment -> ( Float, Float ) -> List ( Float, Float ) -> List ( Float, Float )
@@ -1221,10 +1251,7 @@ recursiveStuff borderSegments currentPoint result =
             let
                 remainingSegments =
                     borderSegments
-                        |> Set.filter
-                            (\( p1, p2 ) ->
-                                p1 /= currentPoint && p2 /= currentPoint
-                            )
+                        |> Set.remove ( point1, point2 )
             in
             recursiveStuff remainingSegments
                 (if currentPoint == point1 then

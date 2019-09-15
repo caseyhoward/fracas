@@ -119,42 +119,144 @@ all =
             \_ ->
                 Expect.equal
                     (Main.parseMap mapFile)
-                    { countries =
+                    { bodiesOfWater =
                         Dict.fromList
-                            [ ( "1"
-                              , { coordinates = Set.fromList [ ( 0, 1 ), ( 0, 2 ), ( 1, 2 ) ]
-                                , neighboringCountries = Set.fromList [ "2", "3" ]
-                                , neighboringBodiesOfWater = Set.fromList [ "1000" ]
-                                }
-                              )
-                            , ( "2"
-                              , { coordinates = Set.fromList [ ( 1, 0 ), ( 1, 1 ), ( 2, 1 ) ]
-                                , neighboringCountries = Set.fromList [ "1", "3", "4" ]
-                                , neighboringBodiesOfWater = Set.fromList [ "1000" ]
-                                }
-                              )
-                            , ( "3"
-                              , { coordinates = Set.fromList [ ( 0, 0 ) ]
+                            [ ( "1000"
+                              , { borderEdges =
+                                    Set.fromList
+                                        [ ( ( 24, 24 ), ( 24, 36 ) )
+                                        , ( ( 24, 24 ), ( 36, 24 ) )
+                                        , ( ( 24, 36 ), ( 36, 36 ) )
+                                        , ( ( 36, 24 ), ( 36, 36 ) )
+                                        ]
+                                , coordinates = Set.fromList [ ( 2, 2 ) ]
                                 , neighboringCountries = Set.fromList [ "1", "2" ]
-                                , neighboringBodiesOfWater = Set.fromList []
-                                }
-                              )
-                            , ( "4"
-                              , { coordinates = Set.fromList [ ( 2, 0 ) ]
-                                , neighboringCountries = Set.fromList [ "2" ]
-                                , neighboringBodiesOfWater = Set.fromList [ "1000" ]
+                                , polygon =
+                                    [ ( 24, 24 )
+                                    , ( 36, 24 )
+                                    , ( 36, 36 )
+                                    , ( 24, 36 )
+                                    ]
                                 }
                               )
                             ]
-                    , bodiesOfWater =
+                    , countries =
                         Dict.fromList
-                            [ ( "1000"
-                              , { coordinates = Set.fromList [ ( 2, 2 ) ]
+                            [ ( "1"
+                              , { borderEdges =
+                                    Set.fromList
+                                        [ ( ( 0, 12 ), ( 0, 24 ) )
+                                        , ( ( 0, 12 ), ( 12, 12 ) )
+                                        , ( ( 0, 24 ), ( 0, 36 ) )
+                                        , ( ( 0, 36 ), ( 12, 36 ) )
+                                        , ( ( 12, 12 ), ( 12, 24 ) )
+                                        , ( ( 12, 24 ), ( 24, 24 ) )
+                                        , ( ( 12, 36 ), ( 24, 36 ) )
+                                        , ( ( 24, 24 ), ( 24, 36 ) )
+                                        ]
+                                , center = ( 0, 2 )
+                                , coordinates = Set.fromList [ ( 0, 1 ), ( 0, 2 ), ( 1, 2 ) ]
+                                , neighboringBodiesOfWater = Set.fromList [ "1000" ]
+                                , neighboringCountries = Set.fromList [ "2", "3" ]
+                                , polygon =
+                                    [ ( 0, 12 )
+                                    , ( 12, 12 )
+                                    , ( 12, 24 )
+                                    , ( 24, 24 )
+                                    , ( 24, 36 )
+                                    , ( 12, 36 )
+                                    , ( 0, 36 )
+                                    , ( 0, 24 )
+                                    ]
+                                }
+                              )
+                            , ( "2"
+                              , { borderEdges =
+                                    Set.fromList
+                                        [ ( ( 12, 0 ), ( 12, 12 ) )
+                                        , ( ( 12, 0 ), ( 24, 0 ) )
+                                        , ( ( 12, 12 ), ( 12, 24 ) )
+                                        , ( ( 12, 24 ), ( 24, 24 ) )
+                                        , ( ( 24, 0 ), ( 24, 12 ) )
+                                        , ( ( 24, 12 ), ( 36, 12 ) )
+                                        , ( ( 24, 24 ), ( 36, 24 ) )
+                                        , ( ( 36, 12 ), ( 36, 24 ) )
+                                        ]
+                                , center = ( 1, 1 )
+                                , coordinates = Set.fromList [ ( 1, 0 ), ( 1, 1 ), ( 2, 1 ) ]
+                                , neighboringBodiesOfWater = Set.fromList [ "1000" ]
+                                , neighboringCountries = Set.fromList [ "1", "3", "4" ]
+                                , polygon =
+                                    [ ( 12, 0 )
+                                    , ( 24, 0 )
+                                    , ( 24, 12 )
+                                    , ( 36, 12 )
+                                    , ( 36, 24 )
+                                    , ( 24, 24 )
+                                    , ( 12, 24 )
+                                    , ( 12, 12 )
+                                    ]
+                                }
+                              )
+                            , ( "3"
+                              , { borderEdges =
+                                    Set.fromList
+                                        [ ( ( 0, 0 ), ( 0, 12 ) )
+                                        , ( ( 0, 0 ), ( 12, 0 ) )
+                                        , ( ( 0, 12 ), ( 12, 12 ) )
+                                        , ( ( 12, 0 ), ( 12, 12 ) )
+                                        ]
+                                , center = ( 0, 0 )
+                                , coordinates = Set.fromList [ ( 0, 0 ) ]
+                                , neighboringBodiesOfWater = Set.fromList []
                                 , neighboringCountries = Set.fromList [ "1", "2" ]
+                                , polygon =
+                                    [ ( 0, 0 )
+                                    , ( 12, 0 )
+                                    , ( 12, 12 )
+                                    , ( 0, 12 )
+                                    ]
+                                }
+                              )
+                            , ( "4"
+                              , { borderEdges =
+                                    Set.fromList
+                                        [ ( ( 24, 0 ), ( 24, 12 ) )
+                                        , ( ( 24, 0 ), ( 36, 0 ) )
+                                        , ( ( 24, 12 ), ( 36, 12 ) )
+                                        , ( ( 36, 0 ), ( 36, 12 ) )
+                                        ]
+                                , center = ( 2, 0 )
+                                , coordinates = Set.fromList [ ( 2, 0 ) ]
+                                , neighboringBodiesOfWater = Set.fromList []
+                                , neighboringCountries = Set.fromList [ "2" ]
+                                , polygon =
+                                    [ ( 24, 0 )
+                                    , ( 36, 0 )
+                                    , ( 36, 12 )
+                                    , ( 24, 12 )
+                                    ]
                                 }
                               )
                             ]
                     }
+
+        -- 1.1.1000.
+        -- 1.2.2.
+        -- 3.2.4.
+        , test "coordinatesToPolygon" <|
+            \_ ->
+                Expect.equal
+                    (Main.coordinatesToPolygon (Set.fromList [ ( 0, 1 ), ( 0, 2 ), ( 1, 2 ) ]))
+                    [ ( 0, 12 )
+                    , ( 12, 12 )
+                    , ( 12, 24 )
+                    , ( 24, 24 )
+                    , ( 24, 36 )
+                    , ( 12, 36 )
+                    , ( 0, 36 )
+                    , ( 0, 24 )
+                    ]
         , test ".updateCountry" <|
             \_ ->
                 let
@@ -163,6 +265,9 @@ all =
                         { coordinates = Set.fromList [ ( 1, 1 ) ]
                         , neighboringBodiesOfWater = Set.fromList [ "1001" ]
                         , neighboringCountries = Set.fromList [ "5" ]
+                        , polygon = []
+                        , center = ( 0, 0 )
+                        , borderEdges = Set.empty
                         }
 
                     rawGameMap =
@@ -179,53 +284,60 @@ all =
                             ]
                 in
                 Expect.equal
-                    (Main.updateCountry "1" country ( 0, 1 ) ( 2, 2 ) rawGameMap)
+                    (Main.updateCountry "1" ( 0, 1 ) ( 2, 2 ) rawGameMap country)
                     { coordinates = Set.fromList [ ( 1, 1 ), ( 0, 1 ) ]
                     , neighboringBodiesOfWater = Set.fromList [ "1001", "1000" ]
                     , neighboringCountries = Set.fromList [ "3", "5" ]
+                    , polygon = []
+                    , center = ( 0, 0 )
+                    , borderEdges = Set.empty
                     }
-
-        -- updateCountry : Country -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Country
-        -- , test ".getEdges 1x1 1 scale" <|
-        --     \_ ->
-        --         Expect.equal
-        --             (Main.getEdgesForArea
-        --                 (Set.fromList [ ( 0, 1 ) ])
-        --                 1
-        --             ).coordinates
-        --             [ Main.BorderSegment ( 0, 2 ) ( 1, 2 )
-        --             , Main.BorderSegment ( 0, 1 ) ( 1, 1 )
-        --             , Main.BorderSegment ( 1, 1 ) ( 1, 2 )
-        --             , Main.BorderSegment ( 0, 1 ) ( 0, 2 )
-        --             ]
-        -- , test ".getEdges 2x1 1 scale" <|
-        --     \_ ->
-        --         Expect.equal
-        --             (Main.getEdgesForArea
-        --                 (Set.fromList [ ( 0, 1 ), ( 0, 2 ) ])
-        --                 1
-        --             ).coordinates
-        --             [ Main.BorderSegment ( 0, 1 ) ( 1, 1 )
-        --             , Main.BorderSegment ( 1, 1 ) ( 1, 2 )
-        --             , Main.BorderSegment ( 0, 1 ) ( 0, 2 )
-        --             , Main.BorderSegment ( 0, 3 ) ( 1, 3 )
-        --             , Main.BorderSegment ( 1, 2 ) ( 1, 3 )
-        --             , Main.BorderSegment ( 0, 2 ) ( 0, 3 )
-        --             ]
-        -- , test ".getEdges" <|
-        --     \_ ->
-        --         Expect.equal
-        --             (Main.getEdgesForArea
-        --                 (Set.fromList [ ( 0, 1 ), ( 0, 2 ), ( 1, 1 ) ])
-        --                 10
-        --             ).coordinates
-        --             [ Main.BorderSegment ( 0, 10 ) ( 10, 10 )
-        --             , Main.BorderSegment ( 0, 10 ) ( 0, 20 )
-        --             , Main.BorderSegment ( 0, 30 ) ( 10, 30 )
-        --             , Main.BorderSegment ( 10, 20 ) ( 10, 30 )
-        --             , Main.BorderSegment ( 0, 20 ) ( 0, 30 )
-        --             , Main.BorderSegment ( 10, 20 ) ( 20, 20 )
-        --             , Main.BorderSegment ( 10, 10 ) ( 20, 10 )
-        --             , Main.BorderSegment ( 20, 10 ) ( 20, 20 )
-        --             ]
+        , test ".getEdges 1x1 1 scale" <|
+            \_ ->
+                Expect.equal
+                    (Main.getEdgesForArea
+                        (Set.fromList [ ( 0, 1 ) ])
+                        1
+                    )
+                    (Set.fromList
+                        [ ( ( 0, 2 ), ( 1, 2 ) )
+                        , ( ( 0, 1 ), ( 1, 1 ) )
+                        , ( ( 1, 1 ), ( 1, 2 ) )
+                        , ( ( 0, 1 ), ( 0, 2 ) )
+                        ]
+                    )
+        , test ".getEdges 2x1 1 scale" <|
+            \_ ->
+                Expect.equal
+                    (Main.getEdgesForArea
+                        (Set.fromList [ ( 0, 1 ), ( 0, 2 ) ])
+                        1
+                    )
+                    (Set.fromList
+                        [ ( ( 0, 1 ), ( 1, 1 ) )
+                        , ( ( 1, 1 ), ( 1, 2 ) )
+                        , ( ( 0, 1 ), ( 0, 2 ) )
+                        , ( ( 0, 3 ), ( 1, 3 ) )
+                        , ( ( 1, 2 ), ( 1, 3 ) )
+                        , ( ( 0, 2 ), ( 0, 3 ) )
+                        ]
+                    )
+        , test ".getEdges" <|
+            \_ ->
+                Expect.equal
+                    (Main.getEdgesForArea
+                        (Set.fromList [ ( 0, 1 ), ( 0, 2 ), ( 1, 1 ) ])
+                        10
+                    )
+                    (Set.fromList
+                        [ ( ( 0, 10 ), ( 10, 10 ) )
+                        , ( ( 0, 10 ), ( 0, 20 ) )
+                        , ( ( 0, 30 ), ( 10, 30 ) )
+                        , ( ( 10, 20 ), ( 10, 30 ) )
+                        , ( ( 0, 20 ), ( 0, 30 ) )
+                        , ( ( 10, 20 ), ( 20, 20 ) )
+                        , ( ( 10, 10 ), ( 20, 10 ) )
+                        , ( ( 20, 10 ), ( 20, 20 ) )
+                        ]
+                    )
         ]
