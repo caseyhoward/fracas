@@ -430,7 +430,7 @@ isCountryReachableFromOtherCountry gameMap fromCountryId toCountryId =
 
 
 attackAnnexOrPort : String -> Country -> Int -> Player -> PlayingGameAttributes -> PlayingGameAttributes
-attackAnnexOrPort clickedCountryId clickedCountry playerId currentPlayer playingGameAttributes =
+attackAnnexOrPort clickedCountryId clickedCountry currentPlayerId currentPlayer playingGameAttributes =
     case getCountryStatus clickedCountryId currentPlayer playingGameAttributes.players of
         OccupiedByCurrentPlayer _ ->
             { playingGameAttributes
@@ -438,31 +438,43 @@ attackAnnexOrPort clickedCountryId clickedCountry playerId currentPlayer playing
             }
 
         OccupiedByOpponent opponentPlayerId opponentPlayer opponentPlayerCountry ->
-            attemptToAttackCountry playerId currentPlayer opponentPlayerId opponentPlayer opponentPlayerCountry clickedCountryId clickedCountry playingGameAttributes
+            attemptToAttackCountry currentPlayerId currentPlayer opponentPlayerId opponentPlayer opponentPlayerCountry clickedCountryId clickedCountry playingGameAttributes
 
         Unoccupied ->
-            if canAnnexCountry playingGameAttributes.map currentPlayer clickedCountryId then
-                let
-                    updatedPlayer =
-                        { currentPlayer
-                            | countries =
-                                Dict.insert clickedCountryId { troopCount = 0 } currentPlayer.countries
-                        }
-                in
-                { playingGameAttributes
-                    | players = Dict.insert playerId updatedPlayer playingGameAttributes.players
-                    , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players playingGameAttributes.currentPlayerTurn
-                    , error = Nothing
+            attemptToAnnexCountry currentPlayerId currentPlayer clickedCountryId playingGameAttributes
+
+
+attemptToAnnexCountry : Int -> Player -> String -> PlayingGameAttributes -> PlayingGameAttributes
+attemptToAnnexCountry currentPlayerId currentPlayer clickedCountryId playingGameAttributes =
+    if canAnnexCountry playingGameAttributes.map currentPlayer clickedCountryId then
+        let
+            updatedPlayer =
+                { currentPlayer
+                    | countries =
+                        Dict.insert clickedCountryId { troopCount = 0 } currentPlayer.countries
                 }
+        in
+        { playingGameAttributes
+            | players = Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
+            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players playingGameAttributes.currentPlayerTurn
+            , error = Nothing
+        }
 
-            else
-                { playingGameAttributes
-                    | error = Just "You can't annex that country"
-                }
+    else
+        { playingGameAttributes
+            | error = Just "You can't annex that country"
+        }
 
 
-attemptToAttackCountry : Int -> Player -> Int -> Player -> PlayerCountry -> String -> Country -> PlayingGameAttributes -> PlayingGameAttributes
-attemptToAttackCountry currentPlayerId currentPlayer opponentPlayerId opponentPlayer opponentPlayerCountry clickedCountryId clickedCountry playingGameAttributes =
+type AttackResult
+    = CurrentPlayerAcquiresOpponentCountry
+    | OpponentCountryLosesTroops Int
+    | OpponentEliminated
+    | NotEnoughTroopsToAttack Int Int
+
+
+attackResult : Player -> Int -> Player -> PlayerCountry -> String -> Country -> PlayingGameAttributes -> AttackResult
+attackResult currentPlayer opponentPlayerId opponentPlayer opponentPlayerCountry clickedCountryId clickedCountry playingGameAttributes =
     let
         ( attackStrength, defenseStrength ) =
             attackAndDefenseStrength clickedCountry.neighboringCountries currentPlayer playingGameAttributes.players opponentPlayerId opponentPlayerCountry
@@ -471,57 +483,95 @@ attemptToAttackCountry currentPlayerId currentPlayer opponentPlayerId opponentPl
             opponentPlayerCountry.troopCount + defenseStrength - attackStrength
     in
     if attackStrength > defenseStrength then
-        let
-            ( updatedOpponentPlayer, updatedCurrentPlayer ) =
-                if remainingTroops > 0 then
-                    ( { opponentPlayer
-                        | countries =
-                            opponentPlayer.countries
-                                |> Dict.insert
-                                    clickedCountryId
-                                    { opponentPlayerCountry | troopCount = remainingTroops }
-                      }
-                    , currentPlayer
-                    )
+        if remainingTroops > 0 then
+            OpponentCountryLosesTroops remainingTroops
 
-                else
-                    ( if isCountryIdCapitol opponentPlayer clickedCountryId then
-                        { opponentPlayer
-                            | countries =
-                                Dict.empty
-                            , capitolStatus = NoCapitol
-                        }
+        else if isCountryIdCapitol opponentPlayer clickedCountryId then
+            OpponentEliminated
 
-                      else
-                        { opponentPlayer
-                            | countries =
-                                opponentPlayer.countries
-                                    |> Dict.remove clickedCountryId
-                        }
-                    , { currentPlayer
-                        | countries =
-                            currentPlayer.countries
-                                |> Dict.insert
-                                    clickedCountryId
-                                    { troopCount = 0 }
-                      }
-                    )
-
-            updatedPlayers =
-                playingGameAttributes.players
-                    |> Dict.insert opponentPlayerId updatedOpponentPlayer
-                    |> Dict.insert currentPlayerId updatedCurrentPlayer
-        in
-        { playingGameAttributes
-            | players = updatedPlayers
-            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers playingGameAttributes.currentPlayerTurn
-            , error = Nothing
-        }
+        else
+            CurrentPlayerAcquiresOpponentCountry
 
     else
-        { playingGameAttributes
-            | error = Just ("Not enough to attack (" ++ String.fromInt attackStrength ++ " < " ++ String.fromInt defenseStrength ++ ")")
-        }
+        NotEnoughTroopsToAttack attackStrength defenseStrength
+
+
+attemptToAttackCountry : Int -> Player -> Int -> Player -> PlayerCountry -> String -> Country -> PlayingGameAttributes -> PlayingGameAttributes
+attemptToAttackCountry currentPlayerId currentPlayer opponentPlayerId opponentPlayer opponentPlayerCountry clickedCountryId clickedCountry playingGameAttributes =
+    case attackResult currentPlayer opponentPlayerId opponentPlayer opponentPlayerCountry clickedCountryId clickedCountry playingGameAttributes of
+        OpponentCountryLosesTroops remainingTroops ->
+            let
+                updatedPlayers =
+                    playingGameAttributes.players
+                        |> updatePlayerTroopCountForCountry clickedCountryId opponentPlayerId opponentPlayer opponentPlayerCountry remainingTroops
+            in
+            updateForSuccessfulAttack updatedPlayers playingGameAttributes
+
+        OpponentEliminated ->
+            let
+                updatedPlayers =
+                    playingGameAttributes.players
+                        |> takeCountryFromOpponent clickedCountryId currentPlayerId currentPlayer opponentPlayerId opponentPlayer
+                        |> destroyCapitol opponentPlayerId opponentPlayer
+            in
+            updateForSuccessfulAttack updatedPlayers playingGameAttributes
+
+        CurrentPlayerAcquiresOpponentCountry ->
+            let
+                updatedPlayers =
+                    playingGameAttributes.players
+                        |> takeCountryFromOpponent clickedCountryId currentPlayerId currentPlayer opponentPlayerId opponentPlayer
+            in
+            updateForSuccessfulAttack updatedPlayers playingGameAttributes
+
+        NotEnoughTroopsToAttack attackStrength defenseStrength ->
+            { playingGameAttributes
+                | error = Just ("Not enough to attack (" ++ String.fromInt attackStrength ++ " < " ++ String.fromInt defenseStrength ++ ")")
+            }
+
+
+updateForSuccessfulAttack : Dict.Dict Int Player -> PlayingGameAttributes -> PlayingGameAttributes
+updateForSuccessfulAttack players playingGameAttributes =
+    { playingGameAttributes
+        | players = players
+        , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers "-1" players playingGameAttributes.currentPlayerTurn
+        , error = Nothing
+    }
+
+
+takeCountryFromOpponent : String -> Int -> Player -> Int -> Player -> Dict.Dict Int Player -> Dict.Dict Int Player
+takeCountryFromOpponent countryId currentPlayerId currentPlayer opponentPlayerId opponentPlayer players =
+    players
+        |> removePlayerCountry countryId opponentPlayerId opponentPlayer
+        |> updatePlayerTroopCountForCountry countryId currentPlayerId currentPlayer { troopCount = 0 } 0
+
+
+updatePlayerTroopCountForCountry : String -> Int -> Player -> PlayerCountry -> Int -> Dict.Dict Int Player -> Dict.Dict Int Player
+updatePlayerTroopCountForCountry countryId playerId player playerCountry troops players =
+    players
+        |> Dict.insert
+            playerId
+            { player
+                | countries =
+                    player.countries
+                        |> Dict.insert countryId { playerCountry | troopCount = troops }
+            }
+
+
+removePlayerCountry : String -> Int -> Player -> Dict.Dict Int Player -> Dict.Dict Int Player
+removePlayerCountry countryId playerId player players =
+    players
+        |> Dict.insert
+            playerId
+            { player
+                | countries = player.countries |> Dict.remove countryId
+            }
+
+
+destroyCapitol : Int -> Player -> Dict.Dict Int Player -> Dict.Dict Int Player
+destroyCapitol playerId player players =
+    players
+        |> Dict.insert playerId { player | capitolStatus = NoCapitol }
 
 
 attackAndDefenseStrength : Set.Set String -> Player -> Dict.Dict Int Player -> Int -> PlayerCountry -> ( Int, Int )
