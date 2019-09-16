@@ -751,6 +751,10 @@ viewSideBar playingGameAttributes =
                 )
 
 
+-- viewConfigureTroopCount : [Element.Element Msg]
+-- viewConfigureTroopCount =
+
+
 defaultButtonAttributes : List (Element.Attribute msg)
 defaultButtonAttributes =
     [ Element.Border.solid
