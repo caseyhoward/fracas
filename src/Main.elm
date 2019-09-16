@@ -64,9 +64,7 @@ type alias Country =
 
 
 type alias BodyOfWater =
-    { coordinates : Set.Set ( Int, Int )
-    , polygon : List ( Float, Float )
-    , neighboringCountries : Set.Set String
+    { neighboringCountries : Set.Set String
     }
 
 
@@ -199,7 +197,6 @@ update msg model =
                             }
                         , Cmd.none
                         )
-                        -- ( LoadingGame (counter + 1) configurationOptions, Cmd.none )
 
                     else
                         ( LoadingGame (counter + 1) configurationOptions, Cmd.none )
@@ -1059,7 +1056,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
         LoadingGame _ _ ->
-            Time.every 1000 (always LoadGame)
+            Time.every 50 (always LoadGame)
 
         _ ->
             Sub.none
@@ -1192,8 +1189,6 @@ parseMap text =
 
                                         Nothing ->
                                             { neighboringCountries = Set.empty
-                                            , coordinates = Set.singleton coordinates
-                                            , polygon = []
                                             }
                             in
                             { gameMap
@@ -1217,16 +1212,6 @@ parseMap text =
                 )
     , bodiesOfWater =
         gameMapWithoutPolygons.bodiesOfWater
-            |> Dict.map
-                (\_ bodyOfWater ->
-                    let
-                        edges =
-                            getEdgesForArea bodyOfWater.coordinates defaultScale
-                    in
-                    { bodyOfWater
-                        | polygon = coordinatesToPolygon edges
-                    }
-                )
     , dimensions =
         ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * defaultScale |> toFloat
         , (gameMapWithoutPolygons.dimensions |> Tuple.second) * defaultScale |> toFloat
@@ -1294,7 +1279,6 @@ updateBodyOfWater bodyOfWaterId bodyOfWater coordinates mapDimensions rawMap =
     { bodyOfWater
         | neighboringCountries =
             Set.union neighboringCountries bodyOfWater.neighboringCountries
-        , coordinates = Set.insert coordinates bodyOfWater.coordinates
     }
 
 
