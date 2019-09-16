@@ -187,8 +187,7 @@ update msg model =
                                 |> Maybe.withDefault 6
                     in
                     if counter > 0 then
-                        ( 
-                            PlayingGame
+                        ( PlayingGame
                             { map = parseMap Maps.Big.map
                             , players =
                                 List.range 1 numberOfPlayers
@@ -196,10 +195,10 @@ update msg model =
                                         (\playerId ->
                                             ( playerId
                                             , { countries = Dict.empty
-                                            , name = "Player " ++ String.fromInt playerId
-                                            , capitolStatus = NoCapitol
-                                            , color = getDefaultColor playerId
-                                            }
+                                              , name = "Player " ++ String.fromInt playerId
+                                              , capitolStatus = NoCapitol
+                                              , color = getDefaultColor playerId
+                                              }
                                             )
                                         )
                                     |> Dict.fromList
@@ -209,7 +208,10 @@ update msg model =
                             }
                         , Cmd.none
                         )
-                    else (LoadingGame (counter + 1) configurationOptions, Cmd.none)
+                        -- ( LoadingGame (counter + 1) configurationOptions, Cmd.none )
+
+                    else
+                        ( LoadingGame (counter + 1) configurationOptions, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -686,8 +688,14 @@ view model =
                     ]
                 )
 
-        LoadingGame counter _ ->
-            Element.text ("Loading " ++ String.fromInt counter) |> Element.layout []
+        LoadingGame _ _ ->
+            Element.layout []
+                (Element.column [ Element.width Element.fill, Element.height Element.fill ]
+                    [(Element.image
+                        [ Element.centerX, Element.centerY ]
+                        { src = "/loading.gif", description = "Loading" }
+                    ), Element.text "Loading"]
+                )
 
         PlayingGame attributes ->
             Element.layout [ Element.width Element.fill ]
@@ -1376,7 +1384,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
         LoadingGame _ _ ->
-            Time.every 0 (always LoadGame)
+            Time.every 1000 (always LoadGame)
 
         _ ->
             Sub.none
