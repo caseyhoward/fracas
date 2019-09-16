@@ -79,7 +79,7 @@ type alias RawGameMap =
 
 
 type alias PlayerCountry =
-    { population : Int
+    { troopCount : Int
     }
 
 
@@ -315,7 +315,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                         updatedPlayer =
                                             { currentPlayer
                                                 | countries =
-                                                    Dict.insert clickedCountryId { population = 0 } currentPlayer.countries
+                                                    Dict.insert clickedCountryId { troopCount = 0 } currentPlayer.countries
                                                 , capitolStatus = Capitol clickedCountryId (capitolDotsCoordinates country.coordinates defaultScale)
                                             }
                                     in
@@ -334,7 +334,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                                 | countries =
                                                     Dict.insert
                                                         clickedCountryId
-                                                        { playerCountry | population = playerCountry.population + numberOfTroops }
+                                                        { playerCountry | troopCount = playerCountry.troopCount + numberOfTroops }
                                                         currentPlayer.countries
                                             }
 
@@ -368,11 +368,11 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                                     (\neighboringCountryId ( attack, defense ) ->
                                                         case getCountryStatus neighboringCountryId currentPlayer model.players of
                                                             OccupiedByCurrentPlayer neighboringPlayerCountry ->
-                                                                ( attack + neighboringPlayerCountry.population, defense )
+                                                                ( attack + neighboringPlayerCountry.troopCount, defense )
 
                                                             OccupiedByOpponent neigborPlayerId _ neighboringPlayerCountry ->
                                                                 if neigborPlayerId == opponentPlayerId then
-                                                                    ( attack, defense + neighboringPlayerCountry.population )
+                                                                    ( attack, defense + neighboringPlayerCountry.troopCount )
 
                                                                 else
                                                                     ( attack, defense )
@@ -380,10 +380,10 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                                             _ ->
                                                                 ( attack, defense )
                                                     )
-                                                    ( 0, opponentPlayerCountry.population )
+                                                    ( 0, opponentPlayerCountry.troopCount )
 
                                         remainingTroops =
-                                            opponentPlayerCountry.population + defenseStrength - attackStrength
+                                            opponentPlayerCountry.troopCount + defenseStrength - attackStrength
                                     in
                                     if attackStrength > defenseStrength then
                                         let
@@ -394,7 +394,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                                             opponentPlayer.countries
                                                                 |> Dict.insert
                                                                     clickedCountryId
-                                                                    { opponentPlayerCountry | population = remainingTroops }
+                                                                    { opponentPlayerCountry | troopCount = remainingTroops }
                                                       }
                                                     , currentPlayer
                                                     )
@@ -418,7 +418,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                                             currentPlayer.countries
                                                                 |> Dict.insert
                                                                     clickedCountryId
-                                                                    { population = 0 }
+                                                                    { troopCount = 0 }
                                                       }
                                                     )
 
@@ -444,7 +444,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                             updatedPlayer =
                                                 { currentPlayer
                                                     | countries =
-                                                        Dict.insert clickedCountryId { population = 0 } currentPlayer.countries
+                                                        Dict.insert clickedCountryId { troopCount = 0 } currentPlayer.countries
                                                 }
                                         in
                                         { model
@@ -463,7 +463,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                 OccupiedByCurrentPlayer _ ->
                                     case Dict.get clickedCountryId currentPlayer.countries of
                                         Just playerCountry ->
-                                            if playerCountry.population > 0 then
+                                            if playerCountry.troopCount > 0 then
                                                 { model
                                                     | currentPlayerTurn = nextPlayerTurn model.numberOfPlayers clickedCountryId model.players model.currentPlayerTurn
                                                     , error = Nothing
@@ -489,10 +489,10 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                                         currentPlayer.countries
                                                             |> Dict.insert
                                                                 fromCountryId
-                                                                { playerCountryFrom | population = 0 }
+                                                                { playerCountryFrom | troopCount = 0 }
                                                             |> Dict.insert
                                                                 clickedCountryId
-                                                                { playerCountryFrom | population = playerCountryFrom.population + playerCountryTo.population }
+                                                                { playerCountryFrom | troopCount = playerCountryFrom.troopCount + playerCountryTo.troopCount }
                                                 }
 
                                             updatedPlayers =
@@ -1111,7 +1111,7 @@ renderMap players map =
                     (\countryId country ->
                         case findCountryOwner players countryId of
                             Just ( _, player, playerCountry ) ->
-                                renderCountry countryId country.polygon country.borderEdges country.center country.coordinates player.color playerCountry.population player.capitolStatus
+                                renderCountry countryId country.polygon country.borderEdges country.center country.coordinates player.color playerCountry.troopCount player.capitolStatus
 
                             Nothing ->
                                 renderCountry countryId country.polygon country.borderEdges country.center country.coordinates Color.gray 0 NoCapitol
