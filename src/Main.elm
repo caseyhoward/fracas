@@ -354,7 +354,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                     { model | error = Just "You must put troops in your own country" }
 
                         AttackAnnexOrPort ->
-                            attackAnnexOrPort clickedCountryId currentPlayer country playerId model
+                            attackAnnexOrPort clickedCountryId country playerId currentPlayer model
 
                         TroopMovement ->
                             case getCountryStatus clickedCountryId currentPlayer model.players of
@@ -415,94 +415,19 @@ handleCountryClickFromPlayer clickedCountryId country model =
                     model
 
 
-attackAnnexOrPort : String -> Player -> Country -> Int -> PlayingGameAttributes -> PlayingGameAttributes
-attackAnnexOrPort clickedCountryId currentPlayer country playerId model =
-    case getCountryStatus clickedCountryId currentPlayer model.players of
+attackAnnexOrPort : String -> Country -> Int -> Player -> PlayingGameAttributes -> PlayingGameAttributes
+attackAnnexOrPort clickedCountryId clickedCountry playerId currentPlayer playingGameAttributes =
+    case getCountryStatus clickedCountryId currentPlayer playingGameAttributes.players of
         OccupiedByCurrentPlayer _ ->
-            { model
+            { playingGameAttributes
                 | error = Just "TODO: Implement building port"
             }
 
         OccupiedByOpponent opponentPlayerId opponentPlayer opponentPlayerCountry ->
-            let
-                ( attackStrength, defenseStrength ) =
-                    country.neighboringCountries
-                        |> Set.foldl
-                            (\neighboringCountryId ( attack, defense ) ->
-                                case getCountryStatus neighboringCountryId currentPlayer model.players of
-                                    OccupiedByCurrentPlayer neighboringPlayerCountry ->
-                                        ( attack + neighboringPlayerCountry.troopCount, defense )
-
-                                    OccupiedByOpponent neigborPlayerId _ neighboringPlayerCountry ->
-                                        if neigborPlayerId == opponentPlayerId then
-                                            ( attack, defense + neighboringPlayerCountry.troopCount )
-
-                                        else
-                                            ( attack, defense )
-
-                                    _ ->
-                                        ( attack, defense )
-                            )
-                            ( 0, opponentPlayerCountry.troopCount )
-
-                remainingTroops =
-                    opponentPlayerCountry.troopCount + defenseStrength - attackStrength
-            in
-            if attackStrength > defenseStrength then
-                let
-                    ( updatedOpponentPlayer, updatedCurrentPlayer ) =
-                        if remainingTroops > 0 then
-                            ( { opponentPlayer
-                                | countries =
-                                    opponentPlayer.countries
-                                        |> Dict.insert
-                                            clickedCountryId
-                                            { opponentPlayerCountry | troopCount = remainingTroops }
-                              }
-                            , currentPlayer
-                            )
-
-                        else
-                            ( if isCountryIdCapitol opponentPlayer clickedCountryId then
-                                { opponentPlayer
-                                    | countries =
-                                        Dict.empty
-                                    , capitolStatus = NoCapitol
-                                }
-
-                              else
-                                { opponentPlayer
-                                    | countries =
-                                        opponentPlayer.countries
-                                            |> Dict.remove clickedCountryId
-                                }
-                            , { currentPlayer
-                                | countries =
-                                    currentPlayer.countries
-                                        |> Dict.insert
-                                            clickedCountryId
-                                            { troopCount = 0 }
-                              }
-                            )
-
-                    updatedPlayers =
-                        model.players
-                            |> Dict.insert opponentPlayerId updatedOpponentPlayer
-                            |> Dict.insert playerId updatedCurrentPlayer
-                in
-                { model
-                    | players = updatedPlayers
-                    , currentPlayerTurn = nextPlayerTurn model.numberOfPlayers clickedCountryId updatedPlayers model.currentPlayerTurn
-                    , error = Nothing
-                }
-
-            else
-                { model
-                    | error = Just ("Not enough to attack (" ++ String.fromInt attackStrength ++ " < " ++ String.fromInt defenseStrength ++ ")")
-                }
+            attemptToAttackCountry playerId currentPlayer opponentPlayerId opponentPlayer opponentPlayerCountry clickedCountryId clickedCountry playingGameAttributes
 
         Unoccupied ->
-            if canAnnexCountry model.map currentPlayer clickedCountryId then
+            if canAnnexCountry playingGameAttributes.map currentPlayer clickedCountryId then
                 let
                     updatedPlayer =
                         { currentPlayer
@@ -510,14 +435,14 @@ attackAnnexOrPort clickedCountryId currentPlayer country playerId model =
                                 Dict.insert clickedCountryId { troopCount = 0 } currentPlayer.countries
                         }
                 in
-                { model
-                    | players = Dict.insert playerId updatedPlayer model.players
-                    , currentPlayerTurn = nextPlayerTurn model.numberOfPlayers clickedCountryId model.players model.currentPlayerTurn
+                { playingGameAttributes
+                    | players = Dict.insert playerId updatedPlayer playingGameAttributes.players
+                    , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players playingGameAttributes.currentPlayerTurn
                     , error = Nothing
                 }
 
             else
-                { model
+                { playingGameAttributes
                     | error = Just "You can't annex that country"
                 }
 
@@ -534,6 +459,91 @@ areCountriesConnected gameMap fromCountryId toCountryId =
 
         Nothing ->
             False
+
+
+attemptToAttackCountry : Int -> Player -> Int -> Player -> PlayerCountry -> String -> Country -> PlayingGameAttributes -> PlayingGameAttributes
+attemptToAttackCountry currentPlayerId currentPlayer opponentPlayerId opponentPlayer opponentPlayerCountry clickedCountryId clickedCountry playingGameAttributes =
+    let
+        ( attackStrength, defenseStrength ) =
+            attackAndDefenseStrength clickedCountry.neighboringCountries currentPlayer playingGameAttributes.players opponentPlayerId opponentPlayerCountry
+
+        remainingTroops =
+            opponentPlayerCountry.troopCount + defenseStrength - attackStrength
+    in
+    if attackStrength > defenseStrength then
+        let
+            ( updatedOpponentPlayer, updatedCurrentPlayer ) =
+                if remainingTroops > 0 then
+                    ( { opponentPlayer
+                        | countries =
+                            opponentPlayer.countries
+                                |> Dict.insert
+                                    clickedCountryId
+                                    { opponentPlayerCountry | troopCount = remainingTroops }
+                      }
+                    , currentPlayer
+                    )
+
+                else
+                    ( if isCountryIdCapitol opponentPlayer clickedCountryId then
+                        { opponentPlayer
+                            | countries =
+                                Dict.empty
+                            , capitolStatus = NoCapitol
+                        }
+
+                      else
+                        { opponentPlayer
+                            | countries =
+                                opponentPlayer.countries
+                                    |> Dict.remove clickedCountryId
+                        }
+                    , { currentPlayer
+                        | countries =
+                            currentPlayer.countries
+                                |> Dict.insert
+                                    clickedCountryId
+                                    { troopCount = 0 }
+                      }
+                    )
+
+            updatedPlayers =
+                playingGameAttributes.players
+                    |> Dict.insert opponentPlayerId updatedOpponentPlayer
+                    |> Dict.insert currentPlayerId updatedCurrentPlayer
+        in
+        { playingGameAttributes
+            | players = updatedPlayers
+            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers playingGameAttributes.currentPlayerTurn
+            , error = Nothing
+        }
+
+    else
+        { playingGameAttributes
+            | error = Just ("Not enough to attack (" ++ String.fromInt attackStrength ++ " < " ++ String.fromInt defenseStrength ++ ")")
+        }
+
+
+attackAndDefenseStrength : Set.Set String -> Player -> Dict.Dict Int Player -> Int -> PlayerCountry -> ( Int, Int )
+attackAndDefenseStrength countryBeingAttackedNeighboringCountries currentPlayer players opponentPlayerId opponentPlayerCountry =
+    countryBeingAttackedNeighboringCountries
+        |> Set.foldl
+            (\neighboringCountryId ( attack, defense ) ->
+                case getCountryStatus neighboringCountryId currentPlayer players of
+                    OccupiedByCurrentPlayer neighboringPlayerCountry ->
+                        ( attack + neighboringPlayerCountry.troopCount, defense )
+
+                    OccupiedByOpponent neigborPlayerId _ neighboringPlayerCountry ->
+                        if neigborPlayerId == opponentPlayerId then
+                            ( attack, defense + neighboringPlayerCountry.troopCount )
+
+                        else
+                            ( attack, defense )
+
+                    _ ->
+                        ( attack, defense )
+            )
+            ( 0, opponentPlayerCountry.troopCount )
 
 
 canAnnexCountry : GameMap -> Player -> String -> Bool
