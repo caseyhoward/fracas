@@ -379,7 +379,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                         TroopMovementFromSelected fromCountryId ->
                             case ( getCountryStatus fromCountryId currentPlayer model.players, getCountryStatus clickedCountryId currentPlayer model.players ) of
                                 ( OccupiedByCurrentPlayer playerCountryFrom, OccupiedByCurrentPlayer playerCountryTo ) ->
-                                    if areCountriesConnected model.map fromCountryId clickedCountryId then
+                                    if isCountryReachableFromOtherCountry model.map fromCountryId clickedCountryId then
                                         let
                                             updatedPlayer =
                                                 { currentPlayer
@@ -415,6 +415,20 @@ handleCountryClickFromPlayer clickedCountryId country model =
                     model
 
 
+
+-- Used for moving troops and seeing if a country is annexable. This will also need to take ports into account when those are added.
+
+
+isCountryReachableFromOtherCountry : GameMap -> String -> String -> Bool
+isCountryReachableFromOtherCountry gameMap fromCountryId toCountryId =
+    case Dict.get fromCountryId gameMap.countries of
+        Just fromCountry ->
+            Set.member toCountryId fromCountry.neighboringCountries
+
+        Nothing ->
+            False
+
+
 attackAnnexOrPort : String -> Country -> Int -> Player -> PlayingGameAttributes -> PlayingGameAttributes
 attackAnnexOrPort clickedCountryId clickedCountry playerId currentPlayer playingGameAttributes =
     case getCountryStatus clickedCountryId currentPlayer playingGameAttributes.players of
@@ -445,20 +459,6 @@ attackAnnexOrPort clickedCountryId clickedCountry playerId currentPlayer playing
                 { playingGameAttributes
                     | error = Just "You can't annex that country"
                 }
-
-
-
--- Used for moving troops. This will also need to take ports into account when those are added.
-
-
-areCountriesConnected : GameMap -> String -> String -> Bool
-areCountriesConnected gameMap fromCountryId toCountryId =
-    case Dict.get fromCountryId gameMap.countries of
-        Just fromCountry ->
-            Set.member toCountryId fromCountry.neighboringCountries
-
-        Nothing ->
-            False
 
 
 attemptToAttackCountry : Int -> Player -> Int -> Player -> PlayerCountry -> String -> Country -> PlayingGameAttributes -> PlayingGameAttributes
@@ -546,33 +546,18 @@ attackAndDefenseStrength countryBeingAttackedNeighboringCountries currentPlayer 
             ( 0, opponentPlayerCountry.troopCount )
 
 
+
+-- We already know the country is unoccuppied from an earlier check so just make sure it is reachable from one of the current players countries
+
+
 canAnnexCountry : GameMap -> Player -> String -> Bool
 canAnnexCountry gameMap player countryIdToAnnex =
-    let
-        playerCountries : List Country
-        playerCountries =
-            player.countries
-                |> Dict.foldl
-                    (\playerCountryId _ countries ->
-                        case Dict.get playerCountryId gameMap.countries of
-                            Just country ->
-                                country :: countries
-
-                            Nothing ->
-                                countries
-                    )
-                    []
-
-        playerNeighborCountries : List String
-        playerNeighborCountries =
-            playerCountries
-                |> List.map
-                    (\country ->
-                        country.neighboringCountries |> Set.toList
-                    )
-                |> List.concat
-    in
-    List.member countryIdToAnnex playerNeighborCountries
+    player.countries
+        |> Dict.foldl
+            (\playerCountryId _ isReachable ->
+                isReachable || isCountryReachableFromOtherCountry gameMap playerCountryId countryIdToAnnex
+            )
+            False
 
 
 getCountryStatus : String -> Player -> Dict.Dict Int Player -> CountryStatus
