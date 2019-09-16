@@ -16,6 +16,7 @@ import Maps.Big
 import Maps.Simple
 import Maps.SuperSimple
 import Set
+import Time
 
 
 
@@ -84,6 +85,7 @@ type alias PlayerCountry =
 
 type Model
     = ConfiguringGame ConfigurationAttributes
+    | LoadingGame Int ConfigurationAttributes
     | PlayingGame PlayingGameAttributes
 
 
@@ -132,7 +134,7 @@ main =
         { view = view
         , init = \_ -> init
         , update = update
-        , subscriptions = always Sub.none
+        , subscriptions = subscriptions
         }
 
 
@@ -152,6 +154,7 @@ type Msg
     | NumberOfPlayersChanged String
     | StartGameClicked
     | Pass
+    | LoadGame
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -163,38 +166,52 @@ update msg model =
                     ( ConfiguringGame { configurationOptions | numberOfPlayers = numberOfPlayers }, Cmd.none )
 
                 StartGameClicked ->
+                    ( LoadingGame 0 configurationOptions, Cmd.none )
+
+                Pass ->
+                    ( model, Cmd.none )
+
+                CountryClicked _ ->
+                    ( model, Cmd.none )
+
+                LoadGame ->
+                    ( model, Cmd.none )
+
+        LoadingGame counter configurationOptions ->
+            case msg of
+                LoadGame ->
                     let
                         numberOfPlayers =
                             configurationOptions.numberOfPlayers
                                 |> String.toInt
                                 |> Maybe.withDefault 6
                     in
-                    ( PlayingGame
-                        { map = parseMap Maps.Big.map
-                        , players =
-                            List.range 1 numberOfPlayers
-                                |> List.map
-                                    (\playerId ->
-                                        ( playerId
-                                        , { countries = Dict.empty
-                                          , name = "Player " ++ String.fromInt playerId
-                                          , capitolStatus = NoCapitol
-                                          , color = getDefaultColor playerId
-                                          }
+                    if counter > 0 then
+                        ( 
+                            PlayingGame
+                            { map = parseMap Maps.Big.map
+                            , players =
+                                List.range 1 numberOfPlayers
+                                    |> List.map
+                                        (\playerId ->
+                                            ( playerId
+                                            , { countries = Dict.empty
+                                            , name = "Player " ++ String.fromInt playerId
+                                            , capitolStatus = NoCapitol
+                                            , color = getDefaultColor playerId
+                                            }
+                                            )
                                         )
-                                    )
-                                |> Dict.fromList
-                        , currentPlayerTurn = PlayerTurn 1 CapitolPlacement
-                        , error = Nothing
-                        , numberOfPlayers = numberOfPlayers
-                        }
-                    , Cmd.none
-                    )
+                                    |> Dict.fromList
+                            , currentPlayerTurn = PlayerTurn 1 CapitolPlacement
+                            , error = Nothing
+                            , numberOfPlayers = numberOfPlayers
+                            }
+                        , Cmd.none
+                        )
+                    else (LoadingGame (counter + 1) configurationOptions, Cmd.none)
 
-                Pass ->
-                    ( model, Cmd.none )
-
-                CountryClicked _ ->
+                _ ->
                     ( model, Cmd.none )
 
         PlayingGame attributes ->
@@ -244,7 +261,7 @@ update msg model =
                             , Cmd.none
                             )
 
-                        PlayerTurn playerId AttackAnnexOrPort ->
+                        PlayerTurn _ AttackAnnexOrPort ->
                             ( PlayingGame
                                 { attributes
                                     | currentPlayerTurn = nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players attributes.currentPlayerTurn -- Gross
@@ -260,6 +277,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 StartGameClicked ->
+                    ( model, Cmd.none )
+
+                LoadGame ->
                     ( model, Cmd.none )
 
 
@@ -439,7 +459,19 @@ handleCountryClickFromPlayer clickedCountryId country model =
                         TroopMovement ->
                             case getCountryStatus clickedCountryId currentPlayer model.players of
                                 OccupiedByCurrentPlayer _ ->
-                                    { model | currentPlayerTurn = nextPlayerTurn model.numberOfPlayers clickedCountryId model.players model.currentPlayerTurn }
+                                    case Dict.get clickedCountryId currentPlayer.countries of
+                                        Just playerCountry ->
+                                            if playerCountry.population > 0 then
+                                                { model
+                                                    | currentPlayerTurn = nextPlayerTurn model.numberOfPlayers clickedCountryId model.players model.currentPlayerTurn
+                                                    , error = Nothing
+                                                }
+
+                                            else
+                                                { model | error = Just "Select a country with troops" }
+
+                                        Nothing ->
+                                            { model | error = Just "This shouldn't happen" }
 
                                 _ ->
                                     { model | error = Just "You must move troops from your own country" }
@@ -447,7 +479,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                         TroopMovementFromSelected fromCountryId ->
                             case ( getCountryStatus fromCountryId currentPlayer model.players, getCountryStatus clickedCountryId currentPlayer model.players ) of
                                 ( OccupiedByCurrentPlayer playerCountryFrom, OccupiedByCurrentPlayer playerCountryTo ) ->
-                                    if canMoveTroops model.map fromCountryId clickedCountryId then
+                                    if areCountriesConnected model.map fromCountryId clickedCountryId then
                                         let
                                             updatedPlayer =
                                                 { currentPlayer
@@ -483,8 +515,8 @@ handleCountryClickFromPlayer clickedCountryId country model =
                     model
 
 
-canMoveTroops : GameMap -> String -> String -> Bool
-canMoveTroops gameMap fromCountryId toCountryId =
+areCountriesConnected : GameMap -> String -> String -> Bool
+areCountriesConnected gameMap fromCountryId toCountryId =
     case Dict.get fromCountryId gameMap.countries of
         Just fromCountry ->
             Set.member toCountryId fromCountry.neighboringCountries
@@ -654,13 +686,16 @@ view model =
                     ]
                 )
 
+        LoadingGame counter _ ->
+            Element.text ("Loading " ++ String.fromInt counter) |> Element.layout []
+
         PlayingGame attributes ->
             Element.layout [ Element.width Element.fill ]
-                (Element.row []
+                (Element.row [ Element.centerX ]
                     [ viewSideBar attributes
                     , Element.column
                         [ Element.centerX ]
-                        ([ Element.el [ Element.centerX ]
+                        ([ Element.el [ Element.centerX, Element.width Element.fill ]
                             (renderMap attributes.players attributes.map
                                 |> Element.html
                             )
@@ -704,7 +739,7 @@ viewSideBar playingGameAttributes =
                     ]
 
                  else
-                    []
+                    [ Element.el [ Element.height (Element.px 30) ] Element.none ]
                 )
 
 
@@ -1087,7 +1122,7 @@ renderMap players map =
             background
                 |> Collage.outlined (Collage.solid (toFloat defaultScale / 8.0) (Collage.uniform Color.black))
     in
-    Collage.group (countryCollages ++ [ backgroundBorder ,backgroundWater ])
+    Collage.group (countryCollages ++ [ backgroundBorder, backgroundWater ])
         |> Collage.Render.svg
 
 
@@ -1335,3 +1370,13 @@ getEdgesForCountryForCoordinate allAreas ( x, y ) scaleFactor =
                     Set.insert (scaleEdge scaleFactor edge) result
             )
             Set.empty
+
+
+subscriptions : Model -> Sub Msg
+subscriptions model =
+    case model of
+        LoadingGame _ _ ->
+            Time.every 0 (always LoadGame)
+
+        _ ->
+            Sub.none
