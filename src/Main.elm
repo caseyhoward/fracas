@@ -903,268 +903,6 @@ type alias BorderSegment =
 
 
 
--- Parsing
--- It's terrible, but it works. Eventually look into using a real parser.
-
-
-parseRawMap : String -> RawGameMap
-parseRawMap text =
-    let
-        rowStrings : List String
-        rowStrings =
-            String.split "\n" text
-                |> List.foldl
-                    (\row result ->
-                        case result of
-                            ( rawGameMap, rowIndex ) ->
-                                if rowIndex then
-                                    if row /= "{Country Names}" then
-                                        ( row :: rawGameMap
-                                        , True
-                                        )
-
-                                    else
-                                        ( rawGameMap, False )
-
-                                else if row == "{Map}" then
-                                    ( rawGameMap, True )
-
-                                else
-                                    ( rawGameMap, False )
-                    )
-                    ( [], False )
-                |> Tuple.first
-
-        rowsAndColumns : List (List String)
-        rowsAndColumns =
-            rowStrings
-                |> List.foldl
-                    (\row result ->
-                        (String.split "." row
-                            |> List.reverse
-                            |> List.drop 1
-                            |> List.reverse
-                        )
-                            :: result
-                    )
-                    []
-    in
-    rowsAndColumns
-        |> List.reverse
-        |> List.indexedMap Tuple.pair
-        |> List.foldl
-            (\( rowIndex, splitRow ) result ->
-                splitRow
-                    |> List.indexedMap Tuple.pair
-                    |> List.foldl
-                        (\( columnIndex, areaId ) innerResult ->
-                            Dict.insert ( columnIndex, rowIndex ) areaId innerResult
-                        )
-                        result
-            )
-            Dict.empty
-
-
-getMapDimensions : RawGameMap -> ( Int, Int )
-getMapDimensions map =
-    map
-        |> Dict.keys
-        |> List.foldl
-            (\( x, y ) ( width, height ) ->
-                ( if x + 1 > width then
-                    x + 1
-
-                  else
-                    width
-                , if y + 1 > height then
-                    y + 1
-
-                  else
-                    height
-                )
-            )
-            ( 0, 0 )
-
-
-parseMap : String -> GameMap
-parseMap text =
-    let
-        map =
-            parseRawMap text
-
-        dimensions =
-            getMapDimensions map
-
-        gameMapWithoutPolygons =
-            map
-                |> Dict.foldl
-                    (\coordinates areaId gameMap ->
-                        if isCountry areaId then
-                            let
-                                country =
-                                    case Dict.get areaId gameMap.countries of
-                                        Just existingCountry ->
-                                            existingCountry
-
-                                        Nothing ->
-                                            { neighboringCountries = Set.empty
-                                            , neighboringBodiesOfWater = Set.empty
-                                            , coordinates = Set.singleton coordinates
-                                            , polygon = []
-                                            , borderEdges = Set.empty
-                                            , center = ( 0, 0 )
-                                            }
-
-                                updatedCountry =
-                                    country
-                                        |> updateCountry areaId coordinates dimensions map
-                            in
-                            { gameMap | countries = Dict.insert areaId updatedCountry gameMap.countries }
-
-                        else
-                            let
-                                bodyOfWater =
-                                    case Dict.get areaId gameMap.bodiesOfWater of
-                                        Just existingBodyOfWater ->
-                                            existingBodyOfWater
-
-                                        Nothing ->
-                                            { neighboringCountries = Set.empty
-                                            , borderEdges = Set.empty
-                                            , coordinates = Set.singleton coordinates
-                                            , polygon = []
-                                            }
-                            in
-                            { gameMap
-                                | bodiesOfWater = Dict.insert areaId (updateBodyOfWater areaId bodyOfWater coordinates dimensions map) gameMap.bodiesOfWater
-                            }
-                    )
-                    { countries = Dict.empty, bodiesOfWater = Dict.empty, dimensions = dimensions }
-    in
-    { countries =
-        gameMapWithoutPolygons.countries
-            |> Dict.map
-                (\_ country ->
-                    let
-                        edges =
-                            getEdgesForArea country.coordinates defaultScale
-                    in
-                    { country
-                        | polygon = coordinatesToPolygon edges
-                        , center = getMedianCoordinates country.coordinates
-                        , borderEdges = edges
-                    }
-                )
-    , bodiesOfWater =
-        gameMapWithoutPolygons.bodiesOfWater
-            |> Dict.map
-                (\_ bodyOfWater ->
-                    let
-                        edges =
-                            getEdgesForArea bodyOfWater.coordinates defaultScale
-                    in
-                    { bodyOfWater
-                        | polygon = coordinatesToPolygon edges
-                        , borderEdges = getEdgesForArea bodyOfWater.coordinates defaultScale
-                    }
-                )
-    , dimensions =
-        ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * defaultScale |> toFloat
-        , (gameMapWithoutPolygons.dimensions |> Tuple.second) * defaultScale |> toFloat
-        )
-    }
-
-
-updateCountry : String -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Country -> Country
-updateCountry countryId coordinates mapDimensions rawMap country =
-    let
-        ( neighboringCountries, neighboringBodiesOfWater ) =
-            getNeighborCoordinates coordinates mapDimensions
-                |> Set.foldl
-                    (\neighborCoordinate ( countries, bodiesOfWater ) ->
-                        case Dict.get neighborCoordinate rawMap of
-                            Just neighborId ->
-                                if neighborId /= countryId then
-                                    if isCountry neighborId then
-                                        ( Set.insert neighborId countries, bodiesOfWater )
-
-                                    else
-                                        ( countries, Set.insert neighborId bodiesOfWater )
-
-                                else
-                                    ( countries, bodiesOfWater )
-
-                            Nothing ->
-                                ( countries, bodiesOfWater )
-                    )
-                    ( Set.empty, Set.empty )
-    in
-    { country
-        | neighboringCountries =
-            Set.union neighboringCountries country.neighboringCountries
-        , neighboringBodiesOfWater =
-            Set.union neighboringBodiesOfWater country.neighboringBodiesOfWater
-        , coordinates = Set.insert coordinates country.coordinates
-    }
-
-
-updateBodyOfWater : String -> BodyOfWater -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> BodyOfWater
-updateBodyOfWater bodyOfWaterId bodyOfWater coordinates mapDimensions rawMap =
-    let
-        neighboringCountries =
-            getNeighborCoordinates coordinates mapDimensions
-                |> Set.foldl
-                    (\neighborCoordinate countries ->
-                        case Dict.get neighborCoordinate rawMap of
-                            Just neighborId ->
-                                if neighborId /= bodyOfWaterId then
-                                    if isCountry neighborId then
-                                        Set.insert neighborId countries
-
-                                    else
-                                        countries
-
-                                else
-                                    countries
-
-                            Nothing ->
-                                countries
-                    )
-                    Set.empty
-    in
-    { bodyOfWater
-        | neighboringCountries =
-            Set.union neighboringCountries bodyOfWater.neighboringCountries
-        , coordinates = Set.insert coordinates bodyOfWater.coordinates
-    }
-
-
-getNeighborCoordinates : ( Int, Int ) -> ( Int, Int ) -> Set.Set ( Int, Int )
-getNeighborCoordinates ( x, y ) ( width, height ) =
-    [ ( -1, 0 ), ( 1, 0 ), ( 0, -1 ), ( 0, 1 ) ]
-        |> List.foldl
-            (\( xOffset, yOffset ) result ->
-                let
-                    neighborX =
-                        x + xOffset
-
-                    neighborY =
-                        y + yOffset
-                in
-                if neighborX >= 0 && neighborX < width && neighborY >= 0 && neighborY < height then
-                    Set.insert ( neighborX, neighborY ) result
-
-                else
-                    result
-            )
-            Set.empty
-
-
-isCountry : String -> Bool
-isCountry areaId =
-    String.length areaId < 4
-
-
 
 -- Rendering
 
@@ -1464,3 +1202,266 @@ subscriptions model =
 
         _ ->
             Sub.none
+
+
+-- Parsing
+-- It's terrible, but it works. Eventually look into using a real parser.
+
+
+parseRawMap : String -> RawGameMap
+parseRawMap text =
+    let
+        rowStrings : List String
+        rowStrings =
+            String.split "\n" text
+                |> List.foldl
+                    (\row result ->
+                        case result of
+                            ( rawGameMap, rowIndex ) ->
+                                if rowIndex then
+                                    if row /= "{Country Names}" then
+                                        ( row :: rawGameMap
+                                        , True
+                                        )
+
+                                    else
+                                        ( rawGameMap, False )
+
+                                else if row == "{Map}" then
+                                    ( rawGameMap, True )
+
+                                else
+                                    ( rawGameMap, False )
+                    )
+                    ( [], False )
+                |> Tuple.first
+
+        rowsAndColumns : List (List String)
+        rowsAndColumns =
+            rowStrings
+                |> List.foldl
+                    (\row result ->
+                        (String.split "." row
+                            |> List.reverse
+                            |> List.drop 1
+                            |> List.reverse
+                        )
+                            :: result
+                    )
+                    []
+    in
+    rowsAndColumns
+        |> List.reverse
+        |> List.indexedMap Tuple.pair
+        |> List.foldl
+            (\( rowIndex, splitRow ) result ->
+                splitRow
+                    |> List.indexedMap Tuple.pair
+                    |> List.foldl
+                        (\( columnIndex, areaId ) innerResult ->
+                            Dict.insert ( columnIndex, rowIndex ) areaId innerResult
+                        )
+                        result
+            )
+            Dict.empty
+
+
+getMapDimensions : RawGameMap -> ( Int, Int )
+getMapDimensions map =
+    map
+        |> Dict.keys
+        |> List.foldl
+            (\( x, y ) ( width, height ) ->
+                ( if x + 1 > width then
+                    x + 1
+
+                  else
+                    width
+                , if y + 1 > height then
+                    y + 1
+
+                  else
+                    height
+                )
+            )
+            ( 0, 0 )
+
+
+parseMap : String -> GameMap
+parseMap text =
+    let
+        map =
+            parseRawMap text
+
+        dimensions =
+            getMapDimensions map
+
+        gameMapWithoutPolygons =
+            map
+                |> Dict.foldl
+                    (\coordinates areaId gameMap ->
+                        if isCountry areaId then
+                            let
+                                country =
+                                    case Dict.get areaId gameMap.countries of
+                                        Just existingCountry ->
+                                            existingCountry
+
+                                        Nothing ->
+                                            { neighboringCountries = Set.empty
+                                            , neighboringBodiesOfWater = Set.empty
+                                            , coordinates = Set.singleton coordinates
+                                            , polygon = []
+                                            , borderEdges = Set.empty
+                                            , center = ( 0, 0 )
+                                            }
+
+                                updatedCountry =
+                                    country
+                                        |> updateCountry areaId coordinates dimensions map
+                            in
+                            { gameMap | countries = Dict.insert areaId updatedCountry gameMap.countries }
+
+                        else
+                            let
+                                bodyOfWater =
+                                    case Dict.get areaId gameMap.bodiesOfWater of
+                                        Just existingBodyOfWater ->
+                                            existingBodyOfWater
+
+                                        Nothing ->
+                                            { neighboringCountries = Set.empty
+                                            , borderEdges = Set.empty
+                                            , coordinates = Set.singleton coordinates
+                                            , polygon = []
+                                            }
+                            in
+                            { gameMap
+                                | bodiesOfWater = Dict.insert areaId (updateBodyOfWater areaId bodyOfWater coordinates dimensions map) gameMap.bodiesOfWater
+                            }
+                    )
+                    { countries = Dict.empty, bodiesOfWater = Dict.empty, dimensions = dimensions }
+    in
+    { countries =
+        gameMapWithoutPolygons.countries
+            |> Dict.map
+                (\_ country ->
+                    let
+                        edges =
+                            getEdgesForArea country.coordinates defaultScale
+                    in
+                    { country
+                        | polygon = coordinatesToPolygon edges
+                        , center = getMedianCoordinates country.coordinates
+                        , borderEdges = edges
+                    }
+                )
+    , bodiesOfWater =
+        gameMapWithoutPolygons.bodiesOfWater
+            |> Dict.map
+                (\_ bodyOfWater ->
+                    let
+                        edges =
+                            getEdgesForArea bodyOfWater.coordinates defaultScale
+                    in
+                    { bodyOfWater
+                        | polygon = coordinatesToPolygon edges
+                        , borderEdges = getEdgesForArea bodyOfWater.coordinates defaultScale
+                    }
+                )
+    , dimensions =
+        ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * defaultScale |> toFloat
+        , (gameMapWithoutPolygons.dimensions |> Tuple.second) * defaultScale |> toFloat
+        )
+    }
+
+
+updateCountry : String -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Country -> Country
+updateCountry countryId coordinates mapDimensions rawMap country =
+    let
+        ( neighboringCountries, neighboringBodiesOfWater ) =
+            getNeighborCoordinates coordinates mapDimensions
+                |> Set.foldl
+                    (\neighborCoordinate ( countries, bodiesOfWater ) ->
+                        case Dict.get neighborCoordinate rawMap of
+                            Just neighborId ->
+                                if neighborId /= countryId then
+                                    if isCountry neighborId then
+                                        ( Set.insert neighborId countries, bodiesOfWater )
+
+                                    else
+                                        ( countries, Set.insert neighborId bodiesOfWater )
+
+                                else
+                                    ( countries, bodiesOfWater )
+
+                            Nothing ->
+                                ( countries, bodiesOfWater )
+                    )
+                    ( Set.empty, Set.empty )
+    in
+    { country
+        | neighboringCountries =
+            Set.union neighboringCountries country.neighboringCountries
+        , neighboringBodiesOfWater =
+            Set.union neighboringBodiesOfWater country.neighboringBodiesOfWater
+        , coordinates = Set.insert coordinates country.coordinates
+    }
+
+
+updateBodyOfWater : String -> BodyOfWater -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> BodyOfWater
+updateBodyOfWater bodyOfWaterId bodyOfWater coordinates mapDimensions rawMap =
+    let
+        neighboringCountries =
+            getNeighborCoordinates coordinates mapDimensions
+                |> Set.foldl
+                    (\neighborCoordinate countries ->
+                        case Dict.get neighborCoordinate rawMap of
+                            Just neighborId ->
+                                if neighborId /= bodyOfWaterId then
+                                    if isCountry neighborId then
+                                        Set.insert neighborId countries
+
+                                    else
+                                        countries
+
+                                else
+                                    countries
+
+                            Nothing ->
+                                countries
+                    )
+                    Set.empty
+    in
+    { bodyOfWater
+        | neighboringCountries =
+            Set.union neighboringCountries bodyOfWater.neighboringCountries
+        , coordinates = Set.insert coordinates bodyOfWater.coordinates
+    }
+
+
+getNeighborCoordinates : ( Int, Int ) -> ( Int, Int ) -> Set.Set ( Int, Int )
+getNeighborCoordinates ( x, y ) ( width, height ) =
+    [ ( -1, 0 ), ( 1, 0 ), ( 0, -1 ), ( 0, 1 ) ]
+        |> List.foldl
+            (\( xOffset, yOffset ) result ->
+                let
+                    neighborX =
+                        x + xOffset
+
+                    neighborY =
+                        y + yOffset
+                in
+                if neighborX >= 0 && neighborX < width && neighborY >= 0 && neighborY < height then
+                    Set.insert ( neighborX, neighborY ) result
+
+                else
+                    result
+            )
+            Set.empty
+
+
+isCountry : String -> Bool
+isCountry areaId =
+    String.length areaId < 4
+
