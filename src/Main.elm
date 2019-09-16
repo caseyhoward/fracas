@@ -1067,130 +1067,6 @@ renderArea polygonPoints color capitolStatus countryId =
     Collage.group (drawnDots ++ [ polygonBorder, polygonFill ])
 
 
-
--- Collage.group (drawnDots ++ borderSegments ++ [ polygonFill ])
-
-
-capitolDotsCoordinates : Area -> Int -> Set.Set ( Float, Float )
-capitolDotsCoordinates area scale =
-    area
-        |> Set.map
-            (\( x, y ) ->
-                ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
-            )
-
-
-coordinatesToPolygon : Set.Set ( ( Float, Float ), ( Float, Float ) ) -> List ( Float, Float )
-coordinatesToPolygon edges =
-    case edges |> Set.toList of
-        ( point1, point2 ) :: _ ->
-            recursiveStuff (Set.remove ( point1, point2 ) edges) point2 []
-
-        _ ->
-            []
-
-
-recursiveStuff : Set.Set BorderSegment -> ( Float, Float ) -> List ( Float, Float ) -> List ( Float, Float )
-recursiveStuff borderSegments currentPoint result =
-    let
-        maybeSegment =
-            borderSegments
-                |> Set.filter
-                    (\( point1, point2 ) -> point1 == currentPoint || point2 == currentPoint)
-                |> Set.toList
-                |> List.head
-    in
-    case maybeSegment of
-        Just ( point1, point2 ) ->
-            let
-                remainingSegments =
-                    borderSegments
-                        |> Set.remove ( point1, point2 )
-            in
-            recursiveStuff remainingSegments
-                (if currentPoint == point1 then
-                    point2
-
-                 else
-                    point1
-                )
-                (currentPoint :: result)
-
-        Nothing ->
-            currentPoint :: result
-
-
-
---should never happen
--- Should never happen
-
-
-getEdgesForArea : Area -> Int -> Set.Set BorderSegment
-getEdgesForArea area scale =
-    area
-        |> Set.foldl
-            (\coordinate result ->
-                Set.union result (getEdgesForCountryForCoordinate area coordinate scale)
-            )
-            Set.empty
-
-
-scaleCoordinate : Int -> ( Int, Int ) -> ( Float, Float )
-scaleCoordinate scale ( x, y ) =
-    ( x * scale |> toFloat, y * scale |> toFloat )
-
-
-scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> BorderSegment
-scaleEdge scale ( point1, point2 ) =
-    ( scaleCoordinate scale point1, scaleCoordinate scale point2 )
-
-
-getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Int -> Set.Set BorderSegment
-getEdgesForCountryForCoordinate allAreas ( x, y ) scaleFactor =
-    let
-        left =
-            ( x - 1, y )
-
-        leftEdge =
-            ( ( x, y ), ( x, y + 1 ) )
-
-        right =
-            ( x + 1, y )
-
-        rightEdge =
-            ( ( x + 1, y ), ( x + 1, y + 1 ) )
-
-        above =
-            ( x, y - 1 )
-
-        aboveEdge =
-            ( ( x, y ), ( x + 1, y ) )
-
-        below =
-            ( x, y + 1 )
-
-        belowEdge =
-            ( ( x, y + 1 ), ( x + 1, y + 1 ) )
-
-        adjacentEdges =
-            [ ( left, leftEdge )
-            , ( right, rightEdge )
-            , ( above, aboveEdge )
-            , ( below, belowEdge )
-            ]
-    in
-    adjacentEdges
-        |> List.foldl
-            (\( adjacent, edge ) result ->
-                if Set.member adjacent allAreas then
-                    result
-
-                else
-                    Set.insert (scaleEdge scaleFactor edge) result
-            )
-            Set.empty
-
-
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
@@ -1202,7 +1078,7 @@ subscriptions model =
 
 
 
--- Parsing
+-- Parsing and converting
 -- It's terrible, but it works. Eventually look into using a real parser.
 
 
@@ -1458,3 +1334,118 @@ getNeighborCoordinates ( x, y ) ( width, height ) =
 isCountry : String -> Bool
 isCountry areaId =
     String.length areaId < 4
+
+
+capitolDotsCoordinates : Area -> Int -> Set.Set ( Float, Float )
+capitolDotsCoordinates area scale =
+    area
+        |> Set.map
+            (\( x, y ) ->
+                ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
+            )
+
+
+coordinatesToPolygon : Set.Set ( ( Float, Float ), ( Float, Float ) ) -> List ( Float, Float )
+coordinatesToPolygon edges =
+    case edges |> Set.toList of
+        ( point1, point2 ) :: _ ->
+            recursiveStuff (Set.remove ( point1, point2 ) edges) point2 []
+
+        _ ->
+            []
+
+
+recursiveStuff : Set.Set BorderSegment -> ( Float, Float ) -> List ( Float, Float ) -> List ( Float, Float )
+recursiveStuff borderSegments currentPoint result =
+    let
+        maybeSegment =
+            borderSegments
+                |> Set.filter
+                    (\( point1, point2 ) -> point1 == currentPoint || point2 == currentPoint)
+                |> Set.toList
+                |> List.head
+    in
+    case maybeSegment of
+        Just ( point1, point2 ) ->
+            let
+                remainingSegments =
+                    borderSegments
+                        |> Set.remove ( point1, point2 )
+            in
+            recursiveStuff remainingSegments
+                (if currentPoint == point1 then
+                    point2
+
+                 else
+                    point1
+                )
+                (currentPoint :: result)
+
+        Nothing ->
+            currentPoint :: result
+
+
+getEdgesForArea : Area -> Int -> Set.Set BorderSegment
+getEdgesForArea area scale =
+    area
+        |> Set.foldl
+            (\coordinate result ->
+                Set.union result (getEdgesForCountryForCoordinate area coordinate scale)
+            )
+            Set.empty
+
+
+scaleCoordinate : Int -> ( Int, Int ) -> ( Float, Float )
+scaleCoordinate scale ( x, y ) =
+    ( x * scale |> toFloat, y * scale |> toFloat )
+
+
+scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> BorderSegment
+scaleEdge scale ( point1, point2 ) =
+    ( scaleCoordinate scale point1, scaleCoordinate scale point2 )
+
+
+getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Int -> Set.Set BorderSegment
+getEdgesForCountryForCoordinate allAreas ( x, y ) scaleFactor =
+    let
+        left =
+            ( x - 1, y )
+
+        leftEdge =
+            ( ( x, y ), ( x, y + 1 ) )
+
+        right =
+            ( x + 1, y )
+
+        rightEdge =
+            ( ( x + 1, y ), ( x + 1, y + 1 ) )
+
+        above =
+            ( x, y - 1 )
+
+        aboveEdge =
+            ( ( x, y ), ( x + 1, y ) )
+
+        below =
+            ( x, y + 1 )
+
+        belowEdge =
+            ( ( x, y + 1 ), ( x + 1, y + 1 ) )
+
+        adjacentEdges =
+            [ ( left, leftEdge )
+            , ( right, rightEdge )
+            , ( above, aboveEdge )
+            , ( below, belowEdge )
+            ]
+    in
+    adjacentEdges
+        |> List.foldl
+            (\( adjacent, edge ) result ->
+                if Set.member adjacent allAreas then
+                    result
+
+                else
+                    Set.insert (scaleEdge scaleFactor edge) result
+            )
+            Set.empty
