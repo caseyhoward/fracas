@@ -60,7 +60,6 @@ type alias Country =
     { coordinates : Set.Set ( Int, Int )
     , polygon : List ( Float, Float )
     , center : ( Int, Int )
-    , borderEdges : Set.Set BorderSegment
     , neighboringCountries : Set.Set String
     , neighboringBodiesOfWater : Set.Set String
     }
@@ -68,7 +67,6 @@ type alias Country =
 
 type alias BodyOfWater =
     { coordinates : Set.Set ( Int, Int )
-    , borderEdges : Set.Set BorderSegment
     , polygon : List ( Float, Float )
     , neighboringCountries : Set.Set String
     }
@@ -512,7 +510,7 @@ attemptToAttackCountry currentPlayerId currentPlayer opponentPlayerId opponentPl
                 updatedPlayers =
                     playingGameAttributes.players
                         |> takeCountryFromOpponent clickedCountryId currentPlayerId opponentPlayerId
-                        |> destroyPlayer opponentPlayerId 
+                        |> destroyPlayer opponentPlayerId
             in
             updateForSuccessfulAttack updatedPlayers playingGameAttributes
 
@@ -888,7 +886,7 @@ viewPlayerTurnStatus playerId player playerTurnStage =
                     "Player " ++ String.fromInt playerId ++ " is moving from " ++ fromCountryId
 
                 GameOver winnerPlayerId ->
-                    Debug.log "" ("Player " ++ String.fromInt winnerPlayerId ++ " wins!!!")
+                    "Player " ++ String.fromInt winnerPlayerId ++ " wins!!!"
             )
         )
 
@@ -900,7 +898,6 @@ colorToElementColor color =
 
 type alias BorderSegment =
     ( ( Float, Float ), ( Float, Float ) )
-
 
 
 
@@ -921,10 +918,10 @@ renderMap players map =
                     (\countryId country ->
                         case findCountryOwner players countryId of
                             Just ( _, player, playerCountry ) ->
-                                renderCountry countryId country.polygon country.borderEdges country.center country.coordinates player.color playerCountry.troopCount player.capitolStatus
+                                renderCountry countryId country.polygon country.center player.color playerCountry.troopCount player.capitolStatus
 
                             Nothing ->
-                                renderCountry countryId country.polygon country.borderEdges country.center country.coordinates Color.gray 0 NoCapitol
+                                renderCountry countryId country.polygon country.center Color.gray 0 NoCapitol
                     )
                 |> Dict.values
 
@@ -974,11 +971,11 @@ findCountryOwner players countryId =
             Nothing
 
 
-renderCountry : String -> List ( Float, Float ) -> Set.Set ( ( Float, Float ), ( Float, Float ) ) -> ( Int, Int ) -> Area -> Color.Color -> Int -> CapitolStatus -> Collage.Collage Msg
-renderCountry countryId polygon borderSegments medianCoordinates area color troopCount capitolStatus =
+renderCountry : String -> List ( Float, Float ) -> ( Int, Int ) -> Color.Color -> Int -> CapitolStatus -> Collage.Collage Msg
+renderCountry countryId polygon medianCoordinates color troopCount capitolStatus =
     Collage.group
         [ renderTroopCount medianCoordinates troopCount
-        , renderArea polygon borderSegments color capitolStatus countryId
+        , renderArea polygon color capitolStatus countryId
         ]
         |> Collage.Events.onClick (CountryClicked countryId)
 
@@ -1022,8 +1019,8 @@ getMedianCoordinates area =
             )
 
 
-renderArea : List ( Float, Float ) -> Set.Set BorderSegment -> Color.Color -> CapitolStatus -> String -> Collage.Collage msg
-renderArea polygonPoints segments color capitolStatus countryId =
+renderArea : List ( Float, Float ) -> Color.Color -> CapitolStatus -> String -> Collage.Collage msg
+renderArea polygonPoints color capitolStatus countryId =
     let
         scale =
             defaultScale
@@ -1204,6 +1201,7 @@ subscriptions model =
             Sub.none
 
 
+
 -- Parsing
 -- It's terrible, but it works. Eventually look into using a real parser.
 
@@ -1312,7 +1310,6 @@ parseMap text =
                                             , neighboringBodiesOfWater = Set.empty
                                             , coordinates = Set.singleton coordinates
                                             , polygon = []
-                                            , borderEdges = Set.empty
                                             , center = ( 0, 0 )
                                             }
 
@@ -1331,7 +1328,6 @@ parseMap text =
 
                                         Nothing ->
                                             { neighboringCountries = Set.empty
-                                            , borderEdges = Set.empty
                                             , coordinates = Set.singleton coordinates
                                             , polygon = []
                                             }
@@ -1353,7 +1349,6 @@ parseMap text =
                     { country
                         | polygon = coordinatesToPolygon edges
                         , center = getMedianCoordinates country.coordinates
-                        , borderEdges = edges
                     }
                 )
     , bodiesOfWater =
@@ -1366,7 +1361,6 @@ parseMap text =
                     in
                     { bodyOfWater
                         | polygon = coordinatesToPolygon edges
-                        , borderEdges = getEdgesForArea bodyOfWater.coordinates defaultScale
                     }
                 )
     , dimensions =
@@ -1464,4 +1458,3 @@ getNeighborCoordinates ( x, y ) ( width, height ) =
 isCountry : String -> Bool
 isCountry areaId =
     String.length areaId < 4
-
