@@ -1,4 +1,4 @@
-module Main exposing (BorderSegment, Country, coordinatesToPolygon, getEdgesForArea, getMapDimensions, getNeighborCoordinates, main, parseMap, parseRawMap, updateCountry)
+module Main exposing (BorderSegment, CapitolStatus(..), Country, coordinatesToPolygon, getEdgesForArea, getMapDimensions, getNeighborCoordinates, main, parseMap, parseRawMap, removePlayerCountry, updateCountry)
 
 import Browser
 import Collage
@@ -503,7 +503,7 @@ attemptToAttackCountry currentPlayerId currentPlayer opponentPlayerId opponentPl
             let
                 updatedPlayers =
                     playingGameAttributes.players
-                        |> updatePlayerTroopCountForCountry clickedCountryId opponentPlayerId opponentPlayer opponentPlayerCountry remainingTroops
+                        |> updatePlayerTroopCountForCountry clickedCountryId opponentPlayerId opponentPlayerCountry remainingTroops
             in
             updateForSuccessfulAttack updatedPlayers playingGameAttributes
 
@@ -511,8 +511,8 @@ attemptToAttackCountry currentPlayerId currentPlayer opponentPlayerId opponentPl
             let
                 updatedPlayers =
                     playingGameAttributes.players
-                        |> takeCountryFromOpponent clickedCountryId currentPlayerId currentPlayer opponentPlayerId opponentPlayer
-                        |> destroyCapitol opponentPlayerId opponentPlayer
+                        |> takeCountryFromOpponent clickedCountryId currentPlayerId opponentPlayerId
+                        |> destroyPlayer opponentPlayerId 
             in
             updateForSuccessfulAttack updatedPlayers playingGameAttributes
 
@@ -520,7 +520,7 @@ attemptToAttackCountry currentPlayerId currentPlayer opponentPlayerId opponentPl
             let
                 updatedPlayers =
                     playingGameAttributes.players
-                        |> takeCountryFromOpponent clickedCountryId currentPlayerId currentPlayer opponentPlayerId opponentPlayer
+                        |> takeCountryFromOpponent clickedCountryId currentPlayerId opponentPlayerId
             in
             updateForSuccessfulAttack updatedPlayers playingGameAttributes
 
@@ -539,39 +539,57 @@ updateForSuccessfulAttack players playingGameAttributes =
     }
 
 
-takeCountryFromOpponent : String -> Int -> Player -> Int -> Player -> Dict.Dict Int Player -> Dict.Dict Int Player
-takeCountryFromOpponent countryId currentPlayerId currentPlayer opponentPlayerId opponentPlayer players =
+takeCountryFromOpponent : String -> Int -> Int -> Dict.Dict Int Player -> Dict.Dict Int Player
+takeCountryFromOpponent countryId currentPlayerId opponentPlayerId players =
     players
-        |> removePlayerCountry countryId opponentPlayerId opponentPlayer
-        |> updatePlayerTroopCountForCountry countryId currentPlayerId currentPlayer { troopCount = 0 } 0
+        |> removePlayerCountry countryId opponentPlayerId
+        |> updatePlayerTroopCountForCountry countryId currentPlayerId { troopCount = 0 } 0
 
 
-updatePlayerTroopCountForCountry : String -> Int -> Player -> PlayerCountry -> Int -> Dict.Dict Int Player -> Dict.Dict Int Player
-updatePlayerTroopCountForCountry countryId playerId player playerCountry troops players =
-    players
-        |> Dict.insert
-            playerId
-            { player
-                | countries =
-                    player.countries
-                        |> Dict.insert countryId { playerCountry | troopCount = troops }
-            }
+updatePlayerTroopCountForCountry : String -> Int -> PlayerCountry -> Int -> Dict.Dict Int Player -> Dict.Dict Int Player
+updatePlayerTroopCountForCountry countryId playerId playerCountry troops players =
+    -- Make this return result with error if dict lookup fails
+    case Dict.get playerId players of
+        Just player ->
+            players
+                |> Dict.insert
+                    playerId
+                    { player
+                        | countries =
+                            player.countries
+                                |> Dict.insert countryId { playerCountry | troopCount = troops }
+                    }
+
+        Nothing ->
+            players
 
 
-removePlayerCountry : String -> Int -> Player -> Dict.Dict Int Player -> Dict.Dict Int Player
-removePlayerCountry countryId playerId player players =
-    players
-        |> Dict.insert
-            playerId
-            { player
-                | countries = player.countries |> Dict.remove countryId
-            }
+removePlayerCountry : String -> Int -> Dict.Dict Int Player -> Dict.Dict Int Player
+removePlayerCountry countryId playerId players =
+    -- Make this return result with error if dict lookup fails
+    case Dict.get playerId players of
+        Just player ->
+            players
+                |> Dict.insert
+                    playerId
+                    { player
+                        | countries = player.countries |> Dict.remove countryId
+                    }
+
+        Nothing ->
+            players
 
 
-destroyCapitol : Int -> Player -> Dict.Dict Int Player -> Dict.Dict Int Player
-destroyCapitol playerId player players =
-    players
-        |> Dict.insert playerId { player | capitolStatus = NoCapitol }
+destroyPlayer : Int -> Dict.Dict Int Player -> Dict.Dict Int Player
+destroyPlayer playerId players =
+    -- Make this return result with error if dict lookup fails
+    case Dict.get playerId players of
+        Just player ->
+            players
+                |> Dict.insert playerId { player | capitolStatus = NoCapitol, countries = Dict.empty }
+
+        Nothing ->
+            players
 
 
 attackAndDefenseStrength : Set.Set String -> Player -> Dict.Dict Int Player -> Int -> PlayerCountry -> ( Int, Int )
@@ -596,12 +614,9 @@ attackAndDefenseStrength countryBeingAttackedNeighboringCountries currentPlayer 
             ( 0, opponentPlayerCountry.troopCount )
 
 
-
--- We already know the country is unoccuppied from an earlier check so just make sure it is reachable from one of the current players countries
-
-
 canAnnexCountry : GameMap -> Player -> String -> Bool
 canAnnexCountry gameMap player countryIdToAnnex =
+    -- We already know the country is unoccuppied from an earlier check so just make sure it is reachable from one of the current players countries
     player.countries
         |> Dict.foldl
             (\playerCountryId _ isReachable ->
@@ -643,10 +658,10 @@ getCountryStatus countryId currentPlayer players =
 
 
 nextPlayerTurn : Int -> String -> Dict.Dict Int Player -> PlayerTurn -> PlayerTurn
-nextPlayerTurn totalPlayers countryId players (PlayerTurn currentPlayer playerTurnStage) =
+nextPlayerTurn totalPlayers countryId players (PlayerTurn currentPlayerId playerTurnStage) =
     case playerTurnStage of
         TroopPlacement _ ->
-            PlayerTurn currentPlayer AttackAnnexOrPort
+            PlayerTurn currentPlayerId AttackAnnexOrPort
 
         AttackAnnexOrPort ->
             let
@@ -665,29 +680,30 @@ nextPlayerTurn totalPlayers countryId players (PlayerTurn currentPlayer playerTu
                             []
             in
             if List.length capitolsRemaining == 1 then
-                PlayerTurn -1 (GameOver currentPlayer)
+                PlayerTurn currentPlayerId (GameOver currentPlayerId)
 
             else
-                PlayerTurn currentPlayer TroopMovement
+                PlayerTurn currentPlayerId TroopMovement
 
         TroopMovement ->
-            PlayerTurn currentPlayer (TroopMovementFromSelected countryId)
+            PlayerTurn currentPlayerId (TroopMovementFromSelected countryId)
 
         TroopMovementFromSelected _ ->
-            PlayerTurn (nextPlayerCheckForDeadPlayers currentPlayer players) (TroopPlacement (numberOfTroopsToPlace (nextPlayerCheckForDeadPlayers currentPlayer players) players))
+            PlayerTurn (nextPlayerCheckForDeadPlayers currentPlayerId players) (TroopPlacement (numberOfTroopsToPlace (nextPlayerCheckForDeadPlayers currentPlayerId players) players))
 
         CapitolPlacement ->
             let
                 nextPlayerId =
-                    remainderBy (Dict.size players) currentPlayer + 1
+                    remainderBy (Dict.size players) currentPlayerId + 1
             in
-            if currentPlayer == totalPlayers then
+            if currentPlayerId == totalPlayers then
                 PlayerTurn nextPlayerId (TroopPlacement (numberOfTroopsToPlace nextPlayerId players))
 
             else
                 PlayerTurn nextPlayerId CapitolPlacement
 
         GameOver _ ->
+            -- This really should never happen since there shuoldn't be another turn after the game is over
             PlayerTurn -1 playerTurnStage
 
 
@@ -872,7 +888,7 @@ viewPlayerTurnStatus playerId player playerTurnStage =
                     "Player " ++ String.fromInt playerId ++ " is moving from " ++ fromCountryId
 
                 GameOver winnerPlayerId ->
-                    "Player " ++ String.fromInt winnerPlayerId ++ " wins!!!"
+                    Debug.log "" ("Player " ++ String.fromInt winnerPlayerId ++ " wins!!!")
             )
         )
 

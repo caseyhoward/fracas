@@ -1,5 +1,6 @@
 module Tests exposing (..)
 
+import Color
 import Dict
 import Expect
 import Main
@@ -119,7 +120,8 @@ all =
             \_ ->
                 Expect.equal
                     (Main.parseMap mapFile)
-                    { bodiesOfWater =
+                    { dimensions = ( 36, 36 )
+                    , bodiesOfWater =
                         Dict.fromList
                             [ ( "1000"
                               , { borderEdges =
@@ -244,19 +246,19 @@ all =
         -- 1.1.1000.
         -- 1.2.2.
         -- 3.2.4.
-        , test "coordinatesToPolygon" <|
-            \_ ->
-                Expect.equal
-                    (Main.coordinatesToPolygon (Set.fromList [ ( 0, 1 ), ( 0, 2 ), ( 1, 2 ) ]))
-                    [ ( 0, 12 )
-                    , ( 12, 12 )
-                    , ( 12, 24 )
-                    , ( 24, 24 )
-                    , ( 24, 36 )
-                    , ( 12, 36 )
-                    , ( 0, 36 )
-                    , ( 0, 24 )
-                    ]
+        -- , test "coordinatesToPolygon" <|
+        --     \_ ->
+        --         Expect.equal
+        --             (Main.coordinatesToPolygon (Set.fromList [ ( 0, 1 ), ( 0, 2 ), ( 1, 2 ) ]))
+        --             [ ( 0, 12 )
+        --             , ( 12, 12 )
+        --             , ( 12, 24 )
+        --             , ( 24, 24 )
+        --             , ( 24, 36 )
+        --             , ( 12, 36 )
+        --             , ( 0, 36 )
+        --             , ( 0, 24 )
+        --             ]
         , test ".updateCountry" <|
             \_ ->
                 let
@@ -340,4 +342,14 @@ all =
                         , ( ( 20, 10 ), ( 20, 20 ) )
                         ]
                     )
+        , test ".removePlayerCountry" <|
+            \_ ->
+                Expect.equal
+                    (Main.removePlayerCountry
+                        "111"
+                        2
+                        { countries = Dict.fromList [ ( "111", { troopCount = 0 } ) ], capitolStatus = Main.NoCapitol, name = "", color = Color.blue }
+                        (Dict.fromList [ ( 2, { countries = Dict.fromList [ ( "111", { troopCount = 0 } ) ], capitolStatus = Main.NoCapitol, name = "", color = Color.blue } ) ])
+                    )
+                    (Dict.fromList [ ( 2, { countries = Dict.empty, capitolStatus = Main.NoCapitol, name = "", color = Color.blue } ) ])
         ]
