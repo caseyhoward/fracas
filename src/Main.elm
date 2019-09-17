@@ -13,7 +13,6 @@ module Main exposing
     , updateCountry
     )
 
-import Array
 import Browser
 import Collage
 import Collage.Events
@@ -32,7 +31,6 @@ import Random
 import Random.Dict
 import Random.List
 import Set
-import Time
 
 
 
@@ -56,7 +54,6 @@ defaultScale =
 
 countryBorderColor : Color.Color
 countryBorderColor =
-    -- Color.rgb255 64 64 64
     Color.black
 
 
@@ -247,21 +244,16 @@ update msg model =
         PlayingGame attributes ->
             case msg of
                 CountryClicked id ->
-                    case Dict.get id attributes.map.countries of
-                        Just country ->
-                            case attributes.currentPlayerTurn of
-                                PlayerTurn playerId _ ->
-                                    case Dict.get playerId attributes.players of
-                                        Just _ ->
-                                            ( PlayingGame (handleCountryClickFromPlayer id country attributes)
-                                            , Cmd.none
-                                            )
+                    case attributes.currentPlayerTurn of
+                        PlayerTurn playerId _ ->
+                            case Dict.get playerId attributes.players of
+                                Just _ ->
+                                    ( PlayingGame (handleCountryClickFromPlayer id attributes)
+                                    , Cmd.none
+                                    )
 
-                                        Nothing ->
-                                            ( PlayingGame attributes, Cmd.none )
-
-                        Nothing ->
-                            ( model, Cmd.none )
+                                Nothing ->
+                                    ( PlayingGame attributes, Cmd.none )
 
                 Pass ->
                     case attributes.currentPlayerTurn of
@@ -335,98 +327,93 @@ getDefaultColor playerId =
             Color.black
 
 
-handleCountryClickFromPlayer : String -> Country -> PlayingGameAttributes -> PlayingGameAttributes
-handleCountryClickFromPlayer clickedCountryId country playingGameAttributes =
+handleCountryClickFromPlayer : String -> PlayingGameAttributes -> PlayingGameAttributes
+handleCountryClickFromPlayer clickedCountryId playingGameAttributes =
     case playingGameAttributes.currentPlayerTurn of
         PlayerTurn currentPlayerId playerTurnStage ->
-            case Dict.get currentPlayerId playingGameAttributes.players of
-                Just currentPlayer ->
-                    case playerTurnStage of
-                        CapitolPlacement ->
-                            attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes
+            case playerTurnStage of
+                CapitolPlacement ->
+                    attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes
 
-                        TroopPlacement troopsToPlace ->
-                            case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
-                                OccupiedByCurrentPlayer clickedCountryTroopCount ->
-                                    let
-                                        updatedPlayers =
-                                            playingGameAttributes.players |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (clickedCountryTroopCount + troopsToPlace)
-                                    in
-                                    { playingGameAttributes
-                                        | players = updatedPlayers
-                                        , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
-                                        , error = Nothing
-                                    }
+                TroopPlacement troopsToPlace ->
+                    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+                        OccupiedByCurrentPlayer clickedCountryTroopCount ->
+                            let
+                                updatedPlayers =
+                                    playingGameAttributes.players |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (clickedCountryTroopCount + troopsToPlace)
+                            in
+                            { playingGameAttributes
+                                | players = updatedPlayers
+                                , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
+                                , error = Nothing
+                            }
 
-                                OccupiedByOpponent _ _ _ ->
-                                    { playingGameAttributes | error = Just "You must put troops in your own country" }
+                        OccupiedByOpponent _ _ _ ->
+                            { playingGameAttributes | error = Just "You must put troops in your own country" }
 
-                                Unoccupied ->
-                                    { playingGameAttributes | error = Just "You must put troops in your own country" }
+                        Unoccupied ->
+                            { playingGameAttributes | error = Just "You must put troops in your own country" }
 
-                        AttackAnnexOrPort ->
-                            attackAnnexOrPort clickedCountryId country currentPlayerId currentPlayer playingGameAttributes
+                AttackAnnexOrPort ->
+                    attackAnnexOrPort clickedCountryId currentPlayerId playingGameAttributes
 
-                        TroopMovement ->
-                            case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
-                                OccupiedByCurrentPlayer troopCount ->
-                                    if troopCount > 0 then
-                                        { playingGameAttributes
-                                            | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players (String.fromInt troopCount) playingGameAttributes.currentPlayerTurn
-                                            , error = Nothing
-                                        }
+                TroopMovement ->
+                    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+                        OccupiedByCurrentPlayer troopCount ->
+                            if troopCount > 0 then
+                                { playingGameAttributes
+                                    | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players (String.fromInt troopCount) playingGameAttributes.currentPlayerTurn
+                                    , error = Nothing
+                                }
 
-                                    else
-                                        { playingGameAttributes | error = Just "Select a country with troops" }
+                            else
+                                { playingGameAttributes | error = Just "Select a country with troops" }
 
-                                _ ->
-                                    { playingGameAttributes | error = Just "You must move troops from your own country" }
+                        _ ->
+                            { playingGameAttributes | error = Just "You must move troops from your own country" }
 
-                        TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
-                            case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
-                                OccupiedByCurrentPlayer playerCountryToTroopCount ->
-                                    case String.toInt numberOfTroopsToMoveString of
-                                        Just numberOfTroopsToMove ->
-                                            if isCountryReachableFromOtherCountry playingGameAttributes.map fromCountryId clickedCountryId then
-                                                let
-                                                    fromCountryTroopCount =
-                                                        case Dict.get currentPlayerId playingGameAttributes.players of
-                                                            Just currentPlayer1 ->
-                                                                case Dict.get fromCountryId currentPlayer1.countries of
-                                                                    Just troopCount ->
-                                                                        troopCount
-
-                                                                    Nothing ->
-                                                                        0
+                TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
+                    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+                        OccupiedByCurrentPlayer playerCountryToTroopCount ->
+                            case String.toInt numberOfTroopsToMoveString of
+                                Just numberOfTroopsToMove ->
+                                    if isCountryReachableFromOtherCountry playingGameAttributes.map fromCountryId clickedCountryId then
+                                        let
+                                            fromCountryTroopCount =
+                                                case Dict.get currentPlayerId playingGameAttributes.players of
+                                                    Just currentPlayer1 ->
+                                                        case Dict.get fromCountryId currentPlayer1.countries of
+                                                            Just troopCount ->
+                                                                troopCount
 
                                                             Nothing ->
                                                                 0
 
-                                                    updatedPlayers =
-                                                        playingGameAttributes.players
-                                                            |> updatePlayerTroopCountForCountry fromCountryId currentPlayerId (fromCountryTroopCount - numberOfTroopsToMove)
-                                                            |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (playerCountryToTroopCount + numberOfTroopsToMove)
-                                                in
-                                                { playingGameAttributes
-                                                    | players = updatedPlayers
-                                                    , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
-                                                    , error = Nothing
-                                                }
+                                                    Nothing ->
+                                                        0
 
-                                            else
-                                                { playingGameAttributes | error = Just "You can't move troops between those countries" }
+                                            updatedPlayers =
+                                                playingGameAttributes.players
+                                                    |> updatePlayerTroopCountForCountry fromCountryId currentPlayerId (fromCountryTroopCount - numberOfTroopsToMove)
+                                                    |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (playerCountryToTroopCount + numberOfTroopsToMove)
+                                        in
+                                        { playingGameAttributes
+                                            | players = updatedPlayers
+                                            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
+                                            , error = Nothing
+                                        }
 
-                                        Nothing ->
-                                            { playingGameAttributes | error = Just "Number of troops must be a number" }
+                                    else
+                                        { playingGameAttributes | error = Just "You can't move troops between those countries" }
 
-                                _ ->
-                                    { playingGameAttributes | error = Just "You must move troops to your own country" }
+                                Nothing ->
+                                    { playingGameAttributes | error = Just "Number of troops must be a number" }
 
-                        GameOver _ ->
-                            { playingGameAttributes | error = Nothing }
+                        _ ->
+                            { playingGameAttributes | error = Just "You must move troops to your own country" }
 
-                Nothing ->
-                    playingGameAttributes
+                GameOver _ ->
+                    { playingGameAttributes | error = Nothing }
 
 
 attemptToPlaceCapitol : String -> Int -> PlayingGameAttributes -> PlayingGameAttributes
@@ -470,8 +457,8 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes =
             }
 
 
-attackAnnexOrPort : String -> Country -> Int -> Player -> PlayingGameAttributes -> PlayingGameAttributes
-attackAnnexOrPort clickedCountryId clickedCountry currentPlayerId currentPlayer playingGameAttributes =
+attackAnnexOrPort : String -> Int -> PlayingGameAttributes -> PlayingGameAttributes
+attackAnnexOrPort clickedCountryId currentPlayerId playingGameAttributes =
     case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
         OccupiedByCurrentPlayer _ ->
             { playingGameAttributes
@@ -479,59 +466,81 @@ attackAnnexOrPort clickedCountryId clickedCountry currentPlayerId currentPlayer 
             }
 
         OccupiedByOpponent opponentPlayerId opponentPlayer opponentPlayerCountry ->
-            attemptToAttackCountry currentPlayerId opponentPlayerId opponentPlayer opponentPlayerCountry clickedCountryId clickedCountry playingGameAttributes
+            attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes
 
         Unoccupied ->
-            attemptToAnnexCountry currentPlayerId currentPlayer clickedCountryId playingGameAttributes
+            attemptToAnnexCountry currentPlayerId clickedCountryId playingGameAttributes
 
 
-attackResult : Int -> Int -> Player -> Int -> String -> Country -> PlayingGameAttributes -> AttackResult
-attackResult currentPlayerId opponentPlayerId opponentPlayer troopCount clickedCountryId clickedCountry playingGameAttributes =
-    let
-        ( attackStrength, defenseStrength ) =
-            attackAndDefenseStrength clickedCountry.neighboringCountries currentPlayerId playingGameAttributes.players opponentPlayerId troopCount
+attackResult : Int -> Int -> String -> PlayingGameAttributes -> AttackResult
+attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes =
+    case Dict.get clickedCountryId playingGameAttributes.map.countries of
+        Just clickedCountry ->
+            case Dict.get opponentPlayerId playingGameAttributes.players of
+                Just opponentPlayer ->
+                    case Dict.get clickedCountryId opponentPlayer.countries of
+                        Just troopCount ->
+                            let
+                                ( attackStrength, defenseStrength ) =
+                                    attackAndDefenseStrength clickedCountry.neighboringCountries currentPlayerId playingGameAttributes.players opponentPlayerId troopCount
 
-        remainingTroops =
-            troopCount + defenseStrength - attackStrength
-    in
-    if attackStrength > defenseStrength then
-        if remainingTroops > 0 then
-            OpponentCountryLosesTroops remainingTroops
+                                remainingTroops =
+                                    troopCount + defenseStrength - attackStrength
+                            in
+                            if attackStrength > defenseStrength then
+                                if remainingTroops > 0 then
+                                    OpponentCountryLosesTroops remainingTroops
 
-        else if isCountryIdCapitol opponentPlayer clickedCountryId then
-            OpponentEliminated
+                                else if isCountryIdCapitol opponentPlayer clickedCountryId then
+                                    OpponentEliminated
 
-        else
-            CurrentPlayerAcquiresOpponentCountry
+                                else
+                                    CurrentPlayerAcquiresOpponentCountry
 
-    else
-        NotEnoughTroopsToAttack attackStrength defenseStrength
+                            else
+                                NotEnoughTroopsToAttack attackStrength defenseStrength
+
+                        Nothing ->
+                            AttackResultError "Opponent does not own country"
+
+                Nothing ->
+                    AttackResultError "Opponent player does not exist"
+
+        Nothing ->
+            AttackResultError "Clicked country does not exist"
 
 
-attemptToAnnexCountry : Int -> Player -> String -> PlayingGameAttributes -> PlayingGameAttributes
-attemptToAnnexCountry currentPlayerId currentPlayer clickedCountryId playingGameAttributes =
-    if canAnnexCountry playingGameAttributes.map currentPlayer clickedCountryId then
-        let
-            neutralTroopCount =
-                Dict.get clickedCountryId playingGameAttributes.neutralCountryTroops |> Maybe.withDefault 0
+attemptToAnnexCountry : Int -> String -> PlayingGameAttributes -> PlayingGameAttributes
+attemptToAnnexCountry currentPlayerId clickedCountryId playingGameAttributes =
+    case Dict.get currentPlayerId playingGameAttributes.players of
+        Just currentPlayer ->
+            if canAnnexCountry playingGameAttributes.map currentPlayer clickedCountryId then
+                let
+                    neutralTroopCount =
+                        Dict.get clickedCountryId playingGameAttributes.neutralCountryTroops |> Maybe.withDefault 0
 
-            updatedPlayer =
-                { currentPlayer
-                    | countries =
-                        Dict.insert clickedCountryId neutralTroopCount currentPlayer.countries
+                    updatedPlayer =
+                        { currentPlayer
+                            | countries =
+                                Dict.insert clickedCountryId neutralTroopCount currentPlayer.countries
+                        }
+                in
+                { playingGameAttributes
+                    | players = Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
+                    , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players "-1" playingGameAttributes.currentPlayerTurn
+                    , neutralCountryTroops = Dict.remove clickedCountryId playingGameAttributes.neutralCountryTroops
+                    , error = Nothing
                 }
-        in
-        { playingGameAttributes
-            | players = Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
-            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players "-1" playingGameAttributes.currentPlayerTurn
-            , neutralCountryTroops = Dict.remove clickedCountryId playingGameAttributes.neutralCountryTroops
-            , error = Nothing
-        }
 
-    else
-        { playingGameAttributes
-            | error = Just "You can't annex that country"
-        }
+            else
+                { playingGameAttributes
+                    | error = Just "You can't annex that country"
+                }
+
+        Nothing ->
+            { playingGameAttributes
+                | error = Just "This shouldn't happen"
+            }
 
 
 type AttackResult
@@ -539,11 +548,12 @@ type AttackResult
     | OpponentCountryLosesTroops Int
     | OpponentEliminated
     | NotEnoughTroopsToAttack Int Int
+    | AttackResultError String
 
 
-attemptToAttackCountry : Int -> Int -> Player -> Int -> String -> Country -> PlayingGameAttributes -> PlayingGameAttributes
-attemptToAttackCountry currentPlayerId opponentPlayerId opponentPlayer troopCount clickedCountryId clickedCountry playingGameAttributes =
-    case attackResult currentPlayerId opponentPlayerId opponentPlayer troopCount clickedCountryId clickedCountry playingGameAttributes of
+attemptToAttackCountry : Int -> Int -> String -> PlayingGameAttributes -> PlayingGameAttributes
+attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes =
+    case attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes of
         OpponentCountryLosesTroops remainingTroops ->
             let
                 updatedPlayers =
@@ -572,6 +582,11 @@ attemptToAttackCountry currentPlayerId opponentPlayerId opponentPlayer troopCoun
         NotEnoughTroopsToAttack attackStrength defenseStrength ->
             { playingGameAttributes
                 | error = Just ("Not enough to attack: attack strength = " ++ String.fromInt attackStrength ++ ", defense strength = " ++ String.fromInt defenseStrength)
+            }
+
+        AttackResultError errorMessage ->
+            { playingGameAttributes
+                | error = Just errorMessage
             }
 
 
