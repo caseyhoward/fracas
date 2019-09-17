@@ -352,10 +352,13 @@ handleCountryClickFromPlayer clickedCountryId country model =
 
                                 Unoccupied ->
                                     let
+                                        neutralTroopCount =
+                                            Dict.get clickedCountryId model.neutralCountryTroops |> Maybe.withDefault 0
+
                                         updatedPlayer =
                                             { currentPlayer
                                                 | countries =
-                                                    Dict.insert clickedCountryId 0 currentPlayer.countries
+                                                    Dict.insert clickedCountryId neutralTroopCount currentPlayer.countries
                                                 , capitolStatus = Capitol clickedCountryId (capitolDotsCoordinates country.coordinates defaultScale)
                                             }
                                     in
