@@ -1,4 +1,17 @@
-module Main exposing (BorderSegment, CapitolStatus(..), Country, coordinatesToPolygon, getEdgesForArea, getMapDimensions, getNeighborCoordinates, main, parseMap, parseRawMap, removePlayerCountry, updateCountry)
+module Main exposing
+    ( BorderSegment
+    , CapitolStatus(..)
+    , Country
+    , coordinatesToPolygon
+    , getEdgesForArea
+    , getMapDimensions
+    , getNeighborCoordinates
+    , main
+    , parseMap
+    , parseRawMap
+    , removePlayerCountry
+    , updateCountry
+    )
 
 import Array
 import Browser
@@ -81,7 +94,6 @@ type alias Country =
 
 type Model
     = ConfiguringGame ConfigurationAttributes
-    | LoadingGame Int ConfigurationAttributes
     | PlayingGame PlayingGameAttributes
     | GeneratingRandomTroopCounts ConfigurationAttributes
 
@@ -154,7 +166,6 @@ type Msg
     | NumberOfPlayersChanged String
     | StartGameClicked
     | Pass
-    | LoadGame
     | NeutralCountryTroopCountsGenerated (Dict.Dict String Int)
     | UpdateNumberOfTroopsToMove String
 
@@ -174,7 +185,13 @@ update msg model =
                     ( ConfiguringGame { configurationOptions | numberOfPlayers = numberOfPlayers }, Cmd.none )
 
                 StartGameClicked ->
-                    ( LoadingGame 0 configurationOptions, Cmd.none )
+                    let
+                        map =
+                            parseMap Maps.Big.map
+                    in
+                    ( GeneratingRandomTroopCounts configurationOptions
+                    , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
+                    )
 
                 Pass ->
                     ( model, Cmd.none )
@@ -185,28 +202,7 @@ update msg model =
                 UpdateNumberOfTroopsToMove _ ->
                     ( model, Cmd.none )
 
-                LoadGame ->
-                    ( model, Cmd.none )
-
                 NeutralCountryTroopCountsGenerated _ ->
-                    ( model, Cmd.none )
-
-        LoadingGame counter configurationOptions ->
-            case msg of
-                LoadGame ->
-                    if counter > 0 then
-                        let
-                            map =
-                                parseMap Maps.Big.map
-                        in
-                        ( GeneratingRandomTroopCounts configurationOptions
-                        , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
-                        )
-
-                    else
-                        ( LoadingGame (counter + 1) configurationOptions, Cmd.none )
-
-                _ ->
                     ( model, Cmd.none )
 
         GeneratingRandomTroopCounts configurationOptions ->
@@ -307,9 +303,6 @@ update msg model =
                     ( model, Cmd.none )
 
                 StartGameClicked ->
-                    ( model, Cmd.none )
-
-                LoadGame ->
                     ( model, Cmd.none )
 
                 NeutralCountryTroopCountsGenerated _ ->
@@ -833,16 +826,6 @@ view model =
                     ]
                 )
 
-        LoadingGame _ _ ->
-            Element.layout []
-                (Element.column [ Element.width Element.fill, Element.height Element.fill ]
-                    [ Element.image
-                        [ Element.centerX, Element.centerY ]
-                        { src = "/loading.gif", description = "Loading" }
-                    , Element.text "Loading"
-                    ]
-                )
-
         GeneratingRandomTroopCounts _ ->
             Element.layout [] Element.none
 
@@ -1197,13 +1180,8 @@ renderArea polygonPoints color capitolStatus countryId =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    case model of
-        LoadingGame _ _ ->
-            Time.every 50 (always LoadGame)
-
-        _ ->
-            Sub.none
+subscriptions _ =
+    Sub.none
 
 
 
