@@ -1,5 +1,6 @@
 module Main exposing (BorderSegment, CapitolStatus(..), Country, coordinatesToPolygon, getEdgesForArea, getMapDimensions, getNeighborCoordinates, main, parseMap, parseRawMap, removePlayerCountry, updateCountry)
 
+import Array
 import Browser
 import Collage
 import Collage.Events
@@ -13,6 +14,9 @@ import Element.Border
 import Element.Input
 import Html exposing (Html)
 import Maps.Big
+import Random
+import Random.Dict
+import Random.List
 import Set
 import Time
 
@@ -24,6 +28,12 @@ import Time
 troopsPerCountryPerTurn : Int
 troopsPerCountryPerTurn =
     1
+
+
+maximumNeutralCountryTroops : Int
+maximumNeutralCountryTroops =
+    20
+
 
 
 defaultScale : Int
@@ -76,6 +86,7 @@ type Model
     = ConfiguringGame ConfigurationAttributes
     | LoadingGame Int ConfigurationAttributes
     | PlayingGame PlayingGameAttributes
+    | GeneratingRandomTroopCounts ConfigurationAttributes
 
 
 type alias ConfigurationAttributes =
@@ -86,6 +97,7 @@ type alias PlayingGameAttributes =
     { currentPlayerTurn : PlayerTurn
     , map : GameMap
     , players : Dict.Dict Int Player
+    , neutralCountryTroops : Dict.Dict String Int
     , error : Maybe String
     , numberOfPlayers : Int
     }
@@ -144,6 +156,7 @@ type Msg
     | StartGameClicked
     | Pass
     | LoadGame
+    | NeutralCountryTroopCountsGenerated (Dict.Dict String Int)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -166,6 +179,9 @@ update msg model =
                 LoadGame ->
                     ( model, Cmd.none )
 
+                NeutralCountryTroopCountsGenerated _ ->
+                    ( model, Cmd.none )
+
         LoadingGame counter configurationOptions ->
             case msg of
                 LoadGame ->
@@ -176,30 +192,55 @@ update msg model =
                                 |> Maybe.withDefault 6
                     in
                     if counter > 0 then
-                        ( PlayingGame
-                            { map = parseMap Maps.Big.map
-                            , players =
-                                List.range 1 numberOfPlayers
-                                    |> List.map
-                                        (\playerId ->
-                                            ( playerId
-                                            , { countries = Dict.empty
-                                              , name = "Player " ++ String.fromInt playerId
-                                              , capitolStatus = NoCapitol
-                                              , color = getDefaultColor playerId
-                                              }
-                                            )
-                                        )
-                                    |> Dict.fromList
-                            , currentPlayerTurn = PlayerTurn 1 CapitolPlacement
-                            , error = Nothing
-                            , numberOfPlayers = numberOfPlayers
-                            }
-                        , Cmd.none
+                        let
+                            map =
+                                parseMap Maps.Big.map
+                        in
+                        ( GeneratingRandomTroopCounts configurationOptions
+                        , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
                         )
 
                     else
                         ( LoadingGame (counter + 1) configurationOptions, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        GeneratingRandomTroopCounts configurationOptions ->
+            case msg of
+                NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
+                    let
+                        numberOfPlayers =
+                            configurationOptions.numberOfPlayers
+                                |> String.toInt
+                                |> Maybe.withDefault 6
+                    in
+                    let
+                        map =
+                            parseMap Maps.Big.map
+                    in
+                    ( PlayingGame
+                        { map = map
+                        , players =
+                            List.range 1 numberOfPlayers
+                                |> List.map
+                                    (\playerId ->
+                                        ( playerId
+                                        , { countries = Dict.empty
+                                          , name = "Player " ++ String.fromInt playerId
+                                          , capitolStatus = NoCapitol
+                                          , color = getDefaultColor playerId
+                                          }
+                                        )
+                                    )
+                                |> Dict.fromList
+                        , currentPlayerTurn = PlayerTurn 1 CapitolPlacement
+                        , error = Nothing
+                        , numberOfPlayers = numberOfPlayers
+                        , neutralCountryTroops = neutralCountryTroopCounts
+                        }
+                    , Cmd.none
+                    )
 
                 _ ->
                     ( model, Cmd.none )
@@ -272,6 +313,9 @@ update msg model =
                 LoadGame ->
                     ( model, Cmd.none )
 
+                NeutralCountryTroopCountsGenerated _ ->
+                    ( model, Cmd.none )
+
 
 getDefaultColor : Int -> Color.Color
 getDefaultColor playerId =
@@ -281,6 +325,15 @@ getDefaultColor playerId =
 
         Nothing ->
             Color.black
+
+
+randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String Int)
+randomTroopPlacementsGenerator countryIds =
+    -- This can pick the same country twice so you might not get the max number of countries
+    Random.Dict.dict
+        100
+        (Random.List.choose countryIds |> Random.map Tuple.first |> Random.map (Maybe.withDefault "-1"))
+        (Random.int 1 maximumNeutralCountryTroops)
 
 
 handleCountryClickFromPlayer : String -> Country -> PlayingGameAttributes -> PlayingGameAttributes
@@ -751,6 +804,9 @@ view model =
                     ]
                 )
 
+        GeneratingRandomTroopCounts _ ->
+            Element.layout [] Element.none
+
         PlayingGame attributes ->
             Element.layout [ Element.width Element.fill ]
                 (Element.row [ Element.centerX ]
@@ -758,9 +814,7 @@ view model =
                     , Element.column
                         [ Element.centerX ]
                         ([ Element.el [ Element.centerX, Element.width Element.fill ]
-                            (renderMap attributes.players attributes.map
-                                |> Element.html
-                            )
+                            (renderMap attributes.players attributes.neutralCountryTroops attributes.map |> Element.html)
                          ]
                             ++ (case attributes.error of
                                     Just error ->
@@ -893,8 +947,8 @@ type alias Area =
     Set.Set ( Int, Int )
 
 
-renderMap : Dict.Dict Int Player -> GameMap -> Html Msg
-renderMap players map =
+renderMap : Dict.Dict Int Player -> Dict.Dict String Int -> GameMap -> Html Msg
+renderMap players neutralTroopCounts map =
     let
         countryCollages : List (Collage.Collage Msg)
         countryCollages =
@@ -906,7 +960,15 @@ renderMap players map =
                                 renderCountry countryId country.polygon country.center player.color troopCount player.capitolStatus
 
                             Nothing ->
-                                renderCountry countryId country.polygon country.center Color.gray 0 NoCapitol
+                                renderCountry
+                                    countryId
+                                    country.polygon
+                                    country.center
+                                    Color.gray
+                                    (Dict.get countryId neutralTroopCounts
+                                        |> Maybe.withDefault 0
+                                    )
+                                    NoCapitol
                     )
                 |> Dict.values
 

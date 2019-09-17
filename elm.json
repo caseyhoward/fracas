@@ -10,7 +10,9 @@
             "elm/browser": "1.0.1",
             "elm/core": "1.0.2",
             "elm/html": "1.0.0",
+            "elm/random": "1.0.0",
             "elm/time": "1.0.0",
+            "elm-community/random-extra": "3.1.0",
             "mdgriffith/elm-ui": "1.1.4",
             "timjs/elm-collage": "2.0.2"
         },
@@ -19,15 +21,14 @@
             "elm/svg": "1.0.1",
             "elm/url": "1.0.0",
             "elm/virtual-dom": "1.0.2",
-            "elm-community/basics-extra": "4.0.0"
+            "elm-community/basics-extra": "4.0.0",
+            "owanturist/elm-union-find": "1.0.0"
         }
     },
     "test-dependencies": {
         "direct": {
             "elm-explorations/test": "1.0.0"
         },
-        "indirect": {
-            "elm/random": "1.0.0"
-        }
+        "indirect": {}
     }
 }
