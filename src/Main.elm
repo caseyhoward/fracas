@@ -92,7 +92,7 @@ type alias Country =
 type Model
     = ConfiguringGame ConfigurationAttributes
     | PlayingGame PlayingGameAttributes
-    | GeneratingRandomTroopCounts ConfigurationAttributes
+    | GeneratingRandomTroopCounts ConfigurationAttributes GameMap
 
 
 type alias ConfigurationAttributes =
@@ -186,7 +186,7 @@ update msg model =
                         map =
                             parseMap Maps.Big.map
                     in
-                    ( GeneratingRandomTroopCounts configurationOptions
+                    ( GeneratingRandomTroopCounts configurationOptions map
                     , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
                     )
 
@@ -202,7 +202,7 @@ update msg model =
                 NeutralCountryTroopCountsGenerated _ ->
                     ( model, Cmd.none )
 
-        GeneratingRandomTroopCounts configurationOptions ->
+        GeneratingRandomTroopCounts configurationOptions map ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
                     let
@@ -210,10 +210,6 @@ update msg model =
                             configurationOptions.numberOfPlayers
                                 |> String.toInt
                                 |> Maybe.withDefault 6
-                    in
-                    let
-                        map =
-                            parseMap Maps.Big.map
                     in
                     ( PlayingGame
                         { map = map
@@ -303,8 +299,6 @@ update msg model =
                 UpdateNumberOfTroopsToMove numberOfTroopsToMoveString ->
                     case attributes.currentPlayerTurn of
                         PlayerTurn currentPlayerId (TroopMovementFromSelected countryId _) ->
-                            -- case String.toInt numberOfTroopsToMoveString of
-                            --     Just numberOfTroopsToMove ->
                             ( PlayingGame
                                 { attributes
                                     | currentPlayerTurn =
@@ -856,7 +850,7 @@ view model =
                     ]
                 )
 
-        GeneratingRandomTroopCounts _ ->
+        GeneratingRandomTroopCounts _ _ ->
             Element.layout [] Element.none
 
         PlayingGame attributes ->
