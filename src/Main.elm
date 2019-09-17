@@ -11,6 +11,7 @@ import Dict
 import Element
 import Element.Background
 import Element.Border
+import Element.Font
 import Element.Input
 import Html exposing (Html)
 import Maps.Big
@@ -64,7 +65,7 @@ defaultPlayerColors =
 
 type alias GameMap =
     { countries : Dict.Dict String Country
-    , bodiesOfWater : Dict.Dict String BodyOfWater
+    , bodiesOfWater : Dict.Dict String (Set.Set String)
     , dimensions : ( Float, Float )
     }
 
@@ -76,15 +77,6 @@ type alias Country =
     , neighboringCountries : Set.Set String
     , neighboringBodiesOfWater : Set.Set String
     }
-
-
-type alias BodyOfWater =
-    { neighboringCountries : Set.Set String
-    }
-
-
-type alias RawGameMap =
-    Dict.Dict ( Int, Int ) String
 
 
 type Model
@@ -117,7 +109,7 @@ type PlayerTurnStage
     | TroopPlacement Int
     | AttackAnnexOrPort
     | TroopMovement
-    | TroopMovementFromSelected String
+    | TroopMovementFromSelected String String
     | GameOver Int
 
 
@@ -152,7 +144,9 @@ init =
 
 
 
----- UPDATE ----
+--------------------------------------------------------------------------------
+---- UPDATE --------------------------------------------------------------------
+--------------------------------------------------------------------------------
 
 
 type Msg
@@ -162,6 +156,13 @@ type Msg
     | Pass
     | LoadGame
     | NeutralCountryTroopCountsGenerated (Dict.Dict String Int)
+    | UpdateNumberOfTroopsToMove String
+
+
+type CountryStatus
+    = Unoccupied
+    | OccupiedByOpponent Int Player Int
+    | OccupiedByCurrentPlayer Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -179,6 +180,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 CountryClicked _ ->
+                    ( model, Cmd.none )
+
+                UpdateNumberOfTroopsToMove _ ->
                     ( model, Cmd.none )
 
                 LoadGame ->
@@ -265,11 +269,11 @@ update msg model =
 
                 Pass ->
                     case attributes.currentPlayerTurn of
-                        PlayerTurn _ (TroopMovementFromSelected _) ->
+                        PlayerTurn _ (TroopMovementFromSelected _ _) ->
                             ( PlayingGame
                                 { attributes
                                     | currentPlayerTurn =
-                                        nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players attributes.currentPlayerTurn
+                                        nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players "-1" attributes.currentPlayerTurn
                                     , error = Nothing
                                 }
                             , Cmd.none
@@ -280,8 +284,8 @@ update msg model =
                                 { attributes
                                     | currentPlayerTurn =
                                         attributes.currentPlayerTurn
-                                            |> nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players
-                                            |> nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players
+                                            |> nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players "-1"
+                                            |> nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players "-1"
                                     , error = Nothing
                                 }
                             , Cmd.none
@@ -290,7 +294,7 @@ update msg model =
                         PlayerTurn _ AttackAnnexOrPort ->
                             ( PlayingGame
                                 { attributes
-                                    | currentPlayerTurn = nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players attributes.currentPlayerTurn -- Gross
+                                    | currentPlayerTurn = nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players "-1" attributes.currentPlayerTurn
                                     , error = Nothing
                                 }
                             , Cmd.none
@@ -311,6 +315,22 @@ update msg model =
                 NeutralCountryTroopCountsGenerated _ ->
                     ( model, Cmd.none )
 
+                UpdateNumberOfTroopsToMove numberOfTroopsToMoveString ->
+                    case attributes.currentPlayerTurn of
+                        PlayerTurn currentPlayerId (TroopMovementFromSelected countryId _) ->
+                            -- case String.toInt numberOfTroopsToMoveString of
+                            --     Just numberOfTroopsToMove ->
+                            ( PlayingGame
+                                { attributes
+                                    | currentPlayerTurn =
+                                        PlayerTurn currentPlayerId (TroopMovementFromSelected countryId numberOfTroopsToMoveString)
+                                }
+                            , Cmd.none
+                            )
+
+                        _ ->
+                            ( model, Cmd.none )
+
 
 getDefaultColor : Int -> Color.Color
 getDefaultColor playerId =
@@ -320,15 +340,6 @@ getDefaultColor playerId =
 
         Nothing ->
             Color.black
-
-
-randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String Int)
-randomTroopPlacementsGenerator countryIds =
-    -- This can pick the same country twice so you might not get the max number of countries
-    Random.Dict.dict
-        100
-        (Random.List.choose countryIds |> Random.map Tuple.first |> Random.map (Maybe.withDefault "-1"))
-        (Random.int 1 maximumNeutralCountryTroops)
 
 
 handleCountryClickFromPlayer : String -> Country -> PlayingGameAttributes -> PlayingGameAttributes
@@ -341,22 +352,16 @@ handleCountryClickFromPlayer clickedCountryId country playingGameAttributes =
                         CapitolPlacement ->
                             attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes
 
-                        TroopPlacement numberOfTroops ->
+                        TroopPlacement troopsToPlace ->
                             case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
-                                OccupiedByCurrentPlayer troopCount ->
+                                OccupiedByCurrentPlayer clickedCountryTroopCount ->
                                     let
-                                        updatedPlayer =
-                                            { currentPlayer
-                                                | countries =
-                                                    Dict.insert clickedCountryId (troopCount + numberOfTroops) currentPlayer.countries
-                                            }
-
                                         updatedPlayers =
-                                            Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
+                                            playingGameAttributes.players |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (clickedCountryTroopCount + troopsToPlace)
                                     in
                                     { playingGameAttributes
                                         | players = updatedPlayers
-                                        , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers playingGameAttributes.currentPlayerTurn
+                                        , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
                                         , error = Nothing
                                     }
 
@@ -371,50 +376,55 @@ handleCountryClickFromPlayer clickedCountryId country playingGameAttributes =
 
                         TroopMovement ->
                             case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
-                                OccupiedByCurrentPlayer _ ->
-                                    case Dict.get clickedCountryId currentPlayer.countries of
-                                        Just troopCount ->
-                                            if troopCount > 0 then
-                                                { playingGameAttributes
-                                                    | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players playingGameAttributes.currentPlayerTurn
-                                                    , error = Nothing
-                                                }
-
-                                            else
-                                                { playingGameAttributes | error = Just "Select a country with troops" }
-
-                                        Nothing ->
-                                            { playingGameAttributes | error = Just "This shouldn't happen" }
-
-                                _ ->
-                                    { playingGameAttributes | error = Just "You must move troops from your own country" }
-
-                        TroopMovementFromSelected fromCountryId ->
-                            case ( getCountryStatus fromCountryId currentPlayerId playingGameAttributes.players, getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players ) of
-                                ( OccupiedByCurrentPlayer playerCountryFromTroopCount, OccupiedByCurrentPlayer playerCountryToTroopCount ) ->
-                                    if isCountryReachableFromOtherCountry playingGameAttributes.map fromCountryId clickedCountryId then
-                                        let
-                                            updatedPlayer =
-                                                { currentPlayer
-                                                    | countries =
-                                                        currentPlayer.countries
-                                                            |> Dict.insert fromCountryId 0
-                                                            |> Dict.insert
-                                                                clickedCountryId
-                                                                (playerCountryFromTroopCount + playerCountryToTroopCount)
-                                                }
-
-                                            updatedPlayers =
-                                                Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
-                                        in
+                                OccupiedByCurrentPlayer troopCount ->
+                                    if troopCount > 0 then
                                         { playingGameAttributes
-                                            | players = updatedPlayers
-                                            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers playingGameAttributes.currentPlayerTurn
+                                            | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players (String.fromInt troopCount) playingGameAttributes.currentPlayerTurn
                                             , error = Nothing
                                         }
 
                                     else
-                                        { playingGameAttributes | error = Just "You can't move troops between those countries" }
+                                        { playingGameAttributes | error = Just "Select a country with troops" }
+
+                                _ ->
+                                    { playingGameAttributes | error = Just "You must move troops from your own country" }
+
+                        TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
+                            case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+                                OccupiedByCurrentPlayer playerCountryToTroopCount ->
+                                    case String.toInt numberOfTroopsToMoveString of
+                                        Just numberOfTroopsToMove ->
+                                            if isCountryReachableFromOtherCountry playingGameAttributes.map fromCountryId clickedCountryId then
+                                                let
+                                                    fromCountryTroopCount =
+                                                        case Dict.get currentPlayerId playingGameAttributes.players of
+                                                            Just currentPlayer1 ->
+                                                                case Dict.get fromCountryId currentPlayer1.countries of
+                                                                    Just troopCount ->
+                                                                        troopCount
+
+                                                                    Nothing ->
+                                                                        0
+
+                                                            Nothing ->
+                                                                0
+
+                                                    updatedPlayers =
+                                                        playingGameAttributes.players
+                                                            |> updatePlayerTroopCountForCountry fromCountryId currentPlayerId (fromCountryTroopCount - numberOfTroopsToMove)
+                                                            |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (playerCountryToTroopCount + numberOfTroopsToMove)
+                                                in
+                                                { playingGameAttributes
+                                                    | players = updatedPlayers
+                                                    , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
+                                                    , error = Nothing
+                                                }
+
+                                            else
+                                                { playingGameAttributes | error = Just "You can't move troops between those countries" }
+
+                                        Nothing ->
+                                            { playingGameAttributes | error = Just "Number of troops must be a number" }
 
                                 _ ->
                                     { playingGameAttributes | error = Just "You must move troops to your own country" }
@@ -454,7 +464,7 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes =
                             { playingGameAttributes
                                 | players = Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
                                 , neutralCountryTroops = Dict.remove clickedCountryId playingGameAttributes.neutralCountryTroops
-                                , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players playingGameAttributes.currentPlayerTurn
+                                , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players "-1" playingGameAttributes.currentPlayerTurn
                                 , error = Nothing
                             }
 
@@ -520,7 +530,7 @@ attemptToAnnexCountry currentPlayerId currentPlayer clickedCountryId playingGame
         in
         { playingGameAttributes
             | players = Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
-            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players playingGameAttributes.currentPlayerTurn
+            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players "-1" playingGameAttributes.currentPlayerTurn
             , neutralCountryTroops = Dict.remove clickedCountryId playingGameAttributes.neutralCountryTroops
             , error = Nothing
         }
@@ -587,7 +597,7 @@ updateForSuccessfulAttack : Dict.Dict Int Player -> PlayingGameAttributes -> Pla
 updateForSuccessfulAttack players playingGameAttributes =
     { playingGameAttributes
         | players = players
-        , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers "-1" players playingGameAttributes.currentPlayerTurn
+        , currentPlayerTurn = playingGameAttributes.currentPlayerTurn |> nextPlayerTurn playingGameAttributes.numberOfPlayers "-1" players "-1"
         , error = Nothing
     }
 
@@ -716,8 +726,8 @@ getCountryStatus countryId currentPlayerId players =
             Unoccupied
 
 
-nextPlayerTurn : Int -> String -> Dict.Dict Int Player -> PlayerTurn -> PlayerTurn
-nextPlayerTurn totalPlayers countryId players (PlayerTurn currentPlayerId playerTurnStage) =
+nextPlayerTurn : Int -> String -> Dict.Dict Int Player -> String -> PlayerTurn -> PlayerTurn
+nextPlayerTurn totalPlayers countryId players numberOfTroops (PlayerTurn currentPlayerId playerTurnStage) =
     case playerTurnStage of
         TroopPlacement _ ->
             PlayerTurn currentPlayerId AttackAnnexOrPort
@@ -745,10 +755,12 @@ nextPlayerTurn totalPlayers countryId players (PlayerTurn currentPlayerId player
                 PlayerTurn currentPlayerId TroopMovement
 
         TroopMovement ->
-            PlayerTurn currentPlayerId (TroopMovementFromSelected countryId)
+            PlayerTurn currentPlayerId (TroopMovementFromSelected countryId numberOfTroops)
 
-        TroopMovementFromSelected _ ->
-            PlayerTurn (nextPlayerCheckForDeadPlayers currentPlayerId players) (TroopPlacement (numberOfTroopsToPlace (nextPlayerCheckForDeadPlayers currentPlayerId players) players))
+        TroopMovementFromSelected _ _ ->
+            PlayerTurn
+                (nextPlayerCheckForDeadPlayers currentPlayerId players)
+                (TroopPlacement (numberOfTroopsToPlace (nextPlayerCheckForDeadPlayers currentPlayerId players) players))
 
         CapitolPlacement ->
             let
@@ -796,10 +808,13 @@ numberOfTroopsToPlace playerId players =
             -1
 
 
-type CountryStatus
-    = Unoccupied
-    | OccupiedByOpponent Int Player Int
-    | OccupiedByCurrentPlayer Int
+randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String Int)
+randomTroopPlacementsGenerator countryIds =
+    -- This can pick the same country twice so you might not get the max number of countries
+    Random.Dict.dict
+        100
+        (Random.List.choose countryIds |> Random.map Tuple.first |> Random.map (Maybe.withDefault "-1"))
+        (Random.int 1 maximumNeutralCountryTroops)
 
 
 
@@ -866,8 +881,9 @@ viewSideBar : PlayingGameAttributes -> Element.Element Msg
 viewSideBar playingGameAttributes =
     case playingGameAttributes.currentPlayerTurn of
         PlayerTurn _ playerTurnStage ->
-            Element.column [ Element.width (Element.px 200), Element.alignTop ]
-                (if canPass playerTurnStage then
+            Element.column
+                [ Element.width (Element.px 200), Element.alignTop ]
+                ((if canPass playerTurnStage then
                     [ Element.Input.button
                         (defaultButtonAttributes
                             ++ [ Element.width (Element.px 100)
@@ -878,23 +894,65 @@ viewSideBar playingGameAttributes =
                         { onPress = Just Pass, label = Element.text "Pass" }
                     ]
 
-                 else
+                  else
                     [ Element.el [ Element.height (Element.px 30) ] Element.none ]
+                 )
+                    ++ viewConfigureTroopCount playingGameAttributes
                 )
-
-
-
--- viewConfigureTroopCount : [Element.Element Msg]
--- viewConfigureTroopCount =
 
 
 defaultButtonAttributes : List (Element.Attribute msg)
 defaultButtonAttributes =
-    [ Element.Border.solid
-    , Element.Border.width 1
-    , Element.Border.color (Element.rgb 0 0 0)
-    , Element.padding 10
+    [ Element.padding 10
+    , Element.Background.color (Element.rgb255 200 200 200)
+    , Element.Font.color (Element.rgb255 0 0 0)
+    , Element.Font.size 16
+    , Element.Font.bold
+    , Element.Border.rounded 2
+    , Element.Border.shadow { offset = ( 2, 2 ), size = 1, blur = 1, color = Element.rgba 0 0 0 0.1 }
+    , Element.width Element.fill
+    , Element.Font.variant Element.Font.smallCaps
     ]
+
+
+defaultTextInputAttributes : List (Element.Attribute msg)
+defaultTextInputAttributes =
+    [ Element.Border.width 1
+    , Element.width Element.fill
+    , Element.height Element.fill
+    , Element.Font.size 16
+    , Element.Border.rounded 2
+    , Element.padding 15
+    , Element.Border.color (Element.rgb255 100 100 100)
+    , Element.Border.solid
+    ]
+
+
+defaultLabelAttributes : List (Element.Attribute msg)
+defaultLabelAttributes =
+    [ Element.Font.size 12
+
+    -- , Element.moveUp 7
+    -- , Element.moveRight 5
+    -- , Element.paddingEach { left = 5, top = 0, right = 5, bottom = 0 }
+    ]
+
+
+viewConfigureTroopCount : PlayingGameAttributes -> List (Element.Element Msg)
+viewConfigureTroopCount playingGameAttributes =
+    case playingGameAttributes.currentPlayerTurn of
+        PlayerTurn _ (TroopMovementFromSelected _ numberOfTroopsToMove) ->
+            [ Element.Input.text
+                defaultTextInputAttributes
+                { onChange = UpdateNumberOfTroopsToMove
+                , placeholder = Nothing
+                , label = Element.Input.labelAbove defaultLabelAttributes (Element.text "Number of troops to move")
+                , text = numberOfTroopsToMove
+                }
+            ]
+
+        _ ->
+            []
 
 
 canPass : PlayerTurnStage -> Bool
@@ -903,7 +961,7 @@ canPass playerTurnStage =
         TroopMovement ->
             True
 
-        TroopMovementFromSelected _ ->
+        TroopMovementFromSelected _ _ ->
             True
 
         AttackAnnexOrPort ->
@@ -945,8 +1003,8 @@ viewPlayerTurnStatus playerId player playerTurnStage =
                 TroopMovement ->
                     "Player " ++ String.fromInt playerId ++ " is moving troops"
 
-                TroopMovementFromSelected fromCountryId ->
-                    "Player " ++ String.fromInt playerId ++ " is moving from " ++ fromCountryId
+                TroopMovementFromSelected fromCountryId numberOfTroopsToMove ->
+                    "Player " ++ String.fromInt playerId ++ " is moving " ++ numberOfTroopsToMove ++ " troops from " ++ fromCountryId
 
                 GameOver winnerPlayerId ->
                     "Player " ++ String.fromInt winnerPlayerId ++ " wins!!!"
@@ -1149,8 +1207,14 @@ subscriptions model =
 
 
 
-------------- PARSING ----------------
+----------------------------------------------------------------------------------------------------------------
+------------- PARSING ------------------------------------------------------------------------------------------
 -- It's terrible, but it works. Eventually look into using a real parser.
+----------------------------------------------------------------------------------------------------------------
+
+
+type alias RawGameMap =
+    Dict.Dict ( Int, Int ) String
 
 
 parseRawMap : String -> RawGameMap
@@ -1268,20 +1332,19 @@ parseMap text =
 
                         else
                             let
-                                bodyOfWater =
-                                    case Dict.get areaId gameMap.bodiesOfWater of
+                                bodyOfWaterNeighborCountries =
+                                    case Dict.get areaId gameMap.bodiesOfWaterNeighborCountries of
                                         Just existingBodyOfWater ->
                                             existingBodyOfWater
 
                                         Nothing ->
-                                            { neighboringCountries = Set.empty
-                                            }
+                                            Set.empty
                             in
                             { gameMap
-                                | bodiesOfWater = Dict.insert areaId (updateBodyOfWater areaId bodyOfWater coordinates dimensions map) gameMap.bodiesOfWater
+                                | bodiesOfWaterNeighborCountries = Dict.insert areaId (updateBodyOfWater areaId coordinates dimensions map bodyOfWaterNeighborCountries) gameMap.bodiesOfWaterNeighborCountries
                             }
                     )
-                    { countries = Dict.empty, bodiesOfWater = Dict.empty, dimensions = dimensions }
+                    { countries = Dict.empty, bodiesOfWaterNeighborCountries = Dict.empty, dimensions = dimensions }
     in
     { countries =
         gameMapWithoutPolygons.countries
@@ -1297,7 +1360,7 @@ parseMap text =
                     }
                 )
     , bodiesOfWater =
-        gameMapWithoutPolygons.bodiesOfWater
+        gameMapWithoutPolygons.bodiesOfWaterNeighborCountries
     , dimensions =
         ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * defaultScale |> toFloat
         , (gameMapWithoutPolygons.dimensions |> Tuple.second) * defaultScale |> toFloat
@@ -1338,8 +1401,8 @@ updateCountry countryId coordinates mapDimensions rawMap country =
     }
 
 
-updateBodyOfWater : String -> BodyOfWater -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> BodyOfWater
-updateBodyOfWater bodyOfWaterId bodyOfWater coordinates mapDimensions rawMap =
+updateBodyOfWater : String -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Set.Set String -> Set.Set String
+updateBodyOfWater bodyOfWaterId coordinates mapDimensions rawMap bodyOfWaterNeighborCountries =
     let
         neighboringCountries =
             getNeighborCoordinates coordinates mapDimensions
@@ -1362,10 +1425,7 @@ updateBodyOfWater bodyOfWaterId bodyOfWater coordinates mapDimensions rawMap =
                     )
                     Set.empty
     in
-    { bodyOfWater
-        | neighboringCountries =
-            Set.union neighboringCountries bodyOfWater.neighboringCountries
-    }
+    Set.union neighboringCountries bodyOfWaterNeighborCountries
 
 
 getNeighborCoordinates : ( Int, Int ) -> ( Int, Int ) -> Set.Set ( Int, Int )
