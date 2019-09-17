@@ -409,10 +409,22 @@ attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroo
                                     Nothing ->
                                         noTroops
 
+                            fromCountryTroopCountInt =
+                                case fromCountryTroopCount of
+                                    TroopCount count ->
+                                        count
+
+                            allowedNumberOfTroopsToMove =
+                                if numberOfTroopsToMove > fromCountryTroopCountInt then
+                                    fromCountryTroopCount
+
+                                else
+                                    TroopCount numberOfTroopsToMove
+
                             updatedPlayers =
                                 playingGameAttributes.players
-                                    |> updatePlayerTroopCountForCountry fromCountryId currentPlayerId (subtractTroopCounts fromCountryTroopCount (TroopCount numberOfTroopsToMove))
-                                    |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (addTroopCounts playerCountryToTroopCount (TroopCount numberOfTroopsToMove))
+                                    |> updatePlayerTroopCountForCountry fromCountryId currentPlayerId (subtractTroopCounts fromCountryTroopCount allowedNumberOfTroopsToMove)
+                                    |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (addTroopCounts playerCountryToTroopCount allowedNumberOfTroopsToMove)
                         in
                         { playingGameAttributes
                             | players = updatedPlayers
@@ -532,7 +544,9 @@ attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttrib
 
                             else
                                 CurrentPlayerAcquiresOpponentCountry
-                        Nothing -> AttackResultError "Error checking if capitol"
+
+                        Nothing ->
+                            AttackResultError "Error checking if capitol"
 
             else
                 NotEnoughTroopsToAttack attackStrength defenseStrength
@@ -590,7 +604,7 @@ type AttackResult
 
 attemptToAttackCountry : PlayerId -> PlayerId -> CountryId -> PlayingGameAttributes -> PlayingGameAttributes
 attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes =
-    case Debug.log "result" (attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes) of
+    case attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes of
         OpponentCountryLosesTroops remainingTroops ->
             let
                 updatedPlayers =
