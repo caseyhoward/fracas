@@ -40,6 +40,12 @@ defaultScale =
     12
 
 
+countryBorderColor : Color.Color
+countryBorderColor =
+    -- Color.rgb255 64 64 64
+    Color.black
+
+
 defaultPlayerColors : Dict.Dict Int Color.Color
 defaultPlayerColors =
     Dict.fromList
@@ -64,7 +70,7 @@ type alias GameMap =
 
 
 type alias Country =
-    { coordinates : Set.Set ( Int, Int )
+    { coordinates : Set.Set ( Int, Int ) -- Only needed for making the capitol dots
     , polygon : List ( Float, Float )
     , center : ( Int, Int )
     , neighboringCountries : Set.Set String
@@ -184,12 +190,6 @@ update msg model =
         LoadingGame counter configurationOptions ->
             case msg of
                 LoadGame ->
-                    let
-                        numberOfPlayers =
-                            configurationOptions.numberOfPlayers
-                                |> String.toInt
-                                |> Maybe.withDefault 6
-                    in
                     if counter > 0 then
                         let
                             map =
@@ -271,7 +271,6 @@ update msg model =
                                     | currentPlayerTurn =
                                         nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players attributes.currentPlayerTurn
 
-                                    -- Gross
                                     , error = Nothing
                                 }
                             , Cmd.none
@@ -282,9 +281,7 @@ update msg model =
                                 { attributes
                                     | currentPlayerTurn =
                                         attributes.currentPlayerTurn
-                                            -- Gross
                                             |> nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players
-                                            -- More gross
                                             |> nextPlayerTurn attributes.numberOfPlayers "-1" attributes.players
                                     , error = Nothing
                                 }
@@ -336,41 +333,17 @@ randomTroopPlacementsGenerator countryIds =
 
 
 handleCountryClickFromPlayer : String -> Country -> PlayingGameAttributes -> PlayingGameAttributes
-handleCountryClickFromPlayer clickedCountryId country model =
-    case model.currentPlayerTurn of
-        PlayerTurn playerId playerTurnStage ->
-            case Dict.get playerId model.players of
+handleCountryClickFromPlayer clickedCountryId country playingGameAttributes =
+    case playingGameAttributes.currentPlayerTurn of
+        PlayerTurn currentPlayerId playerTurnStage ->
+            case Dict.get currentPlayerId playingGameAttributes.players of
                 Just currentPlayer ->
                     case playerTurnStage of
                         CapitolPlacement ->
-                            case getCountryStatus clickedCountryId currentPlayer model.players of
-                                OccupiedByCurrentPlayer _ ->
-                                    { model | error = Just "Error: Somehow you are placing a second capitol" }
-
-                                OccupiedByOpponent _ _ _ ->
-                                    { model | error = Just "You must select an unoccuppied country" }
-
-                                Unoccupied ->
-                                    let
-                                        neutralTroopCount =
-                                            Dict.get clickedCountryId model.neutralCountryTroops |> Maybe.withDefault 0
-
-                                        updatedPlayer =
-                                            { currentPlayer
-                                                | countries =
-                                                    Dict.insert clickedCountryId neutralTroopCount currentPlayer.countries
-                                                , capitolStatus = Capitol clickedCountryId (capitolDotsCoordinates country.coordinates defaultScale)
-                                            }
-                                    in
-                                    { model
-                                        | players = Dict.insert playerId updatedPlayer model.players
-                                        , neutralCountryTroops = Dict.remove clickedCountryId model.neutralCountryTroops
-                                        , currentPlayerTurn = nextPlayerTurn model.numberOfPlayers clickedCountryId model.players model.currentPlayerTurn
-                                        , error = Nothing
-                                    }
+                            attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes
 
                         TroopPlacement numberOfTroops ->
-                            case getCountryStatus clickedCountryId currentPlayer model.players of
+                            case getCountryStatus clickedCountryId currentPlayer playingGameAttributes.players of
                                 OccupiedByCurrentPlayer troopCount ->
                                     let
                                         updatedPlayer =
@@ -380,47 +353,47 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                             }
 
                                         updatedPlayers =
-                                            Dict.insert playerId updatedPlayer model.players
+                                            Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
                                     in
-                                    { model
+                                    { playingGameAttributes
                                         | players = updatedPlayers
-                                        , currentPlayerTurn = nextPlayerTurn model.numberOfPlayers clickedCountryId updatedPlayers model.currentPlayerTurn
+                                        , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers playingGameAttributes.currentPlayerTurn
                                         , error = Nothing
                                     }
 
                                 OccupiedByOpponent _ _ _ ->
-                                    { model | error = Just "You must put troops in your own country" }
+                                    { playingGameAttributes | error = Just "You must put troops in your own country" }
 
                                 Unoccupied ->
-                                    { model | error = Just "You must put troops in your own country" }
+                                    { playingGameAttributes | error = Just "You must put troops in your own country" }
 
                         AttackAnnexOrPort ->
-                            attackAnnexOrPort clickedCountryId country playerId currentPlayer model
+                            attackAnnexOrPort clickedCountryId country currentPlayerId currentPlayer playingGameAttributes
 
                         TroopMovement ->
-                            case getCountryStatus clickedCountryId currentPlayer model.players of
+                            case getCountryStatus clickedCountryId currentPlayer playingGameAttributes.players of
                                 OccupiedByCurrentPlayer _ ->
                                     case Dict.get clickedCountryId currentPlayer.countries of
                                         Just troopCount ->
                                             if troopCount > 0 then
-                                                { model
-                                                    | currentPlayerTurn = nextPlayerTurn model.numberOfPlayers clickedCountryId model.players model.currentPlayerTurn
+                                                { playingGameAttributes
+                                                    | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players playingGameAttributes.currentPlayerTurn
                                                     , error = Nothing
                                                 }
 
                                             else
-                                                { model | error = Just "Select a country with troops" }
+                                                { playingGameAttributes | error = Just "Select a country with troops" }
 
                                         Nothing ->
-                                            { model | error = Just "This shouldn't happen" }
+                                            { playingGameAttributes | error = Just "This shouldn't happen" }
 
                                 _ ->
-                                    { model | error = Just "You must move troops from your own country" }
+                                    { playingGameAttributes | error = Just "You must move troops from your own country" }
 
                         TroopMovementFromSelected fromCountryId ->
-                            case ( getCountryStatus fromCountryId currentPlayer model.players, getCountryStatus clickedCountryId currentPlayer model.players ) of
+                            case ( getCountryStatus fromCountryId currentPlayer playingGameAttributes.players, getCountryStatus clickedCountryId currentPlayer playingGameAttributes.players ) of
                                 ( OccupiedByCurrentPlayer playerCountryFromTroopCount, OccupiedByCurrentPlayer playerCountryToTroopCount ) ->
-                                    if isCountryReachableFromOtherCountry model.map fromCountryId clickedCountryId then
+                                    if isCountryReachableFromOtherCountry playingGameAttributes.map fromCountryId clickedCountryId then
                                         let
                                             updatedPlayer =
                                                 { currentPlayer
@@ -433,33 +406,66 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                                 }
 
                                             updatedPlayers =
-                                                Dict.insert playerId updatedPlayer model.players
+                                                Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
                                         in
-                                        { model
+                                        { playingGameAttributes
                                             | players = updatedPlayers
-                                            , currentPlayerTurn = nextPlayerTurn model.numberOfPlayers clickedCountryId updatedPlayers model.currentPlayerTurn
+                                            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers playingGameAttributes.currentPlayerTurn
                                             , error = Nothing
                                         }
 
                                     else
-                                        { model | error = Just "You can't move troops between those countries" }
+                                        { playingGameAttributes | error = Just "You can't move troops between those countries" }
 
                                 _ ->
-                                    { model | error = Just "You must move troops to your own country" }
+                                    { playingGameAttributes | error = Just "You must move troops to your own country" }
 
                         GameOver _ ->
-                            { model | error = Nothing }
+                            { playingGameAttributes | error = Nothing }
 
                 Nothing ->
-                    model
+                    playingGameAttributes
 
 
+attemptToPlaceCapitol : String -> Int -> PlayingGameAttributes -> PlayingGameAttributes
+attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes =
+    case ( Dict.get currentPlayerId playingGameAttributes.players, Dict.get clickedCountryId playingGameAttributes.map.countries ) of
+        ( Just currentPlayer, Just clickedCountry ) ->
+            case getCountryStatus clickedCountryId currentPlayer playingGameAttributes.players of
+                OccupiedByCurrentPlayer _ ->
+                    { playingGameAttributes | error = Just "Error: Somehow you are placing a second capitol" }
 
--- Used for moving troops and seeing if a country is annexable. This will also need to take ports into account when those are added.
+                OccupiedByOpponent _ _ _ ->
+                    { playingGameAttributes | error = Just "You must select an unoccuppied country" }
+
+                Unoccupied ->
+                    let
+                        neutralTroopCount =
+                            Dict.get clickedCountryId playingGameAttributes.neutralCountryTroops |> Maybe.withDefault 0
+
+                        updatedPlayer =
+                            { currentPlayer
+                                | countries =
+                                    Dict.insert clickedCountryId neutralTroopCount currentPlayer.countries
+                                , capitolStatus = Capitol clickedCountryId (capitolDotsCoordinates clickedCountry.coordinates defaultScale)
+                            }
+                    in
+                    { playingGameAttributes
+                        | players = Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
+                        , neutralCountryTroops = Dict.remove clickedCountryId playingGameAttributes.neutralCountryTroops
+                        , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players playingGameAttributes.currentPlayerTurn
+                        , error = Nothing
+                    }
+
+        _ ->
+            { playingGameAttributes
+                | error = Just "Something bad happened"
+            }
 
 
 isCountryReachableFromOtherCountry : GameMap -> String -> String -> Bool
 isCountryReachableFromOtherCountry gameMap fromCountryId toCountryId =
+    -- Used for moving troops and seeing if a country is annexable. This will also need to take ports into account when those are added.
     case Dict.get fromCountryId gameMap.countries of
         Just fromCountry ->
             Set.member toCountryId fromCountry.neighboringCountries
@@ -569,7 +575,7 @@ attemptToAttackCountry currentPlayerId currentPlayer opponentPlayerId opponentPl
 
         NotEnoughTroopsToAttack attackStrength defenseStrength ->
             { playingGameAttributes
-                | error = Just ("Not enough to attack (" ++ String.fromInt attackStrength ++ " < " ++ String.fromInt defenseStrength ++ ")")
+                | error = Just ("Not enough to attack: attack strength = " ++ String.fromInt attackStrength ++ ", defense strength = " ++ String.fromInt defenseStrength)
             }
 
 
@@ -1104,7 +1110,7 @@ renderArea polygonPoints color capitolStatus countryId =
 
         polygonBorder =
             polygon
-                |> Collage.outlined (Collage.solid (toFloat defaultScale / 8.0) (Collage.uniform Color.black))
+                |> Collage.outlined (Collage.solid (toFloat defaultScale / 24.0) (Collage.uniform countryBorderColor))
 
         polygonFill =
             polygon
@@ -1132,7 +1138,7 @@ subscriptions model =
 
 
 
--- Parsing and converting
+------------- PARSING ----------------
 -- It's terrible, but it works. Eventually look into using a real parser.
 
 
