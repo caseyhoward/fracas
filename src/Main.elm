@@ -336,84 +336,99 @@ handleCountryClickFromPlayer clickedCountryId playingGameAttributes =
                     attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes
 
                 TroopPlacement troopsToPlace ->
-                    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
-                        OccupiedByCurrentPlayer clickedCountryTroopCount ->
-                            let
-                                updatedPlayers =
-                                    playingGameAttributes.players |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (clickedCountryTroopCount + troopsToPlace)
-                            in
-                            { playingGameAttributes
-                                | players = updatedPlayers
-                                , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
-                                , error = Nothing
-                            }
-
-                        OccupiedByOpponent _ _ _ ->
-                            { playingGameAttributes | error = Just "You must put troops in your own country" }
-
-                        Unoccupied ->
-                            { playingGameAttributes | error = Just "You must put troops in your own country" }
+                    attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace playingGameAttributes
 
                 AttackAnnexOrPort ->
                     attackAnnexOrPort clickedCountryId currentPlayerId playingGameAttributes
 
                 TroopMovement ->
-                    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
-                        OccupiedByCurrentPlayer troopCount ->
-                            if troopCount > 0 then
-                                { playingGameAttributes
-                                    | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players (String.fromInt troopCount) playingGameAttributes.currentPlayerTurn
-                                    , error = Nothing
-                                }
-
-                            else
-                                { playingGameAttributes | error = Just "Select a country with troops" }
-
-                        _ ->
-                            { playingGameAttributes | error = Just "You must move troops from your own country" }
+                    attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId playingGameAttributes
 
                 TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
-                    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
-                        OccupiedByCurrentPlayer playerCountryToTroopCount ->
-                            case String.toInt numberOfTroopsToMoveString of
-                                Just numberOfTroopsToMove ->
-                                    if isCountryReachableFromOtherCountry playingGameAttributes.map fromCountryId clickedCountryId then
-                                        let
-                                            fromCountryTroopCount =
-                                                case Dict.get currentPlayerId playingGameAttributes.players of
-                                                    Just currentPlayer1 ->
-                                                        case Dict.get fromCountryId currentPlayer1.countries of
-                                                            Just troopCount ->
-                                                                troopCount
-
-                                                            Nothing ->
-                                                                0
-
-                                                    Nothing ->
-                                                        0
-
-                                            updatedPlayers =
-                                                playingGameAttributes.players
-                                                    |> updatePlayerTroopCountForCountry fromCountryId currentPlayerId (fromCountryTroopCount - numberOfTroopsToMove)
-                                                    |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (playerCountryToTroopCount + numberOfTroopsToMove)
-                                        in
-                                        { playingGameAttributes
-                                            | players = updatedPlayers
-                                            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
-                                            , error = Nothing
-                                        }
-
-                                    else
-                                        { playingGameAttributes | error = Just "You can't move troops between those countries" }
-
-                                Nothing ->
-                                    { playingGameAttributes | error = Just "Number of troops must be a number" }
-
-                        _ ->
-                            { playingGameAttributes | error = Just "You must move troops to your own country" }
+                    attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroopsToMoveString playingGameAttributes
 
                 GameOver _ ->
                     { playingGameAttributes | error = Nothing }
+
+
+attemptSelectTroopMovementFromCountry : String -> Int -> PlayingGameAttributes -> PlayingGameAttributes
+attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId playingGameAttributes =
+    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+        OccupiedByCurrentPlayer troopCount ->
+            if troopCount > 0 then
+                { playingGameAttributes
+                    | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players (String.fromInt troopCount) playingGameAttributes.currentPlayerTurn
+                    , error = Nothing
+                }
+
+            else
+                { playingGameAttributes | error = Just "Select a country with troops" }
+
+        _ ->
+            { playingGameAttributes | error = Just "You must move troops from your own country" }
+
+
+attemptTroopMovement : String -> String -> Int -> String -> PlayingGameAttributes -> PlayingGameAttributes
+attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroopsToMoveString playingGameAttributes =
+    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+        OccupiedByCurrentPlayer playerCountryToTroopCount ->
+            case String.toInt numberOfTroopsToMoveString of
+                Just numberOfTroopsToMove ->
+                    if isCountryReachableFromOtherCountry playingGameAttributes.map fromCountryId clickedCountryId then
+                        let
+                            fromCountryTroopCount =
+                                case Dict.get currentPlayerId playingGameAttributes.players of
+                                    Just currentPlayer1 ->
+                                        case Dict.get fromCountryId currentPlayer1.countries of
+                                            Just troopCount ->
+                                                troopCount
+
+                                            Nothing ->
+                                                0
+
+                                    Nothing ->
+                                        0
+
+                            updatedPlayers =
+                                playingGameAttributes.players
+                                    |> updatePlayerTroopCountForCountry fromCountryId currentPlayerId (fromCountryTroopCount - numberOfTroopsToMove)
+                                    |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (playerCountryToTroopCount + numberOfTroopsToMove)
+                        in
+                        { playingGameAttributes
+                            | players = updatedPlayers
+                            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
+                            , error = Nothing
+                        }
+
+                    else
+                        { playingGameAttributes | error = Just "You can't move troops between those countries" }
+
+                Nothing ->
+                    { playingGameAttributes | error = Just "Number of troops must be a number" }
+
+        _ ->
+            { playingGameAttributes | error = Just "You must move troops to your own country" }
+
+
+attemptTroopPlacement : String -> Int -> Int -> PlayingGameAttributes -> PlayingGameAttributes
+attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace playingGameAttributes =
+    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+        OccupiedByCurrentPlayer clickedCountryTroopCount ->
+            let
+                updatedPlayers =
+                    playingGameAttributes.players |> updatePlayerTroopCountForCountry clickedCountryId currentPlayerId (clickedCountryTroopCount + troopsToPlace)
+            in
+            { playingGameAttributes
+                | players = updatedPlayers
+                , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
+                , error = Nothing
+            }
+
+        OccupiedByOpponent _ _ _ ->
+            { playingGameAttributes | error = Just "You must put troops in your own country" }
+
+        Unoccupied ->
+            { playingGameAttributes | error = Just "You must put troops in your own country" }
 
 
 attemptToPlaceCapitol : String -> Int -> PlayingGameAttributes -> PlayingGameAttributes
