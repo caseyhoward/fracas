@@ -364,6 +364,7 @@ handleCountryClickFromPlayer clickedCountryId country model =
                                     in
                                     { model
                                         | players = Dict.insert playerId updatedPlayer model.players
+                                        , neutralCountryTroops = Dict.remove clickedCountryId model.neutralCountryTroops
                                         , currentPlayerTurn = nextPlayerTurn model.numberOfPlayers clickedCountryId model.players model.currentPlayerTurn
                                         , error = Nothing
                                     }
@@ -498,6 +499,7 @@ attemptToAnnexCountry currentPlayerId currentPlayer clickedCountryId playingGame
         { playingGameAttributes
             | players = Dict.insert currentPlayerId updatedPlayer playingGameAttributes.players
             , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players playingGameAttributes.currentPlayerTurn
+            , neutralCountryTroops = Dict.remove clickedCountryId playingGameAttributes.neutralCountryTroops
             , error = Nothing
         }
 
