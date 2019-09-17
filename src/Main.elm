@@ -1052,7 +1052,7 @@ view model =
                     , Element.column
                         [ Element.centerX ]
                         ([ Element.el [ Element.centerX, Element.width Element.fill ]
-                            (renderMap attributes.players attributes.neutralCountryTroops attributes.map |> Element.html)
+                            (renderPlayingGame attributes |> Element.html)
                          ]
                             ++ (case attributes.error of
                                     Just error ->
@@ -1228,38 +1228,22 @@ type alias Area =
     Set.Set ( Int, Int )
 
 
-renderMap : Dict.Dict Int Player -> Dict.Dict String TroopCount -> GameMap -> Html Msg
-renderMap players neutralTroopCounts map =
+renderPlayingGame : PlayingGameAttributes -> Html Msg
+renderPlayingGame playingGameAttributes =
     let
         countryCollages : List (Collage.Collage Msg)
         countryCollages =
-            map.countries
-                |> Dict.map
-                    (\countryId country ->
-                        case findCountryOwner players countryId of
-                            Just ( _, player, troopCount ) ->
-                                renderCountry (CountryId countryId) country.polygon country.center country.waterEdges player.color troopCount player.capitolStatus
-
-                            Nothing ->
-                                renderCountry
-                                    (CountryId countryId)
-                                    country.polygon
-                                    country.center
-                                    country.waterEdges
-                                    Color.gray
-                                    (Dict.get countryId neutralTroopCounts
-                                        |> Maybe.withDefault noTroops
-                                    )
-                                    NoCapitol
-                    )
-                |> Dict.values
+            playingGameAttributes.map.countries
+                |> Dict.keys
+                |> List.map
+                    (\countryId -> renderCountry (CountryId countryId) playingGameAttributes)
 
         background =
             Collage.polygon
                 [ ( 0, 0 )
-                , ( 0, map.dimensions |> Tuple.second )
-                , ( map.dimensions |> Tuple.first, map.dimensions |> Tuple.second )
-                , ( map.dimensions |> Tuple.first, 0 )
+                , ( 0, playingGameAttributes.map.dimensions |> Tuple.second )
+                , ( playingGameAttributes.map.dimensions |> Tuple.first, playingGameAttributes.map.dimensions |> Tuple.second )
+                , ( playingGameAttributes.map.dimensions |> Tuple.first, 0 )
                 ]
 
         backgroundWater =
@@ -1288,8 +1272,8 @@ isCountryIdCapitol playerId countryId players =
             )
 
 
-findCountryOwner : Dict.Dict Int Player -> String -> Maybe ( PlayerId, Player, TroopCount )
-findCountryOwner players countryId =
+findCountryOwner : CountryId -> Dict.Dict Int Player -> Maybe PlayerId
+findCountryOwner (CountryId countryId) players =
     players
         |> Dict.foldl
             (\playerId player result ->
@@ -1299,20 +1283,51 @@ findCountryOwner players countryId =
 
                     Nothing ->
                         Dict.get countryId player.countryTroopCounts
-                            |> Maybe.map (\troopCount -> ( PlayerId playerId, player, troopCount ))
+                            |> Maybe.map (\_ -> PlayerId playerId)
             )
             Nothing
 
 
-renderCountry : CountryId -> List ( Float, Float ) -> ( Int, Int ) -> Set.Set BorderSegment -> Color.Color -> TroopCount -> CapitolStatus -> Collage.Collage Msg
-renderCountry countryId polygon medianCoordinates waterEdges color troopCount capitolStatus =
-    Collage.group
-        [ renderTroopCount medianCoordinates troopCount
-        , renderArea polygon color capitolStatus countryId
-        ]
-        |> Collage.Events.onClick (CountryClicked countryId)
+renderCountry : CountryId -> PlayingGameAttributes -> Collage.Collage Msg
+renderCountry countryId playingGameAttributes =
+    case ( findCountryOwner countryId playingGameAttributes.players, getCountry countryId playingGameAttributes.map.countries ) of
+        ( Just countryOwnerId, Just country ) ->
+            case
+                getPlayer countryOwnerId playingGameAttributes.players
+            of
+                ( Just player ) ->
+                    case getTroopCountForPlayerCountry countryId countryOwnerId playingGameAttributes.players of
+                        Just troopCount ->
+                            Collage.group
+                                [ renderTroopCount country.center troopCount
+                                , renderArea country.polygon player.color player.capitolStatus countryId
+                                ]
+                                |> Collage.Events.onClick (CountryClicked countryId)
+
+                        _ ->
+                            Collage.Text.fromString "Error rendering country 1" |> Collage.rendered
+
+                _ ->
+                    Collage.Text.fromString "Error rendering country 2" |> Collage.rendered
+
+        (Nothing, Just country) ->
+            case getTroopCount countryId playingGameAttributes.neutralCountryTroops of
+                Just troopCount ->
+                    Collage.group
+                        [ renderTroopCount country.center troopCount
+                        , renderArea country.polygon Color.gray NoCapitol countryId
+                        ]
+                        |> Collage.Events.onClick (CountryClicked countryId)
+
+                _ ->
+                    Collage.group
+                        [ renderArea country.polygon Color.gray NoCapitol countryId
+                        ]
+                        |> Collage.Events.onClick (CountryClicked countryId)
 
 
+        _ ->
+            Collage.Text.fromString "Error rendering country 4" |> Collage.rendered
 renderTroopCount : ( Int, Int ) -> TroopCount -> Collage.Collage msg
 renderTroopCount ( medianX, medianY ) (TroopCount troopCount) =
     if troopCount > 0 then
