@@ -35,7 +35,6 @@ maximumNeutralCountryTroops =
     20
 
 
-
 defaultScale : Int
 defaultScale =
     12
@@ -484,10 +483,13 @@ attemptToAnnexCountry : Int -> Player -> String -> PlayingGameAttributes -> Play
 attemptToAnnexCountry currentPlayerId currentPlayer clickedCountryId playingGameAttributes =
     if canAnnexCountry playingGameAttributes.map currentPlayer clickedCountryId then
         let
+            neutralTroopCount =
+                Dict.get clickedCountryId playingGameAttributes.neutralCountryTroops |> Maybe.withDefault 0
+
             updatedPlayer =
                 { currentPlayer
                     | countries =
-                        Dict.insert clickedCountryId 0 currentPlayer.countries
+                        Dict.insert clickedCountryId neutralTroopCount currentPlayer.countries
                 }
         in
         { playingGameAttributes
