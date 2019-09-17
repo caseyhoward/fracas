@@ -83,6 +83,7 @@ type alias GameMap =
 type alias Country =
     { coordinates : Set.Set ( Int, Int ) -- Only needed for making the capitol dots
     , polygon : List ( Float, Float )
+    , waterEdges : Set.Set ( ( Float, Float ), ( Float, Float ) )
     , center : ( Int, Int )
     , neighboringCountries : Set.Set String
     , neighboringBodiesOfWater : Set.Set String
@@ -1237,13 +1238,14 @@ renderMap players neutralTroopCounts map =
                     (\countryId country ->
                         case findCountryOwner players countryId of
                             Just ( _, player, troopCount ) ->
-                                renderCountry (CountryId countryId) country.polygon country.center player.color troopCount player.capitolStatus
+                                renderCountry (CountryId countryId) country.polygon country.center country.waterEdges player.color troopCount player.capitolStatus
 
                             Nothing ->
                                 renderCountry
                                     (CountryId countryId)
                                     country.polygon
                                     country.center
+                                    country.waterEdges
                                     Color.gray
                                     (Dict.get countryId neutralTroopCounts
                                         |> Maybe.withDefault noTroops
@@ -1302,8 +1304,8 @@ findCountryOwner players countryId =
             Nothing
 
 
-renderCountry : CountryId -> List ( Float, Float ) -> ( Int, Int ) -> Color.Color -> TroopCount -> CapitolStatus -> Collage.Collage Msg
-renderCountry countryId polygon medianCoordinates color troopCount capitolStatus =
+renderCountry : CountryId -> List ( Float, Float ) -> ( Int, Int ) -> Set.Set BorderSegment -> Color.Color -> TroopCount -> CapitolStatus -> Collage.Collage Msg
+renderCountry countryId polygon medianCoordinates waterEdges color troopCount capitolStatus =
     Collage.group
         [ renderTroopCount medianCoordinates troopCount
         , renderArea polygon color capitolStatus countryId
@@ -1519,6 +1521,7 @@ parseMap text =
                                             , coordinates = Set.singleton coordinates
                                             , polygon = []
                                             , center = ( 0, 0 )
+                                            , waterEdges = Set.empty
                                             }
 
                                 updatedCountry =
@@ -1548,12 +1551,27 @@ parseMap text =
             |> Dict.map
                 (\_ country ->
                     let
-                        edges =
+                        edgesWithNeigborCoordinate =
                             getEdgesForArea country.coordinates defaultScale
+
+                        edgesBorderingWater =
+                            edgesWithNeigborCoordinate
+                                |> Set.filter
+                                    (\( neighborCoordinate, _ ) ->
+                                        case Dict.get neighborCoordinate map of
+                                            Just countryIdString ->
+                                                not (isCountry countryIdString)
+
+                                            Nothing ->
+                                                -- shouldn't happen
+                                                False
+                                    )
+                                |> Set.map Tuple.second
                     in
                     { country
-                        | polygon = coordinatesToPolygon edges
+                        | polygon = coordinatesToPolygon (edgesWithNeigborCoordinate |> Set.map Tuple.second)
                         , center = getMedianCoordinates country.coordinates
+                        , waterEdges = edgesBorderingWater
                     }
                 )
     , bodiesOfWater =
@@ -1700,7 +1718,7 @@ recursiveStuff borderSegments currentPoint result =
             currentPoint :: result
 
 
-getEdgesForArea : Area -> Int -> Set.Set BorderSegment
+getEdgesForArea : Area -> Int -> Set.Set ( ( Int, Int ), BorderSegment )
 getEdgesForArea area scale =
     area
         |> Set.foldl
@@ -1720,7 +1738,7 @@ scaleEdge scale ( point1, point2 ) =
     ( scaleCoordinate scale point1, scaleCoordinate scale point2 )
 
 
-getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Int -> Set.Set BorderSegment
+getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Int -> Set.Set ( ( Int, Int ), BorderSegment )
 getEdgesForCountryForCoordinate allAreas ( x, y ) scaleFactor =
     let
         left =
@@ -1761,6 +1779,6 @@ getEdgesForCountryForCoordinate allAreas ( x, y ) scaleFactor =
                     result
 
                 else
-                    Set.insert (scaleEdge scaleFactor edge) result
+                    Set.insert ( adjacent, scaleEdge scaleFactor edge ) result
             )
             Set.empty
