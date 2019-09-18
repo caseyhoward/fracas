@@ -526,7 +526,7 @@ attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroo
 
                             updatedPlayers =
                                 playingGameAttributes.players
-                                    |> updatePlayerTroopCountForCountry currentPlayerId fromCountryId (TroopCount.subtractTroopCounts fromCountryTroopCount allowedNumberOfTroopsToMove)
+                                    |> updatePlayerTroopCountForCountry currentPlayerId fromCountryId (TroopCount.subtractTroopCounts allowedNumberOfTroopsToMove fromCountryTroopCount)
                                     |> updatePlayerTroopCountForCountry currentPlayerId clickedCountryId (TroopCount.addTroopCounts playerCountryToTroopCount allowedNumberOfTroopsToMove)
                         in
                         { playingGameAttributes

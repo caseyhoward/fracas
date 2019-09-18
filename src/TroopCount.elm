@@ -1,4 +1,12 @@
-module TroopCount exposing (TroopCount(..), acrossWater, addTroopCounts, hasTroops, noTroops, nullTroopCount, subtractTroopCounts)
+module TroopCount exposing
+    ( TroopCount(..)
+    , acrossWater
+    , addTroopCounts
+    , hasTroops
+    , noTroops
+    , nullTroopCount
+    , subtractTroopCounts
+    )
 
 
 type TroopCount
