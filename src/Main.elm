@@ -128,7 +128,7 @@ type alias Player =
     , countryTroopCounts : Dict.Dict String TroopCount
     , capitolStatus : CapitolStatus
     , color : Color.Color
-    , ports : Dict.Dict String Bool
+    , ports : Set.Set String
     }
 
 
@@ -260,7 +260,7 @@ update msg model =
                                           , name = "Player " ++ String.fromInt playerId
                                           , capitolStatus = NoCapitol
                                           , color = getDefaultColor (PlayerId playerId)
-                                          , ports = Dict.empty
+                                          , ports = Set.empty
                                           }
                                         )
                                     )
@@ -555,7 +555,7 @@ buildPort playerId countryId playingGameAttributes =
 
 addPortForPlayer : CountryId -> Player -> Player
 addPortForPlayer (CountryId countryId) player =
-    { player | ports = player.ports |> Dict.insert countryId True }
+    { player | ports = player.ports |> Set.insert countryId }
 
 
 isCountryNeighboringWater : CountryId -> Dict.Dict String Country -> Maybe Bool
@@ -748,6 +748,14 @@ getDefaultColor (PlayerId playerId) =
 
         Nothing ->
             Color.black
+
+
+getCountryHasPort : PlayerId -> CountryId -> Dict.Dict Int Player -> Maybe Bool
+getCountryHasPort playerId (CountryId countryId) players =
+    getPlayer playerId players
+        |> Maybe.map .ports
+        |> Maybe.map
+            (Set.member countryId)
 
 
 removePlayerCountry : CountryId -> PlayerId -> Dict.Dict Int Player -> Dict.Dict Int Player
@@ -1293,24 +1301,29 @@ renderCountry countryId playingGameAttributes =
     case ( findCountryOwner countryId playingGameAttributes.players, getCountry countryId playingGameAttributes.map.countries ) of
         ( Just countryOwnerId, Just country ) ->
             case
-                getPlayer countryOwnerId playingGameAttributes.players
+                ( getPlayer countryOwnerId playingGameAttributes.players
+                , getTroopCountForPlayerCountry countryId countryOwnerId playingGameAttributes.players
+                , getCountryHasPort countryOwnerId countryId playingGameAttributes.players
+                )
             of
-                ( Just player ) ->
-                    case getTroopCountForPlayerCountry countryId countryOwnerId playingGameAttributes.players of
-                        Just troopCount ->
-                            Collage.group
-                                [ renderTroopCount country.center troopCount
-                                , renderArea country.polygon player.color player.capitolStatus countryId
-                                ]
-                                |> Collage.Events.onClick (CountryClicked countryId)
+                ( Just player, Just troopCount, Just hasPort ) ->
+                    Collage.group
+                        ((if hasPort then
+                            [ renderPort country.waterEdges ]
 
-                        _ ->
-                            Collage.Text.fromString "Error rendering country 1" |> Collage.rendered
+                          else
+                            []
+                         )
+                            ++ [ renderTroopCount country.center troopCount
+                               , renderArea country.polygon player.color player.capitolStatus countryId
+                               ]
+                        )
+                        |> Collage.Events.onClick (CountryClicked countryId)
 
                 _ ->
-                    Collage.Text.fromString "Error rendering country 2" |> Collage.rendered
+                    Collage.Text.fromString "Error rendering country 1" |> Collage.rendered
 
-        (Nothing, Just country) ->
+        ( Nothing, Just country ) ->
             case getTroopCount countryId playingGameAttributes.neutralCountryTroops of
                 Just troopCount ->
                     Collage.group
@@ -1325,9 +1338,18 @@ renderCountry countryId playingGameAttributes =
                         ]
                         |> Collage.Events.onClick (CountryClicked countryId)
 
-
         _ ->
             Collage.Text.fromString "Error rendering country 4" |> Collage.rendered
+
+
+renderPort : Set.Set BorderSegment -> Collage.Collage msg
+renderPort waterEdges =
+    waterEdges
+        |> Set.toList
+        |> List.map (\( point1, point2 ) -> Collage.segment point1 point2 |> Collage.traced (Collage.dot ((defaultScale |> toFloat) / 4.0) (Collage.uniform Color.black)))
+        |> Collage.group
+
+
 renderTroopCount : ( Int, Int ) -> TroopCount -> Collage.Collage msg
 renderTroopCount ( medianX, medianY ) (TroopCount troopCount) =
     if troopCount > 0 then
