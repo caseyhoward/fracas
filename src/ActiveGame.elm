@@ -63,7 +63,7 @@ type PlayerTurnStage
     | AttackAnnexOrPort
     | TroopMovement
     | TroopMovementFromSelected GameMap.CountryId String
-    | GameOver PlayerId
+    | GameOver
 
 
 type CapitolStatus
@@ -211,7 +211,7 @@ handleCountryClickFromPlayer clickedCountryId activeGame =
                                 TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
                                     attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroopsToMoveString activeGame
 
-                                GameOver _ ->
+                                GameOver ->
                                     { activeGame | error = Nothing }
 
                 Nothing ->
@@ -909,7 +909,7 @@ playerTurnToString players playerTurn =
         PlayerTurn playerId (TroopMovementFromSelected (GameMap.CountryId fromCountryId) numberOfTroopsToMove) ->
             "Player " ++ playerIdToString playerId ++ " is moving " ++ numberOfTroopsToMove ++ " troops from " ++ fromCountryId
 
-        PlayerTurn playerId (GameOver winnerPlayerId) ->
+        PlayerTurn winnerPlayerId GameOver ->
             "Player " ++ playerIdToString winnerPlayerId ++ " wins!!!"
 
 
@@ -979,7 +979,7 @@ updateForSuccessfulAttack updatedPlayers playingGameAttributes =
                             []
             in
             if List.length capitolsRemaining == 1 then
-                PlayerTurn currentPlayerId (GameOver currentPlayerId)
+                PlayerTurn currentPlayerId GameOver
 
             else
                 PlayerTurn currentPlayerId TroopMovement
