@@ -378,8 +378,8 @@ attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroo
 
                             updatedPlayers =
                                 playingGameAttributes.players
-                                    |> updatePlayerTroopCountForCountry currentPlayerId fromCountryId (subtractTroopCounts fromCountryTroopCount allowedNumberOfTroopsToMove)
-                                    |> updatePlayerTroopCountForCountry currentPlayerId clickedCountryId (addTroopCounts playerCountryToTroopCount allowedNumberOfTroopsToMove)
+                                    |> updatePlayerTroopCountForCountry currentPlayerId fromCountryId (TroopCount.subtractTroopCounts fromCountryTroopCount allowedNumberOfTroopsToMove)
+                                    |> updatePlayerTroopCountForCountry currentPlayerId clickedCountryId (TroopCount.addTroopCounts playerCountryToTroopCount allowedNumberOfTroopsToMove)
                         in
                         { playingGameAttributes
                             | players = updatedPlayers
@@ -403,7 +403,7 @@ attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace playingGame
         OccupiedByCurrentPlayer clickedCountryTroopCount ->
             let
                 updatedPlayers =
-                    playingGameAttributes.players |> updatePlayerTroopCountForCountry currentPlayerId clickedCountryId (addTroopCounts clickedCountryTroopCount troopsToPlace)
+                    playingGameAttributes.players |> updatePlayerTroopCountForCountry currentPlayerId clickedCountryId (TroopCount.addTroopCounts clickedCountryTroopCount troopsToPlace)
             in
             { playingGameAttributes
                 | players = updatedPlayers
@@ -534,11 +534,11 @@ attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttrib
 
                 remainingTroops =
                     opponentTroopCount
-                        |> addTroopCounts defenseStrength
-                        |> subtractTroopCounts attackStrength
+                        |> TroopCount.addTroopCounts defenseStrength
+                        |> TroopCount.subtractTroopCounts attackStrength
             in
             if canAttack attackStrength defenseStrength then
-                if hasTroops remainingTroops then
+                if TroopCount.hasTroops remainingTroops then
                     OpponentCountryLosesTroops remainingTroops
 
                 else
@@ -767,21 +767,6 @@ removeTroopCount (GameMap.CountryId countryId) troopCounts =
     Dict.remove countryId troopCounts
 
 
-addTroopCounts : TroopCount.TroopCount -> TroopCount.TroopCount -> TroopCount.TroopCount
-addTroopCounts (TroopCount.TroopCount troopCount1) (TroopCount.TroopCount troopCount2) =
-    TroopCount.TroopCount (troopCount1 + troopCount2)
-
-
-subtractTroopCounts : TroopCount.TroopCount -> TroopCount.TroopCount -> TroopCount.TroopCount
-subtractTroopCounts (TroopCount.TroopCount ammountToSubtract) (TroopCount.TroopCount subtractFrom) =
-    TroopCount.TroopCount (subtractFrom - ammountToSubtract)
-
-
-hasTroops : TroopCount.TroopCount -> Bool
-hasTroops (TroopCount.TroopCount troopCount) =
-    troopCount > 0
-
-
 attackAndDefenseStrength : GameMap.CountryId -> PlayerId -> PlayerId -> Dict.Dict Int Player -> Dict.Dict String GameMap.Country -> ( TroopCount.TroopCount, TroopCount.TroopCount )
 attackAndDefenseStrength countryBeingAttackedId attackerId defenderId players countries =
     case getTroopCountForPlayerCountry countryBeingAttackedId defenderId players of
@@ -795,13 +780,13 @@ attackAndDefenseStrength countryBeingAttackedId attackerId defenderId players co
                             (\neighboringCountryId ( attack, defense ) ->
                                 case getCountryStatus neighboringCountryId attackerId players of
                                     OccupiedByCurrentPlayer neighboringPlayerCountryTroopCount ->
-                                        ( addTroopCounts attack neighboringPlayerCountryTroopCount, defense )
+                                        ( TroopCount.addTroopCounts attack neighboringPlayerCountryTroopCount, defense )
 
                                     OccupiedByOpponent neigborPlayerId ->
                                         if neigborPlayerId == defenderId then
                                             case getTroopCountForPlayerCountry neighboringCountryId defenderId players of
                                                 Just neighboringCountryTroopCount ->
-                                                    ( attack, addTroopCounts defense neighboringCountryTroopCount )
+                                                    ( attack, TroopCount.addTroopCounts defense neighboringCountryTroopCount )
 
                                                 Nothing ->
                                                     -- This shouldn't happen
