@@ -127,17 +127,16 @@ update msg model =
         PlayingGame attributes ->
             case msg of
                 CountryClicked clickedCountryId ->
-                    case attributes.currentPlayerTurn of
-                        ActiveGame.PlayerTurn playerId _ ->
-                            case ActiveGame.getPlayer playerId attributes.players of
-                                Just _ ->
-                                    ( PlayingGame (ActiveGame.handleCountryClickFromPlayer clickedCountryId attributes)
-                                    , Cmd.none
-                                    )
+                    -- case attributes.currentPlayerTurn of
+                    -- ActiveGame.PlayerTurn playerId _ ->
+                    --     case ActiveGame.getPlayer playerId attributes.players of
+                    --         Just _ ->
+                    ( PlayingGame (ActiveGame.handleCountryClickFromPlayer clickedCountryId attributes)
+                    , Cmd.none
+                    )
 
-                                Nothing ->
-                                    ( PlayingGame attributes, Cmd.none )
-
+                -- Nothing ->
+                --     ( PlayingGame attributes, Cmd.none )
                 Pass ->
                     ( ActiveGame.pass attributes |> PlayingGame, Cmd.none )
 
@@ -198,16 +197,7 @@ view model =
                                     Nothing ->
                                         []
                                )
-                            ++ (case attributes.currentPlayerTurn of
-                                    ActiveGame.PlayerTurn playerId playerTurnStage ->
-                                        case ActiveGame.getPlayer playerId attributes.players of
-                                            Just player ->
-                                                [ viewPlayerTurnStatus playerId player playerTurnStage attributes.players ]
-
-                                            Nothing ->
-                                                []
-                                -- Should hopefully never happen
-                               )
+                            ++ [ viewPlayerTurnStatus attributes.currentPlayerTurn attributes.players ]
                         )
                     ]
                 )
@@ -215,26 +205,24 @@ view model =
 
 viewSideBar : ActiveGame.ActiveGame -> Element.Element Msg
 viewSideBar activeGame =
-    case activeGame.currentPlayerTurn of
-        ActiveGame.PlayerTurn _ playerTurnStage ->
-            Element.column
-                [ Element.width (Element.px 200), Element.alignTop ]
-                ((if ActiveGame.canPass playerTurnStage then
-                    [ Element.Input.button
-                        (defaultButtonAttributes
-                            ++ [ Element.width (Element.px 100)
-                               , Element.centerX
-                               , Element.Background.color (Element.rgb255 0 100 100)
-                               ]
-                        )
-                        { onPress = Just Pass, label = Element.text "Pass" }
-                    ]
-
-                  else
-                    [ Element.el [ Element.height (Element.px 30) ] Element.none ]
-                 )
-                    ++ viewConfigureTroopCount activeGame
+    Element.column
+        [ Element.width (Element.px 200), Element.alignTop ]
+        ((if ActiveGame.canCurrentPlayerPass activeGame then
+            [ Element.Input.button
+                (defaultButtonAttributes
+                    ++ [ Element.width (Element.px 100)
+                       , Element.centerX
+                       , Element.Background.color (Element.rgb255 0 100 100)
+                       ]
                 )
+                { onPress = Just Pass, label = Element.text "Pass" }
+            ]
+
+          else
+            [ Element.el [ Element.height (Element.px 30) ] Element.none ]
+         )
+            ++ viewConfigureTroopCount activeGame
+        )
 
 
 defaultButtonAttributes : List (Element.Attribute msg)
@@ -321,11 +309,11 @@ viewConfiguration configurationAttributes =
         ]
 
 
-viewPlayerTurnStatus : ActiveGame.PlayerId -> ActiveGame.Player -> ActiveGame.PlayerTurnStage -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
-viewPlayerTurnStatus playerId player playerTurnStage players =
-    Element.el [ Element.width Element.fill, Element.Background.color (colorToElementColor player.color), Element.padding 5 ]
+viewPlayerTurnStatus : ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
+viewPlayerTurnStatus playerTurn players =
+    Element.el [ Element.width Element.fill, Element.Background.color (ActiveGame.getPlayerColorFromPlayerTurn players playerTurn |> colorToElementColor), Element.padding 5 ]
         (Element.text
-            (ActiveGame.playerTurnStatusToString playerId playerTurnStage players)
+            (ActiveGame.playerTurnToString players playerTurn)
         )
 
 
