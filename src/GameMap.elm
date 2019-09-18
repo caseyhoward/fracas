@@ -7,7 +7,6 @@ module GameMap exposing
     , getCountry
     , getCountryIds
     , isCountryNeighboringWater
-    , nullCountryId
     , parse
     , updateCountry
     )
@@ -79,9 +78,6 @@ isCountryNeighboringWater countryId countries =
             )
 
 
-nullCountryId : CountryId
-nullCountryId =
-    CountryId "-1"
 
 
 parse : String -> Int -> GameMap

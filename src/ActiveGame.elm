@@ -5,6 +5,7 @@ module ActiveGame exposing
     , PlayerId
     , PlayerTurn
     , canCurrentPlayerPass
+    , cancelMovingTroops
     , defaultScale
     , findCountryOwner
     , getCountryHasPort
@@ -13,7 +14,7 @@ module ActiveGame exposing
     , getPlayerColorFromPlayerTurn
     , getTroopCount
     , getTroopCountForPlayerCountry
-    , handleCountryClickFromPlayer
+    , handleCountryClickFromPlayer,canCurrentPlayerCancelTroopMovement
     , isCountryIdCapitol
     , pass
     , playerIdToString
@@ -110,6 +111,13 @@ defaultPlayerColors =
 -- Exposed
 
 
+cancelMovingTroops : ActiveGame -> ActiveGame
+cancelMovingTroops activeGame =
+    case activeGame.currentPlayerTurn of
+        PlayerTurn _ playerId ->
+            { activeGame | currentPlayerTurn = PlayerTurn TroopMovement playerId }
+
+
 canCurrentPlayerPass : ActiveGame -> Bool
 canCurrentPlayerPass activeGame =
     case activeGame.currentPlayerTurn of
@@ -126,6 +134,16 @@ canCurrentPlayerPass activeGame =
 
                 _ ->
                     False
+
+
+canCurrentPlayerCancelTroopMovement : ActiveGame -> Bool
+canCurrentPlayerCancelTroopMovement activeGame =
+    case activeGame.currentPlayerTurn of
+        PlayerTurn playerTurnStage _ ->
+            case playerTurnStage of
+                TroopMovementFromSelected _ _ ->
+                    True
+                _ -> False
 
 
 defaultScale : Int
@@ -897,10 +915,10 @@ playerTurnToString players (PlayerTurn playerTurnStage playerId) =
         Just playerName ->
             case playerTurnStage of
                 CapitolPlacement ->
-                    playerName ++ ": Choose your first country. This country will be your capitol. If it is capture, you lose."
+                    playerName ++ ": Choose your first country. This country will be your capitol. If it is captured, you lose."
 
                 TroopPlacement ->
-                    playerName ++ ": Place " ++ (numberOfTroopsToPlace playerId players |> TroopCount.toString) ++ " troops in one of your countries"
+                    playerName ++ ": Place " ++ (numberOfTroopsToPlace playerId players |> TroopCount.pluralize) ++ " in one of your countries"
 
                 AttackAnnexOrPort ->
                     playerName ++ ": Choose an enemy country to attack, a neutral country to annex, or one of your ccountries bordering water to build a port"
@@ -915,6 +933,7 @@ playerTurnToString players (PlayerTurn playerTurnStage playerId) =
                     playerName ++ " has won the game!!!"
 
         Nothing ->
+            -- TODO
             ""
 
 

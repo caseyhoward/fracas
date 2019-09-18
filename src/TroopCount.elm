@@ -7,6 +7,7 @@ module TroopCount exposing
     , noTroops
     , numberOfTroopsToMove
     , numberOfTroopsToPlace
+    , pluralize
     , random
     , subtractTroopCounts
     , toString
@@ -58,6 +59,15 @@ numberOfTroopsToMove (TroopCount maximumNumberOfTroops) attemptedNumberOfTroops 
          else
             attemptedNumberOfTroops
         )
+
+
+pluralize : TroopCount -> String
+pluralize (TroopCount troopCount) =
+    if troopCount > 1 then
+        String.fromInt troopCount ++ " troops"
+
+    else
+        String.fromInt troopCount ++ " troop"
 
 
 random : Int -> Random.Generator TroopCount

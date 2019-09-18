@@ -79,6 +79,7 @@ type Msg
     | Pass
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | UpdateNumberOfTroopsToMove String
+    | CancelMovingTroops
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -108,6 +109,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 NeutralCountryTroopCountsGenerated _ ->
+                    ( model, Cmd.none )
+
+                CancelMovingTroops ->
                     ( model, Cmd.none )
 
         GeneratingRandomTroopCounts configurationOptions map ->
@@ -145,6 +149,9 @@ update msg model =
 
                 UpdateNumberOfTroopsToMove numberOfTroopsToMoveString ->
                     ( attributes |> ActiveGame.updateNumberOfTroopsToMove numberOfTroopsToMoveString |> PlayingGame, Cmd.none )
+
+                CancelMovingTroops ->
+                    ( attributes |> ActiveGame.cancelMovingTroops |> PlayingGame, Cmd.none )
 
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)
@@ -267,6 +274,14 @@ viewConfigureTroopCount activeGame =
                 , label = Element.Input.labelAbove defaultLabelAttributes (Element.text "Number of troops to move")
                 , text = numberOfTroopsToMove
                 }
+            , Element.Input.button
+                (defaultButtonAttributes
+                    ++ [ Element.width (Element.px 100)
+                       , Element.centerX
+                       , Element.Background.color (Element.rgb255 0 100 100)
+                       ]
+                )
+                { onPress = Just CancelMovingTroops, label = Element.text "Cancel" }
             ]
 
         Nothing ->
