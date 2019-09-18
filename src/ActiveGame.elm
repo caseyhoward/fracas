@@ -232,31 +232,15 @@ isCountryIdCapitol playerId countryId players =
             )
 
 
-
--- nullPlayerId : PlayerId
--- nullPlayerId =
---     PlayerId -1
-
-
 numberOfTroopsToPlace : PlayerId -> Dict.Dict Int Player -> TroopCount.TroopCount
 numberOfTroopsToPlace playerId players =
     case getPlayer playerId players of
         Just player ->
-            TroopCount.TroopCount (Dict.size player.countryTroopCounts * troopsPerCountryPerTurn)
+            TroopCount.numberOfTroopsToPlace (Dict.size player.countryTroopCounts) troopsPerCountryPerTurn
 
         Nothing ->
             -- TODO : Propogate error
             TroopCount.noTroops
-
-
-troopToMove : ActiveGame -> Maybe String
-troopToMove activeGame =
-    case activeGame.currentPlayerTurn of
-        PlayerTurn _ (TroopMovementFromSelected _ troops) ->
-            Just troops
-
-        _ ->
-            Nothing
 
 
 playerIdToString : PlayerId -> String
@@ -491,17 +475,8 @@ attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroo
                                     Nothing ->
                                         TroopCount.noTroops
 
-                            fromCountryTroopCountInt =
-                                case fromCountryTroopCount of
-                                    TroopCount.TroopCount count ->
-                                        count
-
                             allowedNumberOfTroopsToMove =
-                                if numberOfTroopsToMove > fromCountryTroopCountInt then
-                                    fromCountryTroopCount
-
-                                else
-                                    TroopCount.TroopCount numberOfTroopsToMove
+                                TroopCount.numberOfTroopsToMove fromCountryTroopCount numberOfTroopsToMove
 
                             updatedPlayers =
                                 playingGameAttributes.players
@@ -626,7 +601,7 @@ attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttrib
                         |> TroopCount.addTroopCounts defenseStrength
                         |> TroopCount.subtractTroopCounts attackStrength
             in
-            if canAttack attackStrength defenseStrength then
+            if TroopCount.canAttack attackStrength defenseStrength then
                 if TroopCount.hasTroops remainingTroops then
                     OpponentCountryLosesTroops remainingTroops
 
@@ -652,11 +627,11 @@ attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttrib
 attemptSelectTroopMovementFromCountry : GameMap.CountryId -> PlayerId -> ActiveGame -> ActiveGame
 attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId playingGameAttributes =
     case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
-        OccupiedByCurrentPlayer (TroopCount.TroopCount troopCount) ->
-            if troopCount > 0 then
+        OccupiedByCurrentPlayer troopCount ->
+            if TroopCount.hasTroops troopCount then
                 { playingGameAttributes
                     | currentPlayerTurn =
-                        PlayerTurn currentPlayerId (TroopMovementFromSelected clickedCountryId (String.fromInt troopCount))
+                        PlayerTurn currentPlayerId (TroopMovementFromSelected clickedCountryId (TroopCount.toString troopCount))
                     , error = Nothing
                 }
 
@@ -715,9 +690,9 @@ attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playing
             in
             updateForSuccessfulAttack updatedPlayers playingGameAttributes
 
-        NotEnoughTroopsToAttack (TroopCount.TroopCount attackStrength) (TroopCount.TroopCount defenseStrength) ->
+        NotEnoughTroopsToAttack attackStrength defenseStrength ->
             { playingGameAttributes
-                | error = Just ("Not enough to attack: attack strength = " ++ String.fromInt attackStrength ++ ", defense strength = " ++ String.fromInt defenseStrength)
+                | error = Just ("Not enough to attack: attack strength = " ++ TroopCount.toString attackStrength ++ ", defense strength = " ++ TroopCount.toString defenseStrength)
             }
 
         AttackResultError errorMessage ->
@@ -734,7 +709,7 @@ buildPort playerId countryId playingGameAttributes =
             if isNeighboringWater then
                 case getCountryHasPort playerId countryId playingGameAttributes.players of
                     Just hasPort ->
-                        if Debug.log "hasPort" hasPort then
+                        if hasPort then
                             { playingGameAttributes | error = Just "This country already has a port" }
 
                         else
@@ -773,11 +748,6 @@ canAnnexCountry gameMap playerId players countryIdToAnnex =
         Nothing ->
             -- This should never happen
             False
-
-
-canAttack : TroopCount.TroopCount -> TroopCount.TroopCount -> Bool
-canAttack (TroopCount.TroopCount attackTroopCount) (TroopCount.TroopCount defenseTroopCount) =
-    attackTroopCount > defenseTroopCount
 
 
 clearError : ActiveGame -> ActiveGame
@@ -974,6 +944,16 @@ takeCountryFromOpponent countryId currentPlayerId opponentPlayerId players =
     players
         |> removePlayerCountry countryId opponentPlayerId
         |> updatePlayerTroopCountForCountry currentPlayerId countryId TroopCount.noTroops
+
+
+troopToMove : ActiveGame -> Maybe String
+troopToMove activeGame =
+    case activeGame.currentPlayerTurn of
+        PlayerTurn _ (TroopMovementFromSelected _ troops) ->
+            Just troops
+
+        _ ->
+            Nothing
 
 
 updateForSuccessfulAttack : Dict.Dict Int Player -> ActiveGame -> ActiveGame

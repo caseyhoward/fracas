@@ -1,12 +1,18 @@
 module TroopCount exposing
-    ( TroopCount(..)
+    ( TroopCount
     , acrossWater
     , addTroopCounts
+    , canAttack
     , hasTroops
     , noTroops
+    , numberOfTroopsToMove
+    , numberOfTroopsToPlace
+    , random
     , subtractTroopCounts
     , toString
     )
+
+import Random
 
 
 type TroopCount
@@ -23,6 +29,11 @@ addTroopCounts (TroopCount troopCount1) (TroopCount troopCount2) =
     TroopCount (troopCount1 + troopCount2)
 
 
+canAttack : TroopCount -> TroopCount -> Bool
+canAttack (TroopCount attackTroopCount) (TroopCount defenseTroopCount) =
+    attackTroopCount > defenseTroopCount
+
+
 hasTroops : TroopCount -> Bool
 hasTroops (TroopCount troopCount) =
     troopCount > 0
@@ -31,6 +42,27 @@ hasTroops (TroopCount troopCount) =
 noTroops : TroopCount
 noTroops =
     TroopCount 0
+
+
+numberOfTroopsToPlace : Int -> Int -> TroopCount
+numberOfTroopsToPlace numberOfCountries troopsPerCountryPerTurn =
+    numberOfCountries * troopsPerCountryPerTurn |> TroopCount
+
+
+numberOfTroopsToMove : TroopCount -> Int -> TroopCount
+numberOfTroopsToMove (TroopCount maximumNumberOfTroops) attemptedNumberOfTroops =
+    TroopCount
+        (if attemptedNumberOfTroops > maximumNumberOfTroops then
+            maximumNumberOfTroops
+
+         else
+            attemptedNumberOfTroops
+        )
+
+
+random : Int -> Random.Generator TroopCount
+random maximumNeutralCountryTroops =
+    Random.int 1 maximumNeutralCountryTroops |> Random.map TroopCount
 
 
 subtractTroopCounts : TroopCount -> TroopCount -> TroopCount

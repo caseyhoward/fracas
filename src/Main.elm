@@ -159,7 +159,7 @@ randomTroopPlacementsGenerator countryIds =
     Random.Dict.dict
         100
         (Random.List.choose countryIds |> Random.map Tuple.first |> Random.map (Maybe.withDefault "-1"))
-        (Random.int 1 maximumNeutralCountryTroops |> Random.map TroopCount.TroopCount)
+        (TroopCount.random maximumNeutralCountryTroops)
 
 
 
@@ -419,10 +419,10 @@ renderPort waterEdges =
 
 
 renderTroopCount : ( Int, Int ) -> TroopCount.TroopCount -> Collage.Collage msg
-renderTroopCount ( medianX, medianY ) (TroopCount.TroopCount troopCount) =
-    if troopCount > 0 then
+renderTroopCount ( medianX, medianY ) troopCount =
+    if TroopCount.hasTroops troopCount then
         troopCount
-            |> String.fromInt
+            |> TroopCount.toString
             |> Collage.Text.fromString
             |> Collage.Text.color Color.black
             |> Collage.Text.size (ActiveGame.defaultScale * 100 // 120)
