@@ -171,37 +171,66 @@ view : Model -> Html Msg
 view model =
     case model of
         ConfiguringGame configuringGameSettings ->
-            Element.layout [ Element.width Element.fill ]
-                (Element.column
-                    [ Element.width Element.fill, Element.centerX ]
-                    [ Element.el [ Element.centerX ]
-                        (viewConfiguration configuringGameSettings)
-                    ]
-                )
+            viewGameConfiguration configuringGameSettings
 
         GeneratingRandomTroopCounts _ _ ->
             Element.layout [] Element.none
 
-        PlayingGame attributes ->
-            Element.layout [ Element.width Element.fill ]
-                (Element.row [ Element.centerX ]
-                    [ viewSideBar attributes
-                    , Element.column
-                        [ Element.centerX ]
-                        ([ Element.el [ Element.centerX, Element.width Element.fill ]
-                            (renderPlayingGame attributes |> Element.html)
-                         ]
-                            ++ (case attributes.error of
-                                    Just error ->
-                                        [ Element.text error ]
+        PlayingGame activeGame ->
+            viewPlayingGame activeGame
 
-                                    Nothing ->
-                                        []
-                               )
-                            ++ [ viewPlayerTurnStatus attributes.currentPlayerTurn attributes.players ]
-                        )
+
+
+---- Configuration
+
+
+viewGameConfiguration : ConfigurationAttributes -> Html Msg
+viewGameConfiguration gameConfiguration =
+    Element.layout [ Element.width Element.fill ]
+        (Element.column
+            [ Element.width Element.fill, Element.centerX ]
+            [ Element.el [ Element.centerX ]
+                (Element.row
+                    [ Element.width Element.fill ]
+                    [ Element.Input.text
+                        []
+                        { onChange = NumberOfPlayersChanged
+                        , text = gameConfiguration.numberOfPlayers
+                        , placeholder = Nothing
+                        , label = Element.Input.labelLeft [ Element.centerY ] (Element.text "Number of players")
+                        }
+                    , Element.Input.button (defaultButtonAttributes ++ [ Element.Background.color (Element.rgb255 0 150 0) ]) { onPress = Just StartGameClicked, label = Element.text "Start Game" }
                     ]
                 )
+            ]
+        )
+
+
+
+---- PlayingGame
+
+
+viewPlayingGame : ActiveGame.ActiveGame -> Html Msg
+viewPlayingGame activeGame =
+    Element.layout [ Element.width Element.fill ]
+        (Element.row [ Element.centerX ]
+            [ viewSideBar activeGame
+            , Element.column
+                [ Element.centerX ]
+                ([ Element.el [ Element.centerX, Element.width Element.fill ]
+                    (renderGameBoard activeGame |> Element.html)
+                 ]
+                    ++ (case activeGame.error of
+                            Just error ->
+                                [ Element.text error ]
+
+                            Nothing ->
+                                []
+                       )
+                    ++ [ viewPlayerTurnStatus activeGame.currentPlayerTurn activeGame.players ]
+                )
+            ]
+        )
 
 
 viewSideBar : ActiveGame.ActiveGame -> Element.Element Msg
@@ -288,21 +317,6 @@ viewConfigureTroopCount activeGame =
             []
 
 
-viewConfiguration : ConfigurationAttributes -> Element.Element Msg
-viewConfiguration configurationAttributes =
-    Element.row
-        [ Element.width Element.fill ]
-        [ Element.Input.text
-            []
-            { onChange = NumberOfPlayersChanged
-            , text = configurationAttributes.numberOfPlayers
-            , placeholder = Nothing
-            , label = Element.Input.labelLeft [ Element.centerY ] (Element.text "Number of players")
-            }
-        , Element.Input.button (defaultButtonAttributes ++ [ Element.Background.color (Element.rgb255 0 150 0) ]) { onPress = Just StartGameClicked, label = Element.text "Start Game" }
-        ]
-
-
 viewPlayerTurnStatus : ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
 viewPlayerTurnStatus playerTurn players =
     Element.el [ Element.width Element.fill, Element.Background.color (ActiveGame.getPlayerColorFromPlayerTurn players playerTurn |> colorToElementColor), Element.padding 5 ]
@@ -320,8 +334,8 @@ colorToElementColor color =
 -- Rendering
 
 
-renderPlayingGame : ActiveGame.ActiveGame -> Html Msg
-renderPlayingGame activeGame =
+renderGameBoard : ActiveGame.ActiveGame -> Html Msg
+renderGameBoard activeGame =
     let
         countryCollages : List (Collage.Collage Msg)
         countryCollages =
