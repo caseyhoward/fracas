@@ -336,7 +336,11 @@ attackAndDefenseStrength countryBeingAttackedId attackerId defenderId players co
         ( waterAttackStrength, waterDefenseStrength ) =
             attackAndDefenseStrengthWater countryBeingAttackedId attackerId defenderId players countries bodyOfWaterNeighbors
     in
-    ( landAttackStrength, TroopCount.addTroopCounts landDefenseStrength defendingCountryTroopCount )
+    ( landAttackStrength |> TroopCount.addTroopCounts waterAttackStrength
+    , landDefenseStrength
+        |> TroopCount.addTroopCounts defendingCountryTroopCount
+        |> TroopCount.addTroopCounts waterDefenseStrength
+    )
 
 
 attackAndDefenseStrengthLand : GameMap.CountryId -> PlayerId -> PlayerId -> Dict.Dict Int Player -> Dict.Dict String GameMap.Country -> ( TroopCount.TroopCount, TroopCount.TroopCount )
@@ -399,7 +403,7 @@ attackAndDefenseStrengthWater countryBeingAttackedId attackerId defenderId playe
                                             case findCountryOwner (GameMap.CountryId countryId) players of
                                                 Just countryOwnerId ->
                                                     if countryOwnerId == attackerId then
-                                                        ( Set.insert countryId innerAttack, Set.insert countryId innerDefense )
+                                                        ( Set.insert countryId innerAttack,innerDefense )
 
                                                     else if countryOwnerId == defenderId then
                                                         ( innerAttack, Set.insert countryId innerDefense )
@@ -864,7 +868,7 @@ isCountryReachableFromOtherCountry fromCountryId toCountryId playerId countries 
 
 nextPlayerCheckForDeadPlayers : PlayerId -> Dict.Dict Int Player -> PlayerId
 nextPlayerCheckForDeadPlayers (PlayerId currentPlayerId) players =
-    -- This can't during capitol placement because nobody will have a capitol except player 1
+    -- This doesn't work during capitol placement because nobody will have a capitol except player 1 after player 1 places their capitol
     let
         nextPlayerId =
             remainderBy (Dict.size players) currentPlayerId + 1
