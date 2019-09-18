@@ -214,8 +214,8 @@ view model =
 
 
 viewSideBar : ActiveGame.ActiveGame -> Element.Element Msg
-viewSideBar playingGameAttributes =
-    case playingGameAttributes.currentPlayerTurn of
+viewSideBar activeGame =
+    case activeGame.currentPlayerTurn of
         ActiveGame.PlayerTurn _ playerTurnStage ->
             Element.column
                 [ Element.width (Element.px 200), Element.alignTop ]
@@ -233,7 +233,7 @@ viewSideBar playingGameAttributes =
                   else
                     [ Element.el [ Element.height (Element.px 30) ] Element.none ]
                  )
-                    ++ viewConfigureTroopCount playingGameAttributes
+                    ++ viewConfigureTroopCount activeGame
                 )
 
 
@@ -292,7 +292,7 @@ viewConfigureTroopCount activeGame =
 
 
 
--- case playingGameAttributes.currentPlayerTurn of
+-- case activeGame.currentPlayerTurn of
 --     ActiveGame.PlayerTurn _ (ActiveGame.TroopMovementFromSelected _ numberOfTroopsToMove) ->
 --         [ Element.Input.text
 --             defaultTextInputAttributes
@@ -339,21 +339,21 @@ colorToElementColor color =
 
 
 renderPlayingGame : ActiveGame.ActiveGame -> Html Msg
-renderPlayingGame playingGameAttributes =
+renderPlayingGame activeGame =
     let
         countryCollages : List (Collage.Collage Msg)
         countryCollages =
-            playingGameAttributes.map.countries
+            activeGame.map.countries
                 |> Dict.keys
                 |> List.map
-                    (\countryId -> renderCountry (GameMap.CountryId countryId) playingGameAttributes)
+                    (\countryId -> renderCountry (GameMap.CountryId countryId) activeGame)
 
         background =
             Collage.polygon
                 [ ( 0, 0 )
-                , ( 0, playingGameAttributes.map.dimensions |> Tuple.second )
-                , ( playingGameAttributes.map.dimensions |> Tuple.first, playingGameAttributes.map.dimensions |> Tuple.second )
-                , ( playingGameAttributes.map.dimensions |> Tuple.first, 0 )
+                , ( 0, activeGame.map.dimensions |> Tuple.second )
+                , ( activeGame.map.dimensions |> Tuple.first, activeGame.map.dimensions |> Tuple.second )
+                , ( activeGame.map.dimensions |> Tuple.first, 0 )
                 ]
 
         backgroundWater =
@@ -369,13 +369,13 @@ renderPlayingGame playingGameAttributes =
 
 
 renderCountry : GameMap.CountryId -> ActiveGame.ActiveGame -> Collage.Collage Msg
-renderCountry countryId playingGameAttributes =
-    case ( ActiveGame.findCountryOwner countryId playingGameAttributes.players, GameMap.getCountry countryId playingGameAttributes.map.countries ) of
+renderCountry countryId activeGame =
+    case ( ActiveGame.findCountryOwner countryId activeGame.players, GameMap.getCountry countryId activeGame.map.countries ) of
         ( Just countryOwnerId, Just country ) ->
             case
-                ( ActiveGame.getPlayer countryOwnerId playingGameAttributes.players
-                , ActiveGame.getTroopCountForPlayerCountry countryId countryOwnerId playingGameAttributes.players
-                , ActiveGame.getCountryHasPort countryOwnerId countryId playingGameAttributes.players
+                ( ActiveGame.getPlayer countryOwnerId activeGame.players
+                , ActiveGame.getTroopCountForPlayerCountry countryId countryOwnerId activeGame.players
+                , ActiveGame.getCountryHasPort countryOwnerId countryId activeGame.players
                 )
             of
                 ( Just player, Just troopCount, Just hasPort ) ->
@@ -396,7 +396,7 @@ renderCountry countryId playingGameAttributes =
                     Collage.Text.fromString "Error rendering country 1" |> Collage.rendered
 
         ( Nothing, Just country ) ->
-            case ActiveGame.getTroopCount countryId playingGameAttributes.neutralCountryTroops of
+            case ActiveGame.getTroopCount countryId activeGame.neutralCountryTroops of
                 Just troopCount ->
                     Collage.group
                         [ renderTroopCount country.center troopCount
