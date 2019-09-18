@@ -151,18 +151,7 @@ update msg model =
                     ( model, Cmd.none )
 
                 UpdateNumberOfTroopsToMove numberOfTroopsToMoveString ->
-                    case attributes.currentPlayerTurn of
-                        ActiveGame.PlayerTurn currentPlayerId (ActiveGame.TroopMovementFromSelected countryId _) ->
-                            ( PlayingGame
-                                { attributes
-                                    | currentPlayerTurn =
-                                        ActiveGame.PlayerTurn currentPlayerId (ActiveGame.TroopMovementFromSelected countryId numberOfTroopsToMoveString)
-                                }
-                            , Cmd.none
-                            )
-
-                        _ ->
-                            ( model, Cmd.none )
+                    ( attributes |> ActiveGame.updateNumberOfTroopsToMove numberOfTroopsToMoveString |> PlayingGame, Cmd.none )
 
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)
@@ -286,9 +275,9 @@ defaultLabelAttributes =
 
 
 viewConfigureTroopCount : ActiveGame.ActiveGame -> List (Element.Element Msg)
-viewConfigureTroopCount playingGameAttributes =
-    case playingGameAttributes.currentPlayerTurn of
-        ActiveGame.PlayerTurn _ (ActiveGame.TroopMovementFromSelected _ numberOfTroopsToMove) ->
+viewConfigureTroopCount activeGame =
+    case activeGame |> ActiveGame.troopToMove of
+        Just numberOfTroopsToMove ->
             [ Element.Input.text
                 defaultTextInputAttributes
                 { onChange = UpdateNumberOfTroopsToMove
@@ -298,8 +287,23 @@ viewConfigureTroopCount playingGameAttributes =
                 }
             ]
 
-        _ ->
+        Nothing ->
             []
+
+
+
+-- case playingGameAttributes.currentPlayerTurn of
+--     ActiveGame.PlayerTurn _ (ActiveGame.TroopMovementFromSelected _ numberOfTroopsToMove) ->
+--         [ Element.Input.text
+--             defaultTextInputAttributes
+--             { onChange = UpdateNumberOfTroopsToMove
+--             , placeholder = Nothing
+--             , label = Element.Input.labelAbove defaultLabelAttributes (Element.text "Number of troops to move")
+--             , text = numberOfTroopsToMove
+--             }
+--         ]
+--     _ ->
+--         []
 
 
 viewConfiguration : ConfigurationAttributes -> Element.Element Msg

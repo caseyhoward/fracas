@@ -4,7 +4,7 @@ module ActiveGame exposing
     , Player
     , PlayerId
     , PlayerTurn(..)
-    , PlayerTurnStage(..)
+    , PlayerTurnStage
     , canPass
     , defaultScale
     , findCountryOwner
@@ -15,10 +15,12 @@ module ActiveGame exposing
     , getTroopCountForPlayerCountry
     , handleCountryClickFromPlayer
     , isCountryIdCapitol
+    , troopToMove
     , pass
     , playerIdToString
     , playerTurnStatusToString
     , start
+    , updateNumberOfTroopsToMove
     )
 
 import Color
@@ -273,6 +275,13 @@ numberOfTroopsToPlace playerId players =
             -- TODO : Propogate error
             TroopCount.noTroops
 
+
+troopToMove : ActiveGame -> Maybe String
+troopToMove activeGame =
+    case activeGame.currentPlayerTurn of
+        PlayerTurn _ (TroopMovementFromSelected _ troops) ->
+            Just troops
+        _ -> Nothing
 
 playerIdToString : PlayerId -> String
 playerIdToString (PlayerId playerId) =
@@ -1024,6 +1033,19 @@ updateForSuccessfulAttack updatedPlayers playingGameAttributes =
         , currentPlayerTurn = nextPlayerTurn
         , error = Nothing
     }
+
+
+updateNumberOfTroopsToMove : String -> ActiveGame -> ActiveGame
+updateNumberOfTroopsToMove numberOfTroopsToMoveString activeGame =
+    case activeGame.currentPlayerTurn of
+        PlayerTurn currentPlayerId (TroopMovementFromSelected countryId _) ->
+            { activeGame
+                | currentPlayerTurn =
+                    PlayerTurn currentPlayerId (TroopMovementFromSelected countryId numberOfTroopsToMoveString)
+            }
+
+        _ ->
+            activeGame
 
 
 updatePlayer : PlayerId -> Player -> Dict.Dict Int Player -> Dict.Dict Int Player
