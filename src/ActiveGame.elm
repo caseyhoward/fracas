@@ -190,7 +190,7 @@ getPlayerColorFromPlayerTurn players playerTurn =
 handleCountryClickFromPlayer : GameMap.CountryId -> ActiveGame -> ActiveGame
 handleCountryClickFromPlayer clickedCountryId activeGame =
     case activeGame.currentPlayerTurn of
-        PlayerTurn _ playerId  ->
+        PlayerTurn _ playerId ->
             case getPlayer playerId activeGame.players of
                 Just _ ->
                     case activeGame.currentPlayerTurn of
@@ -892,25 +892,36 @@ pass activeGame =
 
 
 playerTurnToString : Dict.Dict Int Player -> PlayerTurn -> String
-playerTurnToString players playerTurn =
-    case playerTurn of
-        PlayerTurn CapitolPlacement playerId ->
-            "Player " ++ playerIdToString playerId ++ " is placing capitol"
+playerTurnToString players (PlayerTurn playerTurnStage playerId) =
+    case getPlayerName playerId players of
+        Just playerName ->
+            case playerTurnStage of
+                CapitolPlacement ->
+                    playerName ++ ": Choose your first country. This country will be your capitol. If it is capture, you lose."
 
-        PlayerTurn TroopPlacement playerId ->
-            "Player " ++ playerIdToString playerId ++ " is placing " ++ (numberOfTroopsToPlace playerId players |> TroopCount.toString) ++ " troops"
+                TroopPlacement ->
+                    playerName ++ ": Place " ++ (numberOfTroopsToPlace playerId players |> TroopCount.toString) ++ " troops in one of your countries"
 
-        PlayerTurn AttackAnnexOrPort playerId ->
-            "Player " ++ playerIdToString playerId ++ " is attacking, annexing, or building a port"
+                AttackAnnexOrPort ->
+                    playerName ++ ": Choose an enemy country to attack, a neutral country to annex, or one of your ccountries bordering water to build a port"
 
-        PlayerTurn TroopMovement playerId ->
-            "Player " ++ playerIdToString playerId ++ " is moving troops"
+                TroopMovement ->
+                    playerName ++ ": Choose a country to move troops from or press the \"Pass\" button for no troop movement"
 
-        PlayerTurn (TroopMovementFromSelected (GameMap.CountryId fromCountryId) numberOfTroopsToMove) playerId ->
-            "Player " ++ playerIdToString playerId ++ " is moving " ++ numberOfTroopsToMove ++ " troops from " ++ fromCountryId
+                TroopMovementFromSelected _ _ ->
+                    playerName ++ ": Enter the number of troops to move and choose a destination or press the \"Pass\" button for no movement"
 
-        PlayerTurn GameOver winnerPlayerId ->
-            "Player " ++ playerIdToString winnerPlayerId ++ " wins!!!"
+                GameOver ->
+                    playerName ++ " has won the game!!!"
+
+        Nothing ->
+            ""
+
+
+getPlayerName : PlayerId -> Dict.Dict Int Player -> Maybe String
+getPlayerName playerId players =
+    getPlayer playerId players
+        |> Maybe.map .name
 
 
 playerTurnToPlayerId : PlayerTurn -> PlayerId
@@ -997,7 +1008,7 @@ updateNumberOfTroopsToMove numberOfTroopsToMoveString activeGame =
         PlayerTurn (TroopMovementFromSelected countryId _) currentPlayerId ->
             { activeGame
                 | currentPlayerTurn =
-                    currentPlayerId |> PlayerTurn (TroopMovementFromSelected countryId numberOfTroopsToMoveString) 
+                    currentPlayerId |> PlayerTurn (TroopMovementFromSelected countryId numberOfTroopsToMoveString)
             }
 
         _ ->
