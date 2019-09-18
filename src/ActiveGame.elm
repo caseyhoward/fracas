@@ -403,7 +403,7 @@ attackAndDefenseStrengthWater countryBeingAttackedId attackerId defenderId playe
                                             case findCountryOwner (GameMap.CountryId countryId) players of
                                                 Just countryOwnerId ->
                                                     if countryOwnerId == attackerId then
-                                                        ( Set.insert countryId innerAttack,innerDefense )
+                                                        ( Set.insert countryId innerAttack, innerDefense )
 
                                                     else if countryOwnerId == defenderId then
                                                         ( innerAttack, Set.insert countryId innerDefense )
@@ -735,15 +735,24 @@ buildPort playerId countryId playingGameAttributes =
     case GameMap.isCountryNeighboringWater countryId playingGameAttributes.map.countries of
         Just isNeighboringWater ->
             if isNeighboringWater then
-                let
-                    updated =
-                        playingGameAttributes
-                            |> updatePlayersWithPlayer playerId (addPortForPlayer countryId)
-                in
-                { updated
-                    | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers countryId playingGameAttributes.players "-1" playingGameAttributes.currentPlayerTurn
-                    , error = Nothing
-                }
+                case getCountryHasPort playerId countryId playingGameAttributes.players of
+                    Just hasPort ->
+                        if Debug.log "hasPort" hasPort then
+                            { playingGameAttributes | error = Just "This country already has a port" }
+
+                        else
+                            let
+                                updated =
+                                    playingGameAttributes
+                                        |> updatePlayersWithPlayer playerId (addPortForPlayer countryId)
+                            in
+                            { updated
+                                | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers countryId playingGameAttributes.players "-1" playingGameAttributes.currentPlayerTurn
+                                , error = Nothing
+                            }
+
+                    Nothing ->
+                        { playingGameAttributes | error = Just "Error while building port" }
 
             else
                 { playingGameAttributes | error = Just "A country must be next to water to build a port" }
