@@ -78,8 +78,6 @@ isCountryNeighboringWater countryId countries =
             )
 
 
-
-
 parse : String -> Int -> GameMap
 parse text scale =
     let

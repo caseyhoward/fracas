@@ -63,7 +63,7 @@ main =
 
 init : ( Model, Cmd Msg )
 init =
-    ( ConfiguringGame { numberOfPlayers = "6" }
+    ( ConfiguringGame { numberOfPlayers = "2" }
     , Cmd.none
     )
 
@@ -210,11 +210,16 @@ viewGameConfiguration gameConfiguration =
 ---- PlayingGame
 
 
+infoPanelWidth =
+    200
+
+
 viewPlayingGame : ActiveGame.ActiveGame -> Html Msg
 viewPlayingGame activeGame =
     Element.layout [ Element.width Element.fill ]
-        (Element.row [ Element.centerX ]
-            [ viewSideBar activeGame
+        (Element.row
+            [ Element.centerX ]
+            [ viewInfoPanel activeGame
             , Element.column
                 [ Element.centerX ]
                 ([ Element.el [ Element.centerX, Element.width Element.fill ]
@@ -233,26 +238,51 @@ viewPlayingGame activeGame =
         )
 
 
-viewSideBar : ActiveGame.ActiveGame -> Element.Element Msg
-viewSideBar activeGame =
+viewInfoPanel : ActiveGame.ActiveGame -> Element.Element Msg
+viewInfoPanel activeGame =
     Element.column
-        [ Element.width (Element.px 200), Element.alignTop ]
-        ((if ActiveGame.canCurrentPlayerPass activeGame then
-            [ Element.Input.button
+        [ Element.width (Element.px 200)
+        , Element.height Element.fill
+        , Element.alignTop
+        , Element.Border.width 1
+        , Element.Border.color black
+        , Element.Border.solid
+        ]
+        [ viewPassButtonIfNecessary activeGame
+        , viewConfigureTroopCountIfNecessary activeGame
+        ]
+
+
+viewPassButtonIfNecessary : ActiveGame.ActiveGame -> Element.Element Msg
+viewPassButtonIfNecessary activeGame =
+    Element.el
+        [ Element.height (Element.px 80)
+        , Element.width Element.fill
+        , Element.moveDown 20
+
+        -- , Element.explain Debug.todo
+        ]
+        (if ActiveGame.canCurrentPlayerPass activeGame then
+            Element.Input.button
                 (defaultButtonAttributes
-                    ++ [ Element.width (Element.px 100)
+                    ++ [ Element.width (Element.px 120)
                        , Element.centerX
-                       , Element.Background.color (Element.rgb255 0 100 100)
+
+                       --    , Element.paddingXY 0 10
+                       , 40 |> Element.px |> Element.height
+                       , Element.Background.color (Element.rgb255 100 200 100)
                        ]
                 )
                 { onPress = Just Pass, label = Element.text "Pass" }
-            ]
 
-          else
-            [ Element.el [ Element.height (Element.px 30) ] Element.none ]
-         )
-            ++ viewConfigureTroopCount activeGame
+         else
+            Element.none
         )
+
+
+black : Element.Color
+black =
+    Element.rgb255 0 100 100
 
 
 defaultButtonAttributes : List (Element.Attribute msg)
@@ -292,29 +322,37 @@ defaultLabelAttributes =
     ]
 
 
-viewConfigureTroopCount : ActiveGame.ActiveGame -> List (Element.Element Msg)
-viewConfigureTroopCount activeGame =
-    case activeGame |> ActiveGame.troopToMove of
-        Just numberOfTroopsToMove ->
-            [ Element.Input.text
-                defaultTextInputAttributes
-                { onChange = UpdateNumberOfTroopsToMove
-                , placeholder = Nothing
-                , label = Element.Input.labelAbove defaultLabelAttributes (Element.text "Number of troops to move")
-                , text = numberOfTroopsToMove
-                }
-            , Element.Input.button
-                (defaultButtonAttributes
-                    ++ [ Element.width (Element.px 100)
-                       , Element.centerX
-                       , Element.Background.color (Element.rgb255 0 100 100)
-                       ]
-                )
-                { onPress = Just CancelMovingTroops, label = Element.text "Cancel" }
-            ]
+viewConfigureTroopCountIfNecessary : ActiveGame.ActiveGame -> Element.Element Msg
+viewConfigureTroopCountIfNecessary activeGame =
+    Element.el
+        [ 100 |> Element.px |> Element.height
+        , Element.explain Debug.todo
+        ]
+        (case activeGame |> ActiveGame.troopToMove of
+            Just numberOfTroopsToMove ->
+                Element.column
+                    []
+                    [ Element.Input.text
+                        (defaultTextInputAttributes ++ [ Element.alignLeft ])
+                        { onChange = UpdateNumberOfTroopsToMove
+                        , placeholder = Nothing
+                        , label = Element.Input.labelAbove defaultLabelAttributes (Element.text "Number of troops to move")
+                        , text = numberOfTroopsToMove
+                        }
+                    , Element.Input.button
+                        (defaultButtonAttributes
+                            ++ [ Element.width (Element.px 100)
+                               , Element.centerX
+                               , Element.Font.color (Element.rgb255 255 255 255)
+                               , Element.Background.color (Element.rgb255 255 63 63)
+                               ]
+                        )
+                        { onPress = Just CancelMovingTroops, label = Element.text "Cancel" }
+                    ]
 
-        Nothing ->
-            []
+            Nothing ->
+                Element.none
+        )
 
 
 viewPlayerTurnStatus : ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg

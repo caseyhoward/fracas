@@ -4,6 +4,7 @@ module ActiveGame exposing
     , Player
     , PlayerId
     , PlayerTurn
+    , canCurrentPlayerCancelTroopMovement
     , canCurrentPlayerPass
     , cancelMovingTroops
     , defaultScale
@@ -12,9 +13,10 @@ module ActiveGame exposing
     , getDefaultColor
     , getPlayer
     , getPlayerColorFromPlayerTurn
+    , getPlayerTurnStageFromPlayerTurn
     , getTroopCount
     , getTroopCountForPlayerCountry
-    , handleCountryClickFromPlayer,canCurrentPlayerCancelTroopMovement
+    , handleCountryClickFromPlayer
     , isCountryIdCapitol
     , pass
     , playerIdToString
@@ -126,9 +128,6 @@ canCurrentPlayerPass activeGame =
                 TroopMovement ->
                     True
 
-                TroopMovementFromSelected _ _ ->
-                    True
-
                 AttackAnnexOrPort ->
                     True
 
@@ -143,7 +142,9 @@ canCurrentPlayerCancelTroopMovement activeGame =
             case playerTurnStage of
                 TroopMovementFromSelected _ _ ->
                     True
-                _ -> False
+
+                _ ->
+                    False
 
 
 defaultScale : Int
@@ -203,6 +204,13 @@ getPlayerColorFromPlayerTurn players playerTurn =
                         player.color
                     )
                 |> Maybe.withDefault Color.black
+
+
+getPlayerTurnStageFromPlayerTurn : PlayerTurn -> PlayerTurnStage
+getPlayerTurnStageFromPlayerTurn playerTurn =
+    case playerTurn of
+        PlayerTurn playerTurnStage _ ->
+            playerTurnStage
 
 
 handleCountryClickFromPlayer : GameMap.CountryId -> ActiveGame -> ActiveGame
