@@ -15,7 +15,7 @@ module ActiveGame exposing
     , getTroopCountForPlayerCountry
     , handleCountryClickFromPlayer
     , isCountryIdCapitol
-    , nextPlayerTurn
+    , pass
     , playerIdToString
     , playerTurnStatusToString
     , start
@@ -57,7 +57,7 @@ type PlayerTurn
 
 type PlayerTurnStage
     = CapitolPlacement
-    | TroopPlacement TroopCount.TroopCount
+    | TroopPlacement
     | AttackAnnexOrPort
     | TroopMovement
     | TroopMovementFromSelected GameMap.CountryId String
@@ -179,8 +179,8 @@ handleCountryClickFromPlayer clickedCountryId playingGameAttributes =
                 CapitolPlacement ->
                     attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes
 
-                TroopPlacement troopsToPlace ->
-                    attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace playingGameAttributes
+                TroopPlacement ->
+                    attemptTroopPlacement clickedCountryId currentPlayerId (numberOfTroopsToPlace currentPlayerId playingGameAttributes.players) playingGameAttributes
 
                 AttackAnnexOrPort ->
                     attackAnnexOrPort clickedCountryId currentPlayerId playingGameAttributes
@@ -209,60 +209,53 @@ isCountryIdCapitol playerId countryId players =
             )
 
 
-nextPlayerTurn : Int -> GameMap.CountryId -> Dict.Dict Int Player -> String -> PlayerTurn -> PlayerTurn
-nextPlayerTurn totalPlayers countryId players numberOfTroops (PlayerTurn currentPlayerId playerTurnStage) =
-    case playerTurnStage of
-        TroopPlacement _ ->
-            PlayerTurn currentPlayerId AttackAnnexOrPort
 
-        AttackAnnexOrPort ->
-            let
-                capitolsRemaining =
-                    players
-                        |> Dict.values
-                        |> List.foldl
-                            (\player capitols ->
-                                case player.capitolStatus of
-                                    Capitol capitolId _ ->
-                                        capitolId :: capitols
-
-                                    NoCapitol ->
-                                        capitols
-                            )
-                            []
-            in
-            if List.length capitolsRemaining == 1 then
-                PlayerTurn currentPlayerId (GameOver currentPlayerId)
-
-            else
-                PlayerTurn currentPlayerId TroopMovement
-
-        TroopMovement ->
-            PlayerTurn currentPlayerId (TroopMovementFromSelected countryId numberOfTroops)
-
-        TroopMovementFromSelected _ _ ->
-            PlayerTurn
-                (nextPlayerCheckForDeadPlayers currentPlayerId players)
-                (TroopPlacement (numberOfTroopsToPlace (nextPlayerCheckForDeadPlayers currentPlayerId players) players))
-
-        CapitolPlacement ->
-            let
-                nextPlayerId =
-                    case currentPlayerId of
-                        PlayerId id ->
-                            PlayerId (remainderBy (Dict.size players) id + 1)
-            in
-            case currentPlayerId of
-                PlayerId id ->
-                    if id == totalPlayers then
-                        PlayerTurn nextPlayerId (TroopPlacement (numberOfTroopsToPlace nextPlayerId players))
-
-                    else
-                        PlayerTurn nextPlayerId CapitolPlacement
-
-        GameOver _ ->
-            -- This really should never happen since there shuoldn't be another turn after the game is over
-            PlayerTurn nullPlayerId playerTurnStage
+-- nextPlayerTurn : Int -> GameMap.CountryId -> Dict.Dict Int Player -> String -> PlayerTurn -> PlayerTurn
+-- nextPlayerTurn totalPlayers countryId players numberOfTroops (PlayerTurn currentPlayerId playerTurnStage) =
+--     case playerTurnStage of
+--         TroopPlacement _ ->
+--             PlayerTurn currentPlayerId AttackAnnexOrPort
+--         AttackAnnexOrPort ->
+--             let
+--                 capitolsRemaining =
+--                     players
+--                         |> Dict.values
+--                         |> List.foldl
+--                             (\player capitols ->
+--                                 case player.capitolStatus of
+--                                     Capitol capitolId _ ->
+--                                         capitolId :: capitols
+--                                     NoCapitol ->
+--                                         capitols
+--                             )
+--                             []
+--             in
+--             if List.length capitolsRemaining == 1 then
+--                 PlayerTurn currentPlayerId (GameOver currentPlayerId)
+--             else
+--                 PlayerTurn currentPlayerId TroopMovement
+--         TroopMovement ->
+--             PlayerTurn currentPlayerId (TroopMovementFromSelected countryId numberOfTroops)
+--         TroopMovementFromSelected _ _ ->
+--             PlayerTurn
+--                 (nextPlayerCheckForDeadPlayers currentPlayerId players)
+--                 (TroopPlacement (numberOfTroopsToPlace (nextPlayerCheckForDeadPlayers currentPlayerId players) players))
+--         CapitolPlacement ->
+--             let
+--                 nextPlayerId =
+--                     case currentPlayerId of
+--                         PlayerId id ->
+--                             PlayerId (remainderBy (Dict.size players) id + 1)
+--             in
+--             case currentPlayerId of
+--                 PlayerId id ->
+--                     if id == totalPlayers then
+--                         PlayerTurn nextPlayerId (TroopPlacement (numberOfTroopsToPlace nextPlayerId players))
+--                     else
+--                         PlayerTurn nextPlayerId CapitolPlacement
+--         GameOver _ ->
+--             -- This really should never happen since there shuoldn't be another turn after the game is over
+--             PlayerTurn nullPlayerId playerTurnStage
 
 
 nullPlayerId : PlayerId
@@ -277,7 +270,8 @@ numberOfTroopsToPlace playerId players =
             TroopCount.TroopCount (Dict.size player.countryTroopCounts * troopsPerCountryPerTurn)
 
         Nothing ->
-            TroopCount.nullTroopCount
+            -- TODO : Propogate error
+            TroopCount.noTroops
 
 
 playerIdToString : PlayerId -> String
@@ -531,7 +525,7 @@ attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroo
                         in
                         { playingGameAttributes
                             | players = updatedPlayers
-                            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
+                            , currentPlayerTurn = PlayerTurn (nextPlayerCheckForDeadPlayers currentPlayerId playingGameAttributes.players) TroopPlacement
                             , error = Nothing
                         }
 
@@ -569,11 +563,28 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes =
                                             updateTroopCount clickedCountryId neutralTroopCount currentPlayer.countryTroopCounts
                                         , capitolStatus = Capitol clickedCountryId (GameMap.capitolDotsCoordinates clickedCountry.coordinates defaultScale)
                                     }
+
+                                updatedPlayers =
+                                    updatePlayer currentPlayerId updatedPlayer playingGameAttributes.players
+
+                                nextPlayerId =
+                                    case currentPlayerId of
+                                        PlayerId id ->
+                                            PlayerId (remainderBy (Dict.size updatedPlayers) id + 1)
+
+                                nextPlayerTurn =
+                                    case currentPlayerId of
+                                        PlayerId id ->
+                                            if id == Dict.size updatedPlayers then
+                                                PlayerTurn nextPlayerId TroopPlacement
+
+                                            else
+                                                PlayerTurn nextPlayerId CapitolPlacement
                             in
                             { playingGameAttributes
-                                | players = updatePlayer currentPlayerId updatedPlayer playingGameAttributes.players
+                                | players = updatedPlayers
                                 , neutralCountryTroops = destroyTroops clickedCountryId playingGameAttributes.neutralCountryTroops
-                                , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players "-1" playingGameAttributes.currentPlayerTurn
+                                , currentPlayerTurn = nextPlayerTurn
                                 , error = Nothing
                             }
 
@@ -596,7 +607,7 @@ attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace playingGame
             in
             { playingGameAttributes
                 | players = updatedPlayers
-                , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId updatedPlayers "-1" playingGameAttributes.currentPlayerTurn
+                , currentPlayerTurn = PlayerTurn currentPlayerId AttackAnnexOrPort
                 , error = Nothing
             }
 
@@ -659,7 +670,8 @@ attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId playingGa
         OccupiedByCurrentPlayer (TroopCount.TroopCount troopCount) ->
             if troopCount > 0 then
                 { playingGameAttributes
-                    | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players (String.fromInt troopCount) playingGameAttributes.currentPlayerTurn
+                    | currentPlayerTurn =
+                        PlayerTurn currentPlayerId (TroopMovementFromSelected clickedCountryId (String.fromInt troopCount))
                     , error = Nothing
                 }
 
@@ -679,7 +691,7 @@ attemptToAnnexCountry currentPlayerId clickedCountryId playingGameAttributes =
         in
         { playingGameAttributes
             | players = updatePlayerTroopCountForCountry currentPlayerId clickedCountryId neutralTroopCount playingGameAttributes.players
-            , currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players "-1" playingGameAttributes.currentPlayerTurn
+            , currentPlayerTurn = PlayerTurn currentPlayerId TroopMovement
             , neutralCountryTroops = removeTroopCount clickedCountryId playingGameAttributes.neutralCountryTroops
             , error = Nothing
         }
@@ -747,7 +759,7 @@ buildPort playerId countryId playingGameAttributes =
                                         |> updatePlayersWithPlayer playerId (addPortForPlayer countryId)
                             in
                             { updated
-                                | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers countryId playingGameAttributes.players "-1" playingGameAttributes.currentPlayerTurn
+                                | currentPlayerTurn = PlayerTurn playerId TroopMovement
                                 , error = Nothing
                             }
 
@@ -781,6 +793,11 @@ canAnnexCountry gameMap playerId players countryIdToAnnex =
 canAttack : TroopCount.TroopCount -> TroopCount.TroopCount -> Bool
 canAttack (TroopCount.TroopCount attackTroopCount) (TroopCount.TroopCount defenseTroopCount) =
     attackTroopCount > defenseTroopCount
+
+
+clearError : ActiveGame -> ActiveGame
+clearError activeGame =
+    { activeGame | error = Nothing }
 
 
 destroyPlayer : PlayerId -> Dict.Dict Int Player -> Dict.Dict Int Player
@@ -875,34 +892,58 @@ isCountryReachableFromOtherCountry fromCountryId toCountryId playerId countries 
             False
 
 
+nextPlayer : PlayerId -> Dict.Dict Int Player -> PlayerId
+nextPlayer (PlayerId currentPlayerId) players =
+    remainderBy (Dict.size players) currentPlayerId + 1 |> PlayerId
+
+
 nextPlayerCheckForDeadPlayers : PlayerId -> Dict.Dict Int Player -> PlayerId
-nextPlayerCheckForDeadPlayers (PlayerId currentPlayerId) players =
+nextPlayerCheckForDeadPlayers currentPlayerId players =
     -- This doesn't work during capitol placement because nobody will have a capitol except player 1 after player 1 places their capitol
     let
         nextPlayerId =
-            remainderBy (Dict.size players) currentPlayerId + 1
+            nextPlayer currentPlayerId players
     in
-    case Dict.get nextPlayerId players of
+    case getPlayer nextPlayerId players of
         Just newCurrentPlayer ->
             case newCurrentPlayer.capitolStatus of
                 Capitol _ _ ->
-                    PlayerId nextPlayerId
+                    nextPlayerId
 
                 NoCapitol ->
-                    nextPlayerCheckForDeadPlayers (PlayerId nextPlayerId) players
+                    nextPlayerCheckForDeadPlayers nextPlayerId players
 
         Nothing ->
-            PlayerId currentPlayerId
+            currentPlayerId
 
 
-playerTurnStatusToString : PlayerId -> PlayerTurnStage -> String
-playerTurnStatusToString playerId playerTurnStage =
+pass : ActiveGame -> ActiveGame
+pass activeGame =
+    case activeGame.currentPlayerTurn of
+        PlayerTurn playerId (TroopMovementFromSelected _ _) ->
+            { activeGame | currentPlayerTurn = PlayerTurn (nextPlayerCheckForDeadPlayers playerId activeGame.players) TroopPlacement }
+                |> clearError
+
+        PlayerTurn playerId TroopMovement ->
+            { activeGame | currentPlayerTurn = PlayerTurn (nextPlayerCheckForDeadPlayers playerId activeGame.players) TroopPlacement }
+                |> clearError
+
+        PlayerTurn playerId AttackAnnexOrPort ->
+            { activeGame | currentPlayerTurn = PlayerTurn playerId TroopMovement }
+                |> clearError
+
+        _ ->
+            activeGame
+
+
+playerTurnStatusToString : PlayerId -> PlayerTurnStage -> Dict.Dict Int Player -> String
+playerTurnStatusToString playerId playerTurnStage players =
     case playerTurnStage of
         CapitolPlacement ->
             "Player " ++ playerIdToString playerId ++ " is placing capitol"
 
-        TroopPlacement (TroopCount.TroopCount numberOfTroops) ->
-            "Player " ++ playerIdToString playerId ++ " is placing " ++ String.fromInt numberOfTroops ++ " troops"
+        TroopPlacement ->
+            "Player " ++ playerIdToString playerId ++ " is placing " ++ (numberOfTroopsToPlace playerId players |> TroopCount.toString) ++ " troops"
 
         AttackAnnexOrPort ->
             "Player " ++ playerIdToString playerId ++ " is attacking, annexing, or building a port"
@@ -915,6 +956,11 @@ playerTurnStatusToString playerId playerTurnStage =
 
         GameOver winnerPlayerId ->
             "Player " ++ playerIdToString winnerPlayerId ++ " wins!!!"
+
+
+playerTurnToPlayerId : PlayerTurn -> PlayerId
+playerTurnToPlayerId (PlayerTurn playerId _) =
+    playerId
 
 
 removePlayerCountry : GameMap.CountryId -> PlayerId -> Dict.Dict Int Player -> Dict.Dict Int Player
@@ -946,10 +992,36 @@ takeCountryFromOpponent countryId currentPlayerId opponentPlayerId players =
 
 
 updateForSuccessfulAttack : Dict.Dict Int Player -> ActiveGame -> ActiveGame
-updateForSuccessfulAttack players playingGameAttributes =
+updateForSuccessfulAttack updatedPlayers playingGameAttributes =
+    let
+        currentPlayerId =
+            playingGameAttributes.currentPlayerTurn |> playerTurnToPlayerId
+
+        nextPlayerTurn =
+            let
+                capitolsRemaining =
+                    updatedPlayers
+                        |> Dict.values
+                        |> List.foldl
+                            (\player capitols ->
+                                case player.capitolStatus of
+                                    Capitol capitolId _ ->
+                                        capitolId :: capitols
+
+                                    NoCapitol ->
+                                        capitols
+                            )
+                            []
+            in
+            if List.length capitolsRemaining == 1 then
+                PlayerTurn currentPlayerId (GameOver currentPlayerId)
+
+            else
+                PlayerTurn currentPlayerId TroopMovement
+    in
     { playingGameAttributes
-        | players = players
-        , currentPlayerTurn = playingGameAttributes.currentPlayerTurn |> nextPlayerTurn playingGameAttributes.numberOfPlayers (GameMap.CountryId "-1") players "-1"
+        | players = updatedPlayers
+        , currentPlayerTurn = nextPlayerTurn
         , error = Nothing
     }
 

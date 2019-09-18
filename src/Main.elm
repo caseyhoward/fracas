@@ -139,40 +139,7 @@ update msg model =
                                     ( PlayingGame attributes, Cmd.none )
 
                 Pass ->
-                    case attributes.currentPlayerTurn of
-                        ActiveGame.PlayerTurn _ (ActiveGame.TroopMovementFromSelected _ _) ->
-                            ( PlayingGame
-                                { attributes
-                                    | currentPlayerTurn =
-                                        ActiveGame.nextPlayerTurn attributes.numberOfPlayers GameMap.nullCountryId attributes.players "-1" attributes.currentPlayerTurn
-                                    , error = Nothing
-                                }
-                            , Cmd.none
-                            )
-
-                        ActiveGame.PlayerTurn _ ActiveGame.TroopMovement ->
-                            ( PlayingGame
-                                { attributes
-                                    | currentPlayerTurn =
-                                        attributes.currentPlayerTurn
-                                            |> ActiveGame.nextPlayerTurn attributes.numberOfPlayers GameMap.nullCountryId attributes.players "-1"
-                                            |> ActiveGame.nextPlayerTurn attributes.numberOfPlayers GameMap.nullCountryId attributes.players "-1"
-                                    , error = Nothing
-                                }
-                            , Cmd.none
-                            )
-
-                        ActiveGame.PlayerTurn _ ActiveGame.AttackAnnexOrPort ->
-                            ( PlayingGame
-                                { attributes
-                                    | currentPlayerTurn = ActiveGame.nextPlayerTurn attributes.numberOfPlayers GameMap.nullCountryId attributes.players "-1" attributes.currentPlayerTurn
-                                    , error = Nothing
-                                }
-                            , Cmd.none
-                            )
-
-                        _ ->
-                            ( model, Cmd.none )
+                    ( ActiveGame.pass attributes |> PlayingGame, Cmd.none )
 
                 NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
@@ -246,7 +213,7 @@ view model =
                                     ActiveGame.PlayerTurn playerId playerTurnStage ->
                                         case ActiveGame.getPlayer playerId attributes.players of
                                             Just player ->
-                                                [ viewPlayerTurnStatus playerId player playerTurnStage ]
+                                                [ viewPlayerTurnStatus playerId player playerTurnStage attributes.players ]
 
                                             Nothing ->
                                                 []
@@ -350,11 +317,11 @@ viewConfiguration configurationAttributes =
         ]
 
 
-viewPlayerTurnStatus : ActiveGame.PlayerId -> ActiveGame.Player -> ActiveGame.PlayerTurnStage -> Element.Element Msg
-viewPlayerTurnStatus playerId player playerTurnStage =
+viewPlayerTurnStatus : ActiveGame.PlayerId -> ActiveGame.Player -> ActiveGame.PlayerTurnStage -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
+viewPlayerTurnStatus playerId player playerTurnStage players =
     Element.el [ Element.width Element.fill, Element.Background.color (colorToElementColor player.color), Element.padding 5 ]
         (Element.text
-            (ActiveGame.playerTurnStatusToString playerId playerTurnStage)
+            (ActiveGame.playerTurnStatusToString playerId playerTurnStage players)
         )
 
 
