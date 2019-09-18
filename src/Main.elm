@@ -397,7 +397,7 @@ attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroo
         OccupiedByCurrentPlayer playerCountryToTroopCount ->
             case String.toInt numberOfTroopsToMoveString of
                 Just numberOfTroopsToMove ->
-                    if isCountryReachableFromOtherCountry playingGameAttributes.map fromCountryId clickedCountryId then
+                    if isCountryReachableFromOtherCountry fromCountryId clickedCountryId currentPlayerId playingGameAttributes.map.countries playingGameAttributes.players then
                         let
                             fromCountryTroopCount =
                                 case getPlayer currentPlayerId playingGameAttributes.players of
@@ -703,12 +703,27 @@ attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playing
             }
 
 
-isCountryReachableFromOtherCountry : GameMap -> CountryId -> CountryId -> Bool
-isCountryReachableFromOtherCountry gameMap (CountryId fromCountryId) (CountryId toCountryId) =
-    -- Used for moving troops and seeing if a country is annexable. This will also need to take ports into account when those are added.
-    case Dict.get fromCountryId gameMap.countries of
+isCountryReachableFromOtherCountry : CountryId -> CountryId -> PlayerId -> Dict.Dict String Country -> Dict.Dict Int Player -> Bool
+isCountryReachableFromOtherCountry fromCountryId toCountryId playerId countries players =
+    case getCountry fromCountryId countries of
         Just fromCountry ->
-            Set.member toCountryId fromCountry.neighboringCountries
+            case toCountryId of
+                CountryId toId ->
+                    if Set.member toId fromCountry.neighboringCountries then
+                        True
+
+                    else
+                        case ( getCountryHasPort playerId fromCountryId players, getCountry toCountryId countries ) of
+                            ( Just hasPort, Just toCountry ) ->
+                                if hasPort then
+                                    Set.size (Set.intersect fromCountry.neighboringBodiesOfWater toCountry.neighboringBodiesOfWater) > 0
+
+                                else
+                                    False
+
+                            _ ->
+                                -- shouldn't happen
+                                False
 
         Nothing ->
             False
@@ -887,7 +902,7 @@ canAnnexCountry gameMap playerId players countryIdToAnnex =
             player.countryTroopCounts
                 |> Dict.foldl
                     (\playerCountryId _ isReachable ->
-                        isReachable || isCountryReachableFromOtherCountry gameMap (CountryId playerCountryId) countryIdToAnnex
+                        isReachable || isCountryReachableFromOtherCountry (CountryId playerCountryId) countryIdToAnnex playerId gameMap.countries players
                     )
                     False
 
@@ -1346,7 +1361,15 @@ renderPort : Set.Set BorderSegment -> Collage.Collage msg
 renderPort waterEdges =
     waterEdges
         |> Set.toList
-        |> List.map (\( point1, point2 ) -> Collage.segment point1 point2 |> Collage.traced (Collage.dot ((defaultScale |> toFloat) / 4.0) (Collage.uniform Color.black)))
+        |> List.map
+            (\( point1, point2 ) ->
+                Collage.segment point1 point2
+                    |> Collage.traced
+                        (Collage.broken [ ( 3, 10 ) ]
+                            ((defaultScale |> toFloat) / 2.0)
+                            (Collage.uniform Color.gray)
+                        )
+            )
         |> Collage.group
 
 
