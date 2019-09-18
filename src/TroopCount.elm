@@ -1,8 +1,13 @@
-module TroopCount exposing (TroopCount(..), addTroopCounts, hasTroops, noTroops, nullTroopCount, subtractTroopCounts)
+module TroopCount exposing (TroopCount(..), acrossWater, addTroopCounts, hasTroops, noTroops, nullTroopCount, subtractTroopCounts)
 
 
 type TroopCount
     = TroopCount Int
+
+
+acrossWater : TroopCount -> TroopCount
+acrossWater (TroopCount troopCount) =
+    toFloat troopCount * 0.25 |> floor |> TroopCount
 
 
 nullTroopCount : TroopCount
