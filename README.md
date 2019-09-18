@@ -7,3 +7,9 @@ Try the early terrible version [here](http://fracas.caseyhoward.net)
 ## Screenshot
 
 ![gameboard](./docs/gameboard.png)
+
+
+## Todo
+
+- Don't offer to move troops if only one country
+  switch args for nextPlayerCheckForDeadPlayers
