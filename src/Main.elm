@@ -351,28 +351,10 @@ viewConfiguration configurationAttributes =
 
 
 viewPlayerTurnStatus : ActiveGame.PlayerId -> ActiveGame.Player -> ActiveGame.PlayerTurnStage -> Element.Element Msg
-viewPlayerTurnStatus (ActiveGame.PlayerId playerId) player playerTurnStage =
+viewPlayerTurnStatus playerId player playerTurnStage =
     Element.el [ Element.width Element.fill, Element.Background.color (colorToElementColor player.color), Element.padding 5 ]
         (Element.text
-            (case playerTurnStage of
-                ActiveGame.CapitolPlacement ->
-                    "Player " ++ String.fromInt playerId ++ " is placing capitol"
-
-                ActiveGame.TroopPlacement (TroopCount.TroopCount numberOfTroops) ->
-                    "Player " ++ String.fromInt playerId ++ " is placing " ++ String.fromInt numberOfTroops ++ " troops"
-
-                ActiveGame.AttackAnnexOrPort ->
-                    "Player " ++ String.fromInt playerId ++ " is attacking, annexing, or building a port"
-
-                ActiveGame.TroopMovement ->
-                    "Player " ++ String.fromInt playerId ++ " is moving troops"
-
-                ActiveGame.TroopMovementFromSelected (GameMap.CountryId fromCountryId) numberOfTroopsToMove ->
-                    "Player " ++ String.fromInt playerId ++ " is moving " ++ numberOfTroopsToMove ++ " troops from " ++ fromCountryId
-
-                ActiveGame.GameOver (ActiveGame.PlayerId winnerPlayerId) ->
-                    "Player " ++ String.fromInt winnerPlayerId ++ " wins!!!"
-            )
+            (ActiveGame.playerTurnStatusToString playerId playerTurnStage)
         )
 
 

@@ -1,9 +1,7 @@
 module GameMap exposing
     ( BorderSegment
     , Country
-    ,  CountryId(..)
-       -- TODO : Get rid of this
-
+    , CountryId(..)
     , GameMap
     , capitolDotsCoordinates
     , getCountry
@@ -50,9 +48,13 @@ type alias BorderSegment =
     ( ( Float, Float ), ( Float, Float ) )
 
 
-nullCountryId : CountryId
-nullCountryId =
-    CountryId "-1"
+capitolDotsCoordinates : Area -> Int -> Set.Set ( Float, Float )
+capitolDotsCoordinates area scale =
+    area
+        |> Set.map
+            (\( x, y ) ->
+                ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
+            )
 
 
 getCountry : CountryId -> Dict.Dict String Country -> Maybe Country
@@ -67,6 +69,11 @@ isCountryNeighboringWater countryId countries =
             (\country ->
                 Set.size country.neighboringBodiesOfWater > 0
             )
+
+
+nullCountryId : CountryId
+nullCountryId =
+    CountryId "-1"
 
 
 parse : String -> Int -> GameMap
@@ -155,6 +162,11 @@ parse text scale =
         , (gameMapWithoutPolygons.dimensions |> Tuple.second) * scale |> toFloat
         )
     }
+
+
+updateCountry : CountryId -> Country -> Dict.Dict String Country -> Dict.Dict String Country
+updateCountry (CountryId countryId) country countries =
+    Dict.insert countryId country countries
 
 
 
@@ -273,11 +285,6 @@ updateCountryWhileParsing countryId coordinates mapDimensions rawMap country =
     }
 
 
-updateCountry : CountryId -> Country -> Dict.Dict String Country -> Dict.Dict String Country
-updateCountry (CountryId countryId) country countries =
-    Dict.insert countryId country countries
-
-
 updateBodyOfWater : String -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Set.Set String -> Set.Set String
 updateBodyOfWater bodyOfWaterId coordinates mapDimensions rawMap bodyOfWaterNeighborCountries =
     let
@@ -353,15 +360,6 @@ getNeighborCoordinates ( x, y ) ( width, height ) =
 isCountry : String -> Bool
 isCountry areaId =
     String.length areaId < 4
-
-
-capitolDotsCoordinates : Area -> Int -> Set.Set ( Float, Float )
-capitolDotsCoordinates area scale =
-    area
-        |> Set.map
-            (\( x, y ) ->
-                ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
-            )
 
 
 coordinatesToPolygon : Set.Set ( ( Float, Float ), ( Float, Float ) ) -> List ( Float, Float )
