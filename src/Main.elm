@@ -1,7 +1,6 @@
 module Main exposing
     ( CapitolStatus(..)
     , main
-    , removePlayerCountry
     )
 
 import Browser
@@ -23,6 +22,7 @@ import Random
 import Random.Dict
 import Random.List
 import Set
+import TroopCount
 
 
 
@@ -79,7 +79,7 @@ type alias PlayingGameAttributes =
     { currentPlayerTurn : PlayerTurn
     , map : GameMap.GameMap
     , players : Dict.Dict Int Player
-    , neutralCountryTroops : Dict.Dict String TroopCount
+    , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
     , error : Maybe String
     , numberOfPlayers : Int
     }
@@ -91,7 +91,7 @@ type PlayerTurn
 
 type PlayerTurnStage
     = CapitolPlacement
-    | TroopPlacement TroopCount
+    | TroopPlacement TroopCount.TroopCount
     | AttackAnnexOrPort
     | TroopMovement
     | TroopMovementFromSelected GameMap.CountryId String
@@ -100,7 +100,7 @@ type PlayerTurnStage
 
 type alias Player =
     { name : String
-    , countryTroopCounts : Dict.Dict String TroopCount
+    , countryTroopCounts : Dict.Dict String TroopCount.TroopCount
     , capitolStatus : CapitolStatus
     , color : Color.Color
     , ports : Set.Set String
@@ -116,10 +116,6 @@ type PlayerId
     = PlayerId Int
 
 
-type TroopCount
-    = TroopCount Int
-
-
 
 -- TODO: Refactor to make these "null" values unnecessary
 
@@ -127,16 +123,6 @@ type TroopCount
 nullPlayerId : PlayerId
 nullPlayerId =
     PlayerId -1
-
-
-nullTroopCount : TroopCount
-nullTroopCount =
-    TroopCount -1
-
-
-noTroops : TroopCount
-noTroops =
-    TroopCount 0
 
 
 main : Program () Model Msg
@@ -167,14 +153,14 @@ type Msg
     | NumberOfPlayersChanged String
     | StartGameClicked
     | Pass
-    | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount)
+    | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | UpdateNumberOfTroopsToMove String
 
 
 type CountryStatus
     = Unoccupied
     | OccupiedByOpponent PlayerId
-    | OccupiedByCurrentPlayer TroopCount
+    | OccupiedByCurrentPlayer TroopCount.TroopCount
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -343,7 +329,7 @@ handleCountryClickFromPlayer clickedCountryId playingGameAttributes =
 attemptSelectTroopMovementFromCountry : GameMap.CountryId -> PlayerId -> PlayingGameAttributes -> PlayingGameAttributes
 attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId playingGameAttributes =
     case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
-        OccupiedByCurrentPlayer (TroopCount troopCount) ->
+        OccupiedByCurrentPlayer (TroopCount.TroopCount troopCount) ->
             if troopCount > 0 then
                 { playingGameAttributes
                     | currentPlayerTurn = nextPlayerTurn playingGameAttributes.numberOfPlayers clickedCountryId playingGameAttributes.players (String.fromInt troopCount) playingGameAttributes.currentPlayerTurn
@@ -373,14 +359,14 @@ attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroo
                                                 troopCount
 
                                             Nothing ->
-                                                noTroops
+                                                TroopCount.noTroops
 
                                     Nothing ->
-                                        noTroops
+                                        TroopCount.noTroops
 
                             fromCountryTroopCountInt =
                                 case fromCountryTroopCount of
-                                    TroopCount count ->
+                                    TroopCount.TroopCount count ->
                                         count
 
                             allowedNumberOfTroopsToMove =
@@ -388,7 +374,7 @@ attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroo
                                     fromCountryTroopCount
 
                                 else
-                                    TroopCount numberOfTroopsToMove
+                                    TroopCount.TroopCount numberOfTroopsToMove
 
                             updatedPlayers =
                                 playingGameAttributes.players
@@ -411,7 +397,7 @@ attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroo
             { playingGameAttributes | error = Just "You must move troops to your own country" }
 
 
-attemptTroopPlacement : GameMap.CountryId -> PlayerId -> TroopCount -> PlayingGameAttributes -> PlayingGameAttributes
+attemptTroopPlacement : GameMap.CountryId -> PlayerId -> TroopCount.TroopCount -> PlayingGameAttributes -> PlayingGameAttributes
 attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace playingGameAttributes =
     case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
         OccupiedByCurrentPlayer clickedCountryTroopCount ->
@@ -448,7 +434,7 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes =
                         Just currentPlayer ->
                             let
                                 neutralTroopCount =
-                                    getTroopCount clickedCountryId playingGameAttributes.neutralCountryTroops |> Maybe.withDefault noTroops
+                                    getTroopCount clickedCountryId playingGameAttributes.neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
 
                                 updatedPlayer =
                                     { currentPlayer
@@ -579,7 +565,7 @@ attemptToAnnexCountry currentPlayerId clickedCountryId playingGameAttributes =
     if canAnnexCountry playingGameAttributes.map currentPlayerId playingGameAttributes.players clickedCountryId then
         let
             neutralTroopCount =
-                getTroopCount clickedCountryId playingGameAttributes.neutralCountryTroops |> Maybe.withDefault noTroops
+                getTroopCount clickedCountryId playingGameAttributes.neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
         in
         { playingGameAttributes
             | players = updatePlayerTroopCountForCountry currentPlayerId clickedCountryId neutralTroopCount playingGameAttributes.players
@@ -594,7 +580,7 @@ attemptToAnnexCountry currentPlayerId clickedCountryId playingGameAttributes =
         }
 
 
-updatePlayerTroopCountForCountry : PlayerId -> GameMap.CountryId -> TroopCount -> Dict.Dict Int Player -> Dict.Dict Int Player
+updatePlayerTroopCountForCountry : PlayerId -> GameMap.CountryId -> TroopCount.TroopCount -> Dict.Dict Int Player -> Dict.Dict Int Player
 updatePlayerTroopCountForCountry playerId countryId troops players =
     -- Make this return result with error if dict lookup fails
     case getPlayer playerId players of
@@ -615,9 +601,9 @@ updatePlayerTroopCountForCountry playerId countryId troops players =
 
 type AttackResult
     = CurrentPlayerAcquiresOpponentCountry
-    | OpponentCountryLosesTroops TroopCount
+    | OpponentCountryLosesTroops TroopCount.TroopCount
     | OpponentEliminated
-    | NotEnoughTroopsToAttack TroopCount TroopCount
+    | NotEnoughTroopsToAttack TroopCount.TroopCount TroopCount.TroopCount
     | AttackResultError String
 
 
@@ -649,7 +635,7 @@ attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playing
             in
             updateForSuccessfulAttack updatedPlayers playingGameAttributes
 
-        NotEnoughTroopsToAttack (TroopCount attackStrength) (TroopCount defenseStrength) ->
+        NotEnoughTroopsToAttack (TroopCount.TroopCount attackStrength) (TroopCount.TroopCount defenseStrength) ->
             { playingGameAttributes
                 | error = Just ("Not enough to attack: attack strength = " ++ String.fromInt attackStrength ++ ", defense strength = " ++ String.fromInt defenseStrength)
             }
@@ -702,7 +688,7 @@ takeCountryFromOpponent : GameMap.CountryId -> PlayerId -> PlayerId -> Dict.Dict
 takeCountryFromOpponent countryId currentPlayerId opponentPlayerId players =
     players
         |> removePlayerCountry countryId opponentPlayerId
-        |> updatePlayerTroopCountForCountry currentPlayerId countryId noTroops
+        |> updatePlayerTroopCountForCountry currentPlayerId countryId TroopCount.noTroops
 
 
 getPlayer : PlayerId -> Dict.Dict Int Player -> Maybe Player
@@ -761,42 +747,42 @@ destroyPlayer (PlayerId playerId) players =
             players
 
 
-getTroopCount : GameMap.CountryId -> Dict.Dict String TroopCount -> Maybe TroopCount
+getTroopCount : GameMap.CountryId -> Dict.Dict String TroopCount.TroopCount -> Maybe TroopCount.TroopCount
 getTroopCount (GameMap.CountryId countryId) troopCounts =
     Dict.get countryId troopCounts
 
 
-destroyTroops : GameMap.CountryId -> Dict.Dict String TroopCount -> Dict.Dict String TroopCount
+destroyTroops : GameMap.CountryId -> Dict.Dict String TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount
 destroyTroops (GameMap.CountryId countryId) neutralTroopCounts =
     Dict.remove countryId neutralTroopCounts
 
 
-updateTroopCount : GameMap.CountryId -> TroopCount -> Dict.Dict String TroopCount -> Dict.Dict String TroopCount
+updateTroopCount : GameMap.CountryId -> TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount
 updateTroopCount (GameMap.CountryId countryId) troopCount troopCounts =
     Dict.insert countryId troopCount troopCounts
 
 
-removeTroopCount : GameMap.CountryId -> Dict.Dict String TroopCount -> Dict.Dict String TroopCount
+removeTroopCount : GameMap.CountryId -> Dict.Dict String TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount
 removeTroopCount (GameMap.CountryId countryId) troopCounts =
     Dict.remove countryId troopCounts
 
 
-addTroopCounts : TroopCount -> TroopCount -> TroopCount
-addTroopCounts (TroopCount troopCount1) (TroopCount troopCount2) =
-    TroopCount (troopCount1 + troopCount2)
+addTroopCounts : TroopCount.TroopCount -> TroopCount.TroopCount -> TroopCount.TroopCount
+addTroopCounts (TroopCount.TroopCount troopCount1) (TroopCount.TroopCount troopCount2) =
+    TroopCount.TroopCount (troopCount1 + troopCount2)
 
 
-subtractTroopCounts : TroopCount -> TroopCount -> TroopCount
-subtractTroopCounts (TroopCount ammountToSubtract) (TroopCount subtractFrom) =
-    TroopCount (subtractFrom - ammountToSubtract)
+subtractTroopCounts : TroopCount.TroopCount -> TroopCount.TroopCount -> TroopCount.TroopCount
+subtractTroopCounts (TroopCount.TroopCount ammountToSubtract) (TroopCount.TroopCount subtractFrom) =
+    TroopCount.TroopCount (subtractFrom - ammountToSubtract)
 
 
-hasTroops : TroopCount -> Bool
-hasTroops (TroopCount troopCount) =
+hasTroops : TroopCount.TroopCount -> Bool
+hasTroops (TroopCount.TroopCount troopCount) =
     troopCount > 0
 
 
-attackAndDefenseStrength : GameMap.CountryId -> PlayerId -> PlayerId -> Dict.Dict Int Player -> Dict.Dict String GameMap.Country -> ( TroopCount, TroopCount )
+attackAndDefenseStrength : GameMap.CountryId -> PlayerId -> PlayerId -> Dict.Dict Int Player -> Dict.Dict String GameMap.Country -> ( TroopCount.TroopCount, TroopCount.TroopCount )
 attackAndDefenseStrength countryBeingAttackedId attackerId defenderId players countries =
     case getTroopCountForPlayerCountry countryBeingAttackedId defenderId players of
         Just countryBeingAttackedTroopCount ->
@@ -827,18 +813,18 @@ attackAndDefenseStrength countryBeingAttackedId attackerId defenderId players co
                                     _ ->
                                         ( attack, defense )
                             )
-                            ( noTroops, countryBeingAttackedTroopCount )
+                            ( TroopCount.noTroops, countryBeingAttackedTroopCount )
 
                 Nothing ->
                     -- This shouldn't happen
-                    ( noTroops, noTroops )
+                    ( TroopCount.noTroops, TroopCount.noTroops )
 
         Nothing ->
             -- This shouldn't happen
-            ( noTroops, noTroops )
+            ( TroopCount.noTroops, TroopCount.noTroops )
 
 
-getTroopCountForPlayerCountry : GameMap.CountryId -> PlayerId -> Dict.Dict Int Player -> Maybe TroopCount
+getTroopCountForPlayerCountry : GameMap.CountryId -> PlayerId -> Dict.Dict Int Player -> Maybe TroopCount.TroopCount
 getTroopCountForPlayerCountry countryId playerId players =
     getPlayer playerId players
         |> Maybe.andThen (\player -> getTroopCount countryId player.countryTroopCounts)
@@ -861,8 +847,8 @@ canAnnexCountry gameMap playerId players countryIdToAnnex =
             False
 
 
-canAttack : TroopCount -> TroopCount -> Bool
-canAttack (TroopCount attackTroopCount) (TroopCount defenseTroopCount) =
+canAttack : TroopCount.TroopCount -> TroopCount.TroopCount -> Bool
+canAttack (TroopCount.TroopCount attackTroopCount) (TroopCount.TroopCount defenseTroopCount) =
     attackTroopCount > defenseTroopCount
 
 
@@ -980,23 +966,23 @@ nextPlayerCheckForDeadPlayers (PlayerId currentPlayerId) players =
             PlayerId currentPlayerId
 
 
-numberOfTroopsToPlace : PlayerId -> Dict.Dict Int Player -> TroopCount
+numberOfTroopsToPlace : PlayerId -> Dict.Dict Int Player -> TroopCount.TroopCount
 numberOfTroopsToPlace playerId players =
     case getPlayer playerId players of
         Just player ->
-            TroopCount (Dict.size player.countryTroopCounts * troopsPerCountryPerTurn)
+            TroopCount.TroopCount (Dict.size player.countryTroopCounts * troopsPerCountryPerTurn)
 
         Nothing ->
-            nullTroopCount
+            TroopCount.nullTroopCount
 
 
-randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount)
+randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)
 randomTroopPlacementsGenerator countryIds =
     -- This can pick the same country twice so you might not get the max number of countries
     Random.Dict.dict
         100
         (Random.List.choose countryIds |> Random.map Tuple.first |> Random.map (Maybe.withDefault "-1"))
-        (Random.int 1 maximumNeutralCountryTroops |> Random.map TroopCount)
+        (Random.int 1 maximumNeutralCountryTroops |> Random.map TroopCount.TroopCount)
 
 
 
@@ -1166,7 +1152,7 @@ viewPlayerTurnStatus (PlayerId playerId) player playerTurnStage =
                 CapitolPlacement ->
                     "Player " ++ String.fromInt playerId ++ " is placing capitol"
 
-                TroopPlacement (TroopCount numberOfTroops) ->
+                TroopPlacement (TroopCount.TroopCount numberOfTroops) ->
                     "Player " ++ String.fromInt playerId ++ " is placing " ++ String.fromInt numberOfTroops ++ " troops"
 
                 AttackAnnexOrPort ->
@@ -1315,8 +1301,8 @@ renderPort waterEdges =
         |> Collage.group
 
 
-renderTroopCount : ( Int, Int ) -> TroopCount -> Collage.Collage msg
-renderTroopCount ( medianX, medianY ) (TroopCount troopCount) =
+renderTroopCount : ( Int, Int ) -> TroopCount.TroopCount -> Collage.Collage msg
+renderTroopCount ( medianX, medianY ) (TroopCount.TroopCount troopCount) =
     if troopCount > 0 then
         troopCount
             |> String.fromInt
