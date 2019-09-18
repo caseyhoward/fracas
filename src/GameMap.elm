@@ -5,6 +5,7 @@ module GameMap exposing
     , GameMap
     , capitolDotsCoordinates
     , getCountry
+    , getCountryIds
     , isCountryNeighboringWater
     , nullCountryId
     , parse
@@ -60,6 +61,13 @@ capitolDotsCoordinates area scale =
 getCountry : CountryId -> Dict.Dict String Country -> Maybe Country
 getCountry (CountryId countryId) countries =
     Dict.get countryId countries
+
+
+getCountryIds : Dict.Dict String Country -> List CountryId
+getCountryIds countries =
+    countries
+        |> Dict.keys
+        |> List.map CountryId
 
 
 isCountryNeighboringWater : CountryId -> Dict.Dict String Country -> Maybe Bool

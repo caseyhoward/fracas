@@ -127,16 +127,10 @@ update msg model =
         PlayingGame attributes ->
             case msg of
                 CountryClicked clickedCountryId ->
-                    -- case attributes.currentPlayerTurn of
-                    -- ActiveGame.PlayerTurn playerId _ ->
-                    --     case ActiveGame.getPlayer playerId attributes.players of
-                    --         Just _ ->
                     ( PlayingGame (ActiveGame.handleCountryClickFromPlayer clickedCountryId attributes)
                     , Cmd.none
                     )
 
-                -- Nothing ->
-                --     ( PlayingGame attributes, Cmd.none )
                 Pass ->
                     ( ActiveGame.pass attributes |> PlayingGame, Cmd.none )
 
@@ -279,21 +273,6 @@ viewConfigureTroopCount activeGame =
             []
 
 
-
--- case activeGame.currentPlayerTurn of
---     ActiveGame.PlayerTurn _ (ActiveGame.TroopMovementFromSelected _ numberOfTroopsToMove) ->
---         [ Element.Input.text
---             defaultTextInputAttributes
---             { onChange = UpdateNumberOfTroopsToMove
---             , placeholder = Nothing
---             , label = Element.Input.labelAbove defaultLabelAttributes (Element.text "Number of troops to move")
---             , text = numberOfTroopsToMove
---             }
---         ]
---     _ ->
---         []
-
-
 viewConfiguration : ConfigurationAttributes -> Element.Element Msg
 viewConfiguration configurationAttributes =
     Element.row
@@ -332,9 +311,9 @@ renderPlayingGame activeGame =
         countryCollages : List (Collage.Collage Msg)
         countryCollages =
             activeGame.map.countries
-                |> Dict.keys
+                |> GameMap.getCountryIds
                 |> List.map
-                    (\countryId -> renderCountry (GameMap.CountryId countryId) activeGame)
+                    (\countryId -> renderCountry countryId activeGame)
 
         background =
             Collage.polygon
