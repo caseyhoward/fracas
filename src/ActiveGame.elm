@@ -189,14 +189,25 @@ getPlayerCountryAndTroopCounts activeGame =
                         , troopCount = getTotalTroopCountForPlayer player
                         , isAlive = True
                         }
+
                     NoCapitol ->
                         { playerId = PlayerId playerId
                         , countryCount = Dict.size player.countryTroopCounts
                         , troopCount = getTotalTroopCountForPlayer player
-                        , isAlive = False
-                        }  
+                        , isAlive = False || isCapitolPlacementTurn activeGame
+                        }
             )
         |> Dict.values
+
+
+isCapitolPlacementTurn : ActiveGame -> Bool
+isCapitolPlacementTurn activeGame =
+    case activeGame.currentPlayerTurn  of
+        PlayerTurn CapitolPlacement _ ->
+            True
+
+        _ ->
+            False
 
 
 
