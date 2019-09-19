@@ -177,12 +177,24 @@ findCountryOwner (GameMap.CountryId countryId) players =
             Nothing
 
 
-getPlayerCountryAndTroopCounts : ActiveGame -> List ( PlayerId, Int, TroopCount.TroopCount )
+getPlayerCountryAndTroopCounts : ActiveGame -> List { playerId : PlayerId, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
 getPlayerCountryAndTroopCounts activeGame =
     activeGame.players
         |> Dict.map
             (\playerId player ->
-                ( PlayerId playerId, Dict.size player.countryTroopCounts, getTotalTroopCountForPlayer player )
+                case player.capitolStatus of
+                    Capitol _ _ ->
+                        { playerId = PlayerId playerId
+                        , countryCount = Dict.size player.countryTroopCounts
+                        , troopCount = getTotalTroopCountForPlayer player
+                        , isAlive = True
+                        }
+                    NoCapitol ->
+                        { playerId = PlayerId playerId
+                        , countryCount = Dict.size player.countryTroopCounts
+                        , troopCount = getTotalTroopCountForPlayer player
+                        , isAlive = False
+                        }  
             )
         |> Dict.values
 

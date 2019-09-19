@@ -359,16 +359,29 @@ viewPlayerCountryAndTroopCounts activeGame =
         )
 
 
-viewPlayerTroopCount : ActiveGame.PlayerId -> Dict.Dict Int ActiveGame.Player -> ( ActiveGame.PlayerId, Int, TroopCount.TroopCount ) -> Element.Element Msg
-viewPlayerTroopCount currentPlayerId players ( playerId, countryCount, troopCount ) =
-    case ActiveGame.getPlayer playerId players of
+viewPlayerTroopCount :
+    ActiveGame.PlayerId
+    -> Dict.Dict Int ActiveGame.Player
+    -> { playerId : ActiveGame.PlayerId, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
+    -> Element.Element Msg
+viewPlayerTroopCount currentPlayerId players status =
+    let
+        fontColor =
+            if status.isAlive then
+                black
+
+            else
+                Color.darkGray |> colorToElementColor
+    in
+    case ActiveGame.getPlayer status.playerId players of
         Just player ->
             Element.column
                 ([ Element.spacing 1
                  , Element.width Element.fill
                  , Element.Background.color playerAndTroopCountBorderColor
+                 , Element.Font.color fontColor
                  ]
-                    ++ playerAndTroopCountBorder currentPlayerId playerId
+                    ++ playerAndTroopCountBorder currentPlayerId status.playerId
                 )
                 [ Element.el
                     [ Element.Background.color (player.color |> colorToElementColor)
@@ -391,7 +404,7 @@ viewPlayerTroopCount currentPlayerId players ( playerId, countryCount, troopCoun
                             (Element.el [ Element.alignRight ] (Element.text "Countries"))
                         , Element.el
                             []
-                            (Element.text (String.fromInt countryCount))
+                            (Element.text (String.fromInt status.countryCount))
                         ]
                     , Element.row [ Element.spacing 20, Element.Font.size 16 ]
                         [ Element.el
@@ -401,7 +414,7 @@ viewPlayerTroopCount currentPlayerId players ( playerId, countryCount, troopCoun
                             (Element.el [ Element.alignRight ] (Element.text "Troops"))
                         , Element.el
                             []
-                            (Element.text (TroopCount.toString troopCount))
+                            (Element.text (TroopCount.toString status.troopCount))
                         ]
                     ]
                 ]

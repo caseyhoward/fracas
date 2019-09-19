@@ -11,5 +11,5 @@ Try the early terrible version [here](http://fracas.caseyhoward.net)
 
 ## Todo
 
-- Don't offer to move troops if only one country
-- Draw troop counts in their own layer on top of all the countriss
+- Draw troop counts in their own layer on top of all the countries
+- Don't add defending country troop count twice when it has a port
