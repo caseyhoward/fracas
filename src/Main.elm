@@ -178,7 +178,7 @@ startGame : ConfigurationAttributes -> ( Model, Cmd Msg )
 startGame configurationOptions =
     let
         map =
-            GameMap.parse Maps.MobileFriendlier.map ActiveGame.defaultScale
+            GameMap.parse Maps.MobileFriendlier.map ActiveGame.pixelsPerMapSquare
     in
     ( GeneratingRandomTroopCounts configurationOptions map
     , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
@@ -570,7 +570,7 @@ renderGameBoard activeGame =
 
         backgroundBorder =
             background
-                |> Collage.outlined (Collage.solid (toFloat ActiveGame.defaultScale / 8.0) (Collage.uniform Color.black))
+                |> Collage.outlined (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 8.0) (Collage.uniform Color.black))
 
         gameBoardCollage =
             Collage.group (countryCollages ++ [ backgroundBorder, backgroundWater ])
@@ -656,7 +656,7 @@ renderPort waterEdges =
                 Collage.segment point1 point2
                     |> Collage.traced
                         (Collage.broken [ ( 3, 10 ) ]
-                            ((ActiveGame.defaultScale |> toFloat) / 2.0)
+                            ((ActiveGame.pixelsPerMapSquare |> toFloat) / 2.0)
                             (Collage.uniform Color.gray)
                         )
             )
@@ -670,9 +670,9 @@ renderTroopCount ( medianX, medianY ) troopCount =
             |> TroopCount.toString
             |> Collage.Text.fromString
             |> Collage.Text.color Color.black
-            |> Collage.Text.size (ActiveGame.defaultScale * 100 // 120)
+            |> Collage.Text.size (toFloat ActiveGame.pixelsPerMapSquare * 0.6 |> ceiling)
             |> Collage.rendered
-            |> Collage.shift ( (toFloat medianX + 0.5) * toFloat ActiveGame.defaultScale, (toFloat medianY + 0.5) * toFloat ActiveGame.defaultScale )
+            |> Collage.shift ( (toFloat medianX + 0.5) * toFloat ActiveGame.pixelsPerMapSquare, (toFloat medianY + 0.5) * toFloat ActiveGame.pixelsPerMapSquare )
 
     else
         Collage.group []
@@ -681,14 +681,11 @@ renderTroopCount ( medianX, medianY ) troopCount =
 renderArea : List ( Float, Float ) -> Color.Color -> ActiveGame.CapitolStatus -> GameMap.CountryId -> Collage.Collage msg
 renderArea polygonPoints color capitolStatus countryId =
     let
-        scale =
-            ActiveGame.defaultScale
-
         ( capitolDot, capitolDotsCoords ) =
             case capitolStatus of
                 ActiveGame.Capitol capitolId coords ->
                     if countryId == capitolId then
-                        ( [ Collage.square (toFloat scale / 10.0)
+                        ( [ Collage.square (toFloat ActiveGame.pixelsPerMapSquare / 10.0)
                                 |> Collage.filled (Collage.uniform Color.black)
                           ]
                         , coords
@@ -709,7 +706,7 @@ renderArea polygonPoints color capitolStatus countryId =
 
         polygonBorder =
             polygon
-                |> Collage.outlined (Collage.solid (toFloat ActiveGame.defaultScale / 24.0) (Collage.uniform countryBorderColor))
+                |> Collage.outlined (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 24.0) (Collage.uniform countryBorderColor))
 
         polygonFill =
             polygon

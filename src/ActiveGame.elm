@@ -7,7 +7,6 @@ module ActiveGame exposing
     , canCurrentPlayerCancelTroopMovement
     , canCurrentPlayerPass
     , cancelMovingTroops
-    , defaultScale
     , findCountryOwner
     , getCountryHasPort
     , getCurrentPlayer
@@ -21,6 +20,7 @@ module ActiveGame exposing
     , handleCountryClickFromPlayer
     , isCountryIdCapitol
     , pass
+    , pixelsPerMapSquare
     , playerIdToString
     , playerTurnToString
     , start
@@ -156,9 +156,13 @@ getCurrentPlayer activeGame =
             playerId
 
 
-defaultScale : Int
-defaultScale =
-    12
+
+-- This is mainly used for the precision of the font size. The bigger the more presice. Scaling is done by the browser.
+
+
+pixelsPerMapSquare : Int
+pixelsPerMapSquare =
+    100
 
 
 findCountryOwner : GameMap.CountryId -> Dict.Dict Int Player -> Maybe PlayerId
@@ -202,7 +206,7 @@ getPlayerCountryAndTroopCounts activeGame =
 
 isCapitolPlacementTurn : ActiveGame -> Bool
 isCapitolPlacementTurn activeGame =
-    case activeGame.currentPlayerTurn  of
+    case activeGame.currentPlayerTurn of
         PlayerTurn CapitolPlacement _ ->
             True
 
@@ -600,7 +604,7 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes =
                                     { currentPlayer
                                         | countryTroopCounts =
                                             updateTroopCount clickedCountryId neutralTroopCount currentPlayer.countryTroopCounts
-                                        , capitolStatus = Capitol clickedCountryId (GameMap.capitolDotsCoordinates clickedCountry.coordinates defaultScale)
+                                        , capitolStatus = Capitol clickedCountryId (GameMap.capitolDotsCoordinates clickedCountry.coordinates pixelsPerMapSquare)
                                     }
 
                                 updatedPlayers =
