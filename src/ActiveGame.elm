@@ -100,12 +100,12 @@ troopsPerCountryPerTurn =
 defaultPlayerColors : Dict.Dict Int Color.Color
 defaultPlayerColors =
     Dict.fromList
-        [ ( 1, Color.lightRed )
-        , ( 2, Color.lightPurple )
-        , ( 3, Color.lightYellow )
-        , ( 4, Color.lightGreen )
-        , ( 5, Color.lightOrange )
-        , ( 6, Color.brown )
+        [ ( 1, Color.darkGreen )
+        , ( 3, Color.lightGreen )
+        , ( 2, Color.lightYellow )
+        , ( 5, Color.orange )
+        , ( 4, Color.brown )
+        , ( 6, Color.lightPurple )
         ]
 
 
