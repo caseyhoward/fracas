@@ -19,7 +19,9 @@ import Element.Input
 import GameMap
 import Html exposing (Html)
 import Html.Attributes
-import Maps.Simple
+import Html.Events
+import Json.Decode as Json
+import Maps.MobileFriendlier
 import Random
 import Random.Dict
 import Random.List
@@ -84,6 +86,7 @@ type Msg
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | UpdateNumberOfTroopsToMove String
     | CancelMovingTroops
+    | NumberOfPlayersKeyPressed Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -95,15 +98,14 @@ update msg model =
                     ( ConfiguringGame { configurationOptions | numberOfPlayers = numberOfPlayers }, Cmd.none )
 
                 StartGameClicked ->
-                    let
-                        map =
-                            GameMap.parse Maps.Simple.map ActiveGame.defaultScale
+                    startGame configurationOptions
 
-                        -- GameMap.parse Maps.Big.map ActiveGame.defaultScale
-                    in
-                    ( GeneratingRandomTroopCounts configurationOptions map
-                    , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
-                    )
+                NumberOfPlayersKeyPressed key ->
+                    if key == 13 then
+                        startGame configurationOptions
+
+                    else
+                        ( model, Cmd.none )
 
                 Pass ->
                     ( model, Cmd.none )
@@ -159,6 +161,9 @@ update msg model =
                 CancelMovingTroops ->
                     ( attributes |> ActiveGame.cancelMovingTroops |> PlayingGame, Cmd.none )
 
+                NumberOfPlayersKeyPressed _ ->
+                    ( model, Cmd.none )
+
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)
 randomTroopPlacementsGenerator countryIds =
@@ -167,6 +172,19 @@ randomTroopPlacementsGenerator countryIds =
         100
         (Random.List.choose countryIds |> Random.map Tuple.first |> Random.map (Maybe.withDefault "-1"))
         (TroopCount.random maximumNeutralCountryTroops)
+
+
+startGame : ConfigurationAttributes -> ( Model, Cmd Msg )
+startGame configurationOptions =
+    let
+        map =
+            GameMap.parse Maps.MobileFriendlier.map ActiveGame.defaultScale
+
+        -- GameMap.parse Maps.Big.map ActiveGame.defaultScale
+    in
+    ( GeneratingRandomTroopCounts configurationOptions map
+    , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
+    )
 
 
 
@@ -208,7 +226,13 @@ viewGameConfiguration gameConfiguration =
                 (Element.column
                     [ Element.width Element.fill ]
                     [ Element.Input.text
-                        [ Element.width (Element.px 50) ]
+                        [ Element.width (Element.px 50)
+                        , Element.htmlAttribute
+                            (Html.Events.on
+                                "keyup"
+                                (Json.map NumberOfPlayersKeyPressed Html.Events.keyCode)
+                            )
+                        ]
                         { onChange = NumberOfPlayersChanged
                         , text = gameConfiguration.numberOfPlayers
                         , placeholder = Nothing
