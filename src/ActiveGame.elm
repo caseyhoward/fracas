@@ -13,6 +13,7 @@ module ActiveGame exposing
     , getDefaultColor
     , getPlayer
     , getPlayerColorFromPlayerTurn
+    , getPlayerCountryAndTroopCounts
     , getPlayerTurnStageFromPlayerTurn
     , getTroopCount
     , getTroopCountForPlayerCountry
@@ -166,6 +167,27 @@ findCountryOwner (GameMap.CountryId countryId) players =
                             |> Maybe.map (\_ -> PlayerId playerId)
             )
             Nothing
+
+
+getPlayerCountryAndTroopCounts : ActiveGame -> List ( Int, Int, TroopCount.TroopCount )
+getPlayerCountryAndTroopCounts activeGame =
+    activeGame.players
+        |> Dict.map
+            (\playerId player ->
+                ( playerId, Dict.size player.countryTroopCounts, getTotalTroopCountForPlayer player )
+            )
+        |> Dict.values
+
+
+
+-- todo move
+
+
+getTotalTroopCountForPlayer : Player -> TroopCount.TroopCount
+getTotalTroopCountForPlayer player =
+    player.countryTroopCounts
+        |> Dict.values
+        |> List.foldl (\troopCount result -> TroopCount.addTroopCounts troopCount result) TroopCount.noTroops
 
 
 getPlayer : PlayerId -> Dict.Dict Int Player -> Maybe Player
@@ -727,6 +749,13 @@ attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playing
             }
 
 
+playerHasMoreThanOneCountry : Dict.Dict Int Player -> PlayerId -> Bool
+playerHasMoreThanOneCountry players playerId =
+    getPlayer playerId players
+        |> Maybe.map (\player -> Dict.size player.countryTroopCounts > 1)
+        |> Maybe.withDefault False
+
+
 buildPort : PlayerId -> GameMap.CountryId -> ActiveGame -> ActiveGame
 buildPort playerId countryId playingGameAttributes =
     -- We already had to check that the player owned this country before so no need to do that here
@@ -743,9 +772,16 @@ buildPort playerId countryId playingGameAttributes =
                                 updated =
                                     playingGameAttributes
                                         |> updatePlayersWithPlayer playerId (addPortForPlayer countryId)
+
+                                nextPlayerTurn =
+                                    if playerHasMoreThanOneCountry playingGameAttributes.players playerId then
+                                        PlayerTurn TroopMovement playerId
+
+                                    else
+                                        PlayerTurn TroopPlacement (playerId |> nextPlayerCheckForDeadPlayers playingGameAttributes.players)
                             in
                             { updated
-                                | currentPlayerTurn = PlayerTurn TroopMovement playerId
+                                | currentPlayerTurn = nextPlayerTurn
                                 , error = Nothing
                             }
 
@@ -910,7 +946,14 @@ pass activeGame =
                 |> clearError
 
         PlayerTurn AttackAnnexOrPort playerId ->
-            { activeGame | currentPlayerTurn = PlayerTurn TroopMovement playerId }
+            { activeGame
+                | currentPlayerTurn =
+                    if playerHasMoreThanOneCountry activeGame.players playerId then
+                        PlayerTurn TroopMovement playerId
+
+                    else
+                        PlayerTurn TroopPlacement (playerId |> nextPlayerCheckForDeadPlayers activeGame.players)
+            }
                 |> clearError
 
         _ ->
@@ -1019,8 +1062,11 @@ updateForSuccessfulAttack updatedPlayers playingGameAttributes =
             if List.length capitolsRemaining == 1 then
                 PlayerTurn GameOver currentPlayerId
 
-            else
+            else if playerHasMoreThanOneCountry playingGameAttributes.players currentPlayerId then
                 PlayerTurn TroopMovement currentPlayerId
+
+            else
+                PlayerTurn TroopPlacement (currentPlayerId |> nextPlayerCheckForDeadPlayers playingGameAttributes.players)
     in
     { playingGameAttributes
         | players = updatedPlayers

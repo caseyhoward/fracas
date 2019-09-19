@@ -314,6 +314,7 @@ viewInfoPanel activeGame =
         , Element.Border.solid
         ]
         [ viewPassButtonIfNecessary activeGame
+        , viewPlayerCountryAndTroopCounts activeGame
         , viewConfigureTroopCountIfNecessary activeGame
         ]
 
@@ -339,6 +340,17 @@ viewPassButtonIfNecessary activeGame =
 
          else
             Element.none
+        )
+
+
+viewPlayerCountryAndTroopCounts : ActiveGame.ActiveGame -> Element.Element Msg
+viewPlayerCountryAndTroopCounts activeGame =
+    Element.column []
+        (ActiveGame.getPlayerCountryAndTroopCounts activeGame
+            |> List.map
+                (\( playerId, countryCount, troopCount ) ->
+                    Element.text <| String.fromInt playerId ++ " " ++ String.fromInt countryCount ++ "  " ++ TroopCount.toString troopCount
+                )
         )
 
 
