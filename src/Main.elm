@@ -224,11 +224,19 @@ viewPlayingGame activeGame =
             [ viewInfoPanel activeGame
             , Element.column
                 [ Element.centerX, Element.width Element.fill ]
-                ([ Element.el [ Element.centerX, Element.width Element.fill, Element.height Element.fill ]
+                ([ Element.el
+                    [ Element.centerX
+                    , Element.width Element.fill
+                    , Element.height Element.fill
+                    ]
                     (renderGameBoard activeGame |> Element.html)
                  ]
                     ++ [ Element.column
                             [ 100 |> Element.px |> Element.height
+                            , Element.width Element.fill
+                            , Element.Border.width 1
+                            , Element.Border.color black
+                            , Element.Border.solid
                             ]
                             ((case activeGame.error of
                                 Just error ->
@@ -263,11 +271,8 @@ viewInfoPanel activeGame =
 viewPassButtonIfNecessary : ActiveGame.ActiveGame -> Element.Element Msg
 viewPassButtonIfNecessary activeGame =
     Element.el
-        [ Element.height (Element.px 80)
-        , Element.width Element.fill
+        [ Element.width Element.fill
         , Element.moveDown 20
-
-        -- , Element.explain Debug.todo
         ]
         (if ActiveGame.canCurrentPlayerPass activeGame then
             Element.Input.button
@@ -332,25 +337,28 @@ defaultLabelAttributes =
 viewConfigureTroopCountIfNecessary : ActiveGame.ActiveGame -> Element.Element Msg
 viewConfigureTroopCountIfNecessary activeGame =
     Element.el
-        [ 100 |> Element.px |> Element.height
+        [ Element.width Element.fill
         ]
         (case activeGame |> ActiveGame.troopToMove of
             Just numberOfTroopsToMove ->
                 Element.column
-                    [ 50 |> Element.px |> Element.width, Element.padding 10 ]
+                    [ Element.width Element.fill
+                    , Element.padding 10
+                    ]
                     [ Element.Input.text
                         (defaultTextInputAttributes ++ [ Element.alignLeft ])
                         { onChange = UpdateNumberOfTroopsToMove
                         , placeholder = Nothing
-                        , label = Element.Input.labelAbove defaultLabelAttributes (Element.text "Number of troops to move")
+                        , label = Element.Input.labelAbove (defaultLabelAttributes ++ [ Element.alignLeft ]) (Element.text "Number of troops to move")
                         , text = numberOfTroopsToMove
                         }
                     , Element.Input.button
                         (defaultButtonAttributes
-                            ++ [ Element.width (Element.px 100)
+                            ++ [ Element.width Element.fill
                                , Element.centerX
                                , Element.Font.color (Element.rgb255 255 255 255)
                                , Element.Background.color (Element.rgb255 255 63 63)
+                               , Element.moveDown 10
                                ]
                         )
                         { onPress = Just CancelMovingTroops, label = Element.text "Cancel" }
