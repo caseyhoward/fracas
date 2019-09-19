@@ -169,12 +169,12 @@ findCountryOwner (GameMap.CountryId countryId) players =
             Nothing
 
 
-getPlayerCountryAndTroopCounts : ActiveGame -> List ( Int, Int, TroopCount.TroopCount )
+getPlayerCountryAndTroopCounts : ActiveGame -> List ( PlayerId, Int, TroopCount.TroopCount )
 getPlayerCountryAndTroopCounts activeGame =
     activeGame.players
         |> Dict.map
             (\playerId player ->
-                ( playerId, Dict.size player.countryTroopCounts, getTotalTroopCountForPlayer player )
+                ( (PlayerId playerId), Dict.size player.countryTroopCounts, getTotalTroopCountForPlayer player )
             )
         |> Dict.values
 

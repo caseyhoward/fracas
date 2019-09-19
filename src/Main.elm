@@ -285,7 +285,7 @@ viewPlayingGame activeGame =
                     ++ [ Element.column
                             [ Element.width Element.fill
                             , Element.Border.width 1
-                            , Element.Border.color black
+                            , Element.Border.color teal
                             , Element.Border.solid
                             ]
                             ((case activeGame.error of
@@ -308,9 +308,11 @@ viewInfoPanel activeGame =
     Element.column
         [ Element.width (Element.px 200)
         , Element.height Element.fill
+        , Element.padding 20
+        , Element.spacing 20
         , Element.alignTop
         , Element.Border.width 1
-        , Element.Border.color black
+        , Element.Border.color teal
         , Element.Border.solid
         ]
         [ viewPassButtonIfNecessary activeGame
@@ -323,7 +325,7 @@ viewPassButtonIfNecessary : ActiveGame.ActiveGame -> Element.Element Msg
 viewPassButtonIfNecessary activeGame =
     Element.el
         [ Element.width Element.fill
-        , Element.moveDown 20
+        , Element.height (Element.px 50)
         ]
         (if ActiveGame.canCurrentPlayerPass activeGame then
             Element.Input.button
@@ -345,18 +347,75 @@ viewPassButtonIfNecessary activeGame =
 
 viewPlayerCountryAndTroopCounts : ActiveGame.ActiveGame -> Element.Element Msg
 viewPlayerCountryAndTroopCounts activeGame =
-    Element.column []
+    Element.column
+        [ Element.spacing 10
+        , Element.width Element.fill
+        ]
         (ActiveGame.getPlayerCountryAndTroopCounts activeGame
-            |> List.map
-                (\( playerId, countryCount, troopCount ) ->
-                    Element.text <| String.fromInt playerId ++ " " ++ String.fromInt countryCount ++ "  " ++ TroopCount.toString troopCount
-                )
+            |> List.map (viewPlayerTroopCount activeGame.players)
         )
+
+
+viewPlayerTroopCount : Dict.Dict Int ActiveGame.Player -> ( ActiveGame.PlayerId, Int, TroopCount.TroopCount ) -> Element.Element Msg
+viewPlayerTroopCount players ( playerId, countryCount, troopCount ) =
+    case ActiveGame.getPlayer playerId players of
+        Just player ->
+            Element.column
+                [ Element.spacing 1
+                , Element.width Element.fill
+                , Element.Border.solid
+                , Element.Border.width 1
+                , Element.Border.color black
+                , Element.Background.color (Color.black |> colorToElementColor)
+                ]
+                [ Element.el
+                    [ Element.Background.color (player.color |> colorToElementColor)
+                    , Element.padding 5
+                    , Element.width Element.fill
+                    , Element.Font.size 14
+                    , Element.Font.bold
+                    ]
+                    (Element.text <| player.name)
+                , Element.column [ Element.Background.color (Color.lightGray |> colorToElementColor), Element.width Element.fill ]
+                    [ Element.row [ Element.spacing 5, Element.Font.size 16 ]
+                        [ Element.el
+                            [ Element.width (Element.px 100)
+                            , Element.alignRight
+                            , Element.padding 3
+                            ]
+                            (Element.text "Countries")
+                        , Element.el
+                            [ Element.alignRight
+                            ]
+                            (Element.text (String.fromInt countryCount))
+                        ]
+                    , Element.row [ Element.spacing 5, Element.Font.size 16 ]
+                        [ Element.el
+                            [ Element.width (Element.px 100)
+                            , Element.alignRight
+                            , Element.padding 3
+                            ]
+                            (Element.text "Troops")
+                        , Element.el
+                            [ Element.alignRight
+                            ]
+                            (Element.text (TroopCount.toString troopCount))
+                        ]
+                    ]
+                ]
+
+        Nothing ->
+            Element.none
+
+
+teal : Element.Color
+teal =
+    Element.rgb255 0 100 100
 
 
 black : Element.Color
 black =
-    Element.rgb255 0 100 100
+    Element.rgb255 0 0 0
 
 
 defaultButtonAttributes : List (Element.Attribute msg)
