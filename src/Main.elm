@@ -17,7 +17,7 @@ import Element.Border
 import Element.Font
 import Element.Input
 import GameMap
-import Html exposing (Html)
+import Html
 import Html.Attributes
 import Html.Events
 import Json.Decode as Json
@@ -189,7 +189,7 @@ startGame configurationOptions =
 ---- VIEW ----
 
 
-view : Model -> Html Msg
+view : Model -> Html.Html Msg
 view model =
     case model of
         ConfiguringGame configuringGameSettings ->
@@ -206,7 +206,7 @@ view model =
 ---- Configuration
 
 
-viewGameConfiguration : ConfigurationAttributes -> Html Msg
+viewGameConfiguration : ConfigurationAttributes -> Html.Html Msg
 viewGameConfiguration gameConfiguration =
     Element.layout [ Element.width Element.fill, Element.centerX ]
         (Element.column
@@ -267,7 +267,7 @@ centerText text =
 ---- PlayingGame
 
 
-viewPlayingGame : ActiveGame.ActiveGame -> Html Msg
+viewPlayingGame : ActiveGame.ActiveGame -> Html.Html Msg
 viewPlayingGame activeGame =
     Element.layout [ Element.width Element.fill ]
         (Element.row
@@ -546,7 +546,7 @@ colorToElementColor color =
 -- Rendering
 
 
-renderGameBoard : ActiveGame.ActiveGame -> Html Msg
+renderGameBoard : ActiveGame.ActiveGame -> Html.Html Msg
 renderGameBoard activeGame =
     let
         countryCollages : List (Collage.Collage Msg)
