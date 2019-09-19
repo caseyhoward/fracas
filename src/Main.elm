@@ -1,5 +1,7 @@
 module Main exposing (main)
 
+-- import Maps.Big
+
 import ActiveGame
 import Browser
 import Collage
@@ -17,7 +19,7 @@ import Element.Input
 import GameMap
 import Html exposing (Html)
 import Html.Attributes
-import Maps.Big
+import Maps.Simple
 import Random
 import Random.Dict
 import Random.List
@@ -95,7 +97,9 @@ update msg model =
                 StartGameClicked ->
                     let
                         map =
-                            GameMap.parse Maps.Big.map ActiveGame.defaultScale
+                            GameMap.parse Maps.Simple.map ActiveGame.defaultScale
+
+                        -- GameMap.parse Maps.Big.map ActiveGame.defaultScale
                     in
                     ( GeneratingRandomTroopCounts configurationOptions map
                     , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
@@ -191,17 +195,40 @@ viewGameConfiguration gameConfiguration =
     Element.layout [ Element.width Element.fill ]
         (Element.column
             [ Element.width Element.fill, Element.centerX ]
-            [ Element.el [ Element.centerX ]
-                (Element.row
+            [ Element.el
+                [ Element.width Element.fill
+                , Element.padding 100
+                , Element.Font.bold
+                , Element.Font.size 60
+                , Element.centerX
+                , Element.Font.color (Color.darkBlue |> colorToElementColor)
+                ]
+                (Element.text "Fracas")
+            , Element.el [ Element.centerX ]
+                (Element.column
                     [ Element.width Element.fill ]
                     [ Element.Input.text
-                        []
+                        [ Element.width (Element.px 50) ]
                         { onChange = NumberOfPlayersChanged
                         , text = gameConfiguration.numberOfPlayers
                         , placeholder = Nothing
-                        , label = Element.Input.labelLeft [ Element.centerY ] (Element.text "Number of players")
+                        , label =
+                            Element.Input.labelLeft
+                                [ Element.centerY
+                                , Element.paddingEach { top = 0, left = 0, right = 10, bottom = 0 }
+                                ]
+                                (Element.text "Number of players")
                         }
-                    , Element.Input.button (defaultButtonAttributes ++ [ Element.Background.color (Element.rgb255 0 150 0) ]) { onPress = Just StartGameClicked, label = Element.text "Start Game" }
+                    , Element.Input.button
+                        (defaultButtonAttributes
+                            ++ [ Element.Background.color (Element.rgb255 0 150 0)
+                               , Element.width Element.fill
+                               , Element.padding 30
+                               , Element.centerX
+                               , Element.moveDown 30
+                               ]
+                        )
+                        { onPress = Just StartGameClicked, label = Element.text "Start Game" }
                     ]
                 )
             ]
