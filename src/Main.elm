@@ -274,10 +274,12 @@ viewPlayingGame activeGame =
             [ Element.centerX, Element.width Element.fill ]
             [ viewInfoPanel activeGame
             , Element.column
-                [ Element.centerX, Element.width Element.fill ]
+                [ Element.centerX
+                , Element.width Element.fill
+                , Element.alignTop
+                ]
                 [ Element.el
-                    [ Element.centerX
-                    , Element.width Element.fill
+                    [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
                     (renderGameBoard activeGame |> Element.html)
@@ -497,7 +499,7 @@ viewConfigureTroopCountIfNecessary activeGame =
                                , Element.moveDown 10
                                ]
                         )
-                        { onPress = Just CancelMovingTroops, label = Element.text "Cancel" }
+                        { onPress = Just CancelMovingTroops, label = centerText "Cancel" }
                     ]
 
             Nothing ->
