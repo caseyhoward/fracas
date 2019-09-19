@@ -179,8 +179,6 @@ startGame configurationOptions =
     let
         map =
             GameMap.parse Maps.MobileFriendlier.map ActiveGame.defaultScale
-
-        -- GameMap.parse Maps.Big.map ActiveGame.defaultScale
     in
     ( GeneratingRandomTroopCounts configurationOptions map
     , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
@@ -210,14 +208,13 @@ view model =
 
 viewGameConfiguration : ConfigurationAttributes -> Html Msg
 viewGameConfiguration gameConfiguration =
-    Element.layout [ Element.width Element.fill ]
+    Element.layout [ Element.width Element.fill, Element.centerX ]
         (Element.column
             [ Element.width Element.fill, Element.centerX ]
             [ Element.el
-                [ Element.width Element.fill
-                , Element.padding 100
+                [ Element.padding 100
                 , Element.Font.bold
-                , Element.Font.size 60
+                , Element.Font.size 80
                 , Element.centerX
                 , Element.Font.color (Color.darkBlue |> colorToElementColor)
                 ]
@@ -247,24 +244,27 @@ viewGameConfiguration gameConfiguration =
                         (defaultButtonAttributes
                             ++ [ Element.Background.color (Element.rgb255 0 150 0)
                                , Element.width Element.fill
-                               , Element.padding 30
+                               , Element.padding 20
                                , Element.centerX
                                , Element.moveDown 30
+                               , Element.Font.size 30
+                               , Element.Font.color (Color.white |> colorToElementColor)
                                ]
                         )
-                        { onPress = Just StartGameClicked, label = Element.text "Start Game" }
+                        { onPress = Just StartGameClicked, label = centerText "Start Game" }
                     ]
                 )
             ]
         )
 
 
+centerText : String -> Element.Element Msg
+centerText text =
+    Element.el [ Element.centerX ] (Element.text text)
+
+
 
 ---- PlayingGame
-
-
-infoPanelWidth =
-    200
 
 
 viewPlayingGame : ActiveGame.ActiveGame -> Html Msg
@@ -275,30 +275,28 @@ viewPlayingGame activeGame =
             [ viewInfoPanel activeGame
             , Element.column
                 [ Element.centerX, Element.width Element.fill ]
-                ([ Element.el
+                [ Element.el
                     [ Element.centerX
                     , Element.width Element.fill
                     , Element.height Element.fill
                     ]
                     (renderGameBoard activeGame |> Element.html)
-                 ]
-                    ++ [ Element.column
-                            [ Element.width Element.fill
-                            , Element.Border.width 1
-                            , Element.Border.color teal
-                            , Element.Border.solid
-                            ]
-                            ((case activeGame.error of
-                                Just error ->
-                                    [ Element.paragraph [] [ Element.text error ] ]
+                , Element.column
+                    [ Element.width Element.fill
+                    , Element.Border.width 1
+                    , Element.Border.color teal
+                    , Element.Border.solid
+                    ]
+                    ((case activeGame.error of
+                        Just error ->
+                            [ Element.paragraph [] [ Element.text error ] ]
 
-                                Nothing ->
-                                    []
-                             )
-                                ++ [ viewPlayerTurnStatus activeGame.currentPlayerTurn activeGame.players ]
-                            )
-                       ]
-                )
+                        Nothing ->
+                            []
+                     )
+                        ++ [ viewPlayerTurnStatus activeGame.currentPlayerTurn activeGame.players ]
+                    )
+                ]
             ]
         )
 
@@ -332,17 +330,20 @@ viewPassButtonIfNecessary activeGame =
                 (defaultButtonAttributes
                     ++ [ Element.width (Element.px 120)
                        , Element.centerX
-
-                       --    , Element.paddingXY 0 10
                        , 40 |> Element.px |> Element.height
                        , Element.Background.color (Element.rgb255 100 200 100)
                        ]
                 )
-                { onPress = Just Pass, label = Element.text "Pass" }
+                { onPress = Just Pass, label = centerText "Pass" }
 
          else
             Element.none
         )
+
+
+playerAndTroopCountBorderColor : Element.Color
+playerAndTroopCountBorderColor =
+    Color.darkGray |> colorToElementColor
 
 
 viewPlayerCountryAndTroopCounts : ActiveGame.ActiveGame -> Element.Element Msg
@@ -352,22 +353,21 @@ viewPlayerCountryAndTroopCounts activeGame =
         , Element.width Element.fill
         ]
         (ActiveGame.getPlayerCountryAndTroopCounts activeGame
-            |> List.map (viewPlayerTroopCount activeGame.players)
+            |> List.map (viewPlayerTroopCount (ActiveGame.getCurrentPlayer activeGame) activeGame.players)
         )
 
 
-viewPlayerTroopCount : Dict.Dict Int ActiveGame.Player -> ( ActiveGame.PlayerId, Int, TroopCount.TroopCount ) -> Element.Element Msg
-viewPlayerTroopCount players ( playerId, countryCount, troopCount ) =
+viewPlayerTroopCount : ActiveGame.PlayerId -> Dict.Dict Int ActiveGame.Player -> ( ActiveGame.PlayerId, Int, TroopCount.TroopCount ) -> Element.Element Msg
+viewPlayerTroopCount currentPlayerId players ( playerId, countryCount, troopCount ) =
     case ActiveGame.getPlayer playerId players of
         Just player ->
             Element.column
-                [ Element.spacing 1
-                , Element.width Element.fill
-                , Element.Border.solid
-                , Element.Border.width 1
-                , Element.Border.color black
-                , Element.Background.color (Color.black |> colorToElementColor)
-                ]
+                ([ Element.spacing 1
+                 , Element.width Element.fill
+                 , Element.Background.color playerAndTroopCountBorderColor
+                 ]
+                    ++ playerAndTroopCountBorder currentPlayerId playerId
+                )
                 [ Element.el
                     [ Element.Background.color (player.color |> colorToElementColor)
                     , Element.padding 5
@@ -376,29 +376,29 @@ viewPlayerTroopCount players ( playerId, countryCount, troopCount ) =
                     , Element.Font.bold
                     ]
                     (Element.text <| player.name)
-                , Element.column [ Element.Background.color (Color.lightGray |> colorToElementColor), Element.width Element.fill ]
-                    [ Element.row [ Element.spacing 5, Element.Font.size 16 ]
+                , Element.column
+                    [ Element.Background.color (Color.lightGray |> colorToElementColor)
+                    , Element.width Element.fill
+                    ]
+                    [ Element.row [ Element.spacing 20, Element.Font.size 16 ]
                         [ Element.el
-                            [ Element.width (Element.px 100)
+                            [ Element.width (Element.px 80)
                             , Element.alignRight
                             , Element.padding 3
                             ]
-                            (Element.text "Countries")
+                            (Element.el [ Element.alignRight ] (Element.text "Countries"))
                         , Element.el
-                            [ Element.alignRight
-                            ]
+                            []
                             (Element.text (String.fromInt countryCount))
                         ]
-                    , Element.row [ Element.spacing 5, Element.Font.size 16 ]
+                    , Element.row [ Element.spacing 20, Element.Font.size 16 ]
                         [ Element.el
-                            [ Element.width (Element.px 100)
-                            , Element.alignRight
+                            [ Element.width (Element.px 80)
                             , Element.padding 3
                             ]
-                            (Element.text "Troops")
+                            (Element.el [ Element.alignRight ] (Element.text "Troops"))
                         , Element.el
-                            [ Element.alignRight
-                            ]
+                            []
                             (Element.text (TroopCount.toString troopCount))
                         ]
                     ]
@@ -406,6 +406,21 @@ viewPlayerTroopCount players ( playerId, countryCount, troopCount ) =
 
         Nothing ->
             Element.none
+
+
+playerAndTroopCountBorder : ActiveGame.PlayerId -> ActiveGame.PlayerId -> List (Element.Attribute Msg)
+playerAndTroopCountBorder currentPlayerId playerIdToDisplay =
+    if currentPlayerId == playerIdToDisplay then
+        [ Element.Border.solid
+        , Element.Border.width 3
+        , Element.Border.color black
+        ]
+
+    else
+        [ Element.Border.solid
+        , Element.Border.width 1
+        , Element.Border.color playerAndTroopCountBorderColor
+        ]
 
 
 teal : Element.Color

@@ -10,6 +10,7 @@ module ActiveGame exposing
     , defaultScale
     , findCountryOwner
     , getCountryHasPort
+    , getCurrentPlayer
     , getDefaultColor
     , getPlayer
     , getPlayerColorFromPlayerTurn
@@ -148,6 +149,13 @@ canCurrentPlayerCancelTroopMovement activeGame =
                     False
 
 
+getCurrentPlayer : ActiveGame -> PlayerId
+getCurrentPlayer activeGame =
+    case activeGame.currentPlayerTurn of
+        PlayerTurn _ playerId ->
+            playerId
+
+
 defaultScale : Int
 defaultScale =
     12
@@ -174,7 +182,7 @@ getPlayerCountryAndTroopCounts activeGame =
     activeGame.players
         |> Dict.map
             (\playerId player ->
-                ( (PlayerId playerId), Dict.size player.countryTroopCounts, getTotalTroopCountForPlayer player )
+                ( PlayerId playerId, Dict.size player.countryTroopCounts, getTotalTroopCountForPlayer player )
             )
         |> Dict.values
 
