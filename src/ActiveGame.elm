@@ -364,8 +364,8 @@ addPortForPlayer (GameMap.CountryId countryId) player =
     { player | ports = player.ports |> Set.insert countryId }
 
 
-attackAndDefenseStrength : GameMap.CountryId -> PlayerId -> PlayerId -> Dict.Dict Int Player -> Dict.Dict String GameMap.Country -> Dict.Dict String (Set.Set String) -> ( TroopCount.TroopCount, TroopCount.TroopCount )
-attackAndDefenseStrength countryBeingAttackedId attackerId defenderId players countries bodyOfWaterNeighbors =
+attackAndDefenseStrength : GameMap.GameMap -> GameMap.CountryId -> PlayerId -> PlayerId -> Dict.Dict Int Player -> Dict.Dict String GameMap.Country -> Dict.Dict String (Set.Set String) -> ( TroopCount.TroopCount, TroopCount.TroopCount )
+attackAndDefenseStrength gameMap countryBeingAttackedId attackerId defenderId players countries bodyOfWaterNeighbors =
     let
         defendingCountryTroopCount =
             case getTroopCountForPlayerCountry countryBeingAttackedId defenderId players of
@@ -380,7 +380,7 @@ attackAndDefenseStrength countryBeingAttackedId attackerId defenderId players co
             attackAndDefenseStrengthLand countryBeingAttackedId attackerId defenderId players countries
 
         ( waterAttackStrength, waterDefenseStrength ) =
-            attackAndDefenseStrengthWater countryBeingAttackedId attackerId defenderId players countries bodyOfWaterNeighbors
+            attackAndDefenseStrengthWater countryBeingAttackedId attackerId defenderId players gameMap bodyOfWaterNeighbors
     in
     ( landAttackStrength |> TroopCount.addTroopCounts waterAttackStrength
     , landDefenseStrength
@@ -425,101 +425,100 @@ attackAndDefenseStrengthLand countryBeingAttackedId attackerId defenderId player
             ( TroopCount.noTroops, TroopCount.noTroops )
 
 
-attackAndDefenseStrengthWater : GameMap.CountryId -> PlayerId -> PlayerId -> Dict.Dict Int Player -> Dict.Dict String GameMap.Country -> Dict.Dict String (Set.Set String) -> ( TroopCount.TroopCount, TroopCount.TroopCount )
-attackAndDefenseStrengthWater countryBeingAttackedId attackerId defenderId players countries bodyOfWaterNeighbors =
+filterCountriesOwnedBy : Dict.Dict Int Player -> PlayerId -> List GameMap.CountryId -> List GameMap.CountryId
+filterCountriesOwnedBy players playerId countryIds =
     let
-        neighboringBodiesOfWater =
-            case GameMap.getCountry countryBeingAttackedId countries of
-                Just countryBeingAttacked ->
-                    countryBeingAttacked.neighboringBodiesOfWater
+        countriesOwnedByPlayer : Set.Set String
+        countriesOwnedByPlayer =
+            case getPlayer playerId players of
+                Just player ->
+                    player.countryTroopCounts |> Dict.keys |> Set.fromList
 
                 Nothing ->
-                    -- TODO
                     Set.empty
+    in
+    List.foldl
+        (\(GameMap.CountryId countryId) result ->
+            if Set.member countryId countriesOwnedByPlayer then
+                GameMap.CountryId countryId :: result
 
-        ( attackerCountriesNeighoboringWater, defenderCountriesNeighboringWater ) =
-            neighboringBodiesOfWater
-                |> Set.foldl
-                    (\bodyOfWaterId ( attackerCountries, defenderCountries ) ->
-                        case Dict.get bodyOfWaterId bodyOfWaterNeighbors of
-                            Just countryIdsNeighboringWater ->
-                                countryIdsNeighboringWater
-                                    |> Set.foldl
-                                        (\countryId ( innerAttack, innerDefense ) ->
-                                            case findCountryOwner (GameMap.CountryId countryId) players of
-                                                Just countryOwnerId ->
-                                                    if countryOwnerId == attackerId then
-                                                        ( Set.insert countryId innerAttack, innerDefense )
+            else
+                result
+        )
+        []
+        countryIds
 
-                                                    else if countryOwnerId == defenderId then
-                                                        ( innerAttack, Set.insert countryId innerDefense )
 
-                                                    else
-                                                        ( innerAttack, innerDefense )
+filterCountriesWithPort : Dict.Dict Int Player -> PlayerId -> List GameMap.CountryId -> List GameMap.CountryId
+filterCountriesWithPort players playerId countries =
+    countries
+        |> List.filter
+            (\countryId ->
+                case getCountryHasPort playerId countryId players of
+                    Just hasPort ->
+                        hasPort
 
-                                                Nothing ->
-                                                    ( innerAttack, innerDefense )
-                                        )
-                                        ( attackerCountries, defenderCountries )
+                    _ ->
+                        False
+            )
 
-                            _ ->
-                                ( attackerCountries, defenderCountries )
-                    )
-                    ( Set.empty, Set.empty )
 
-        attackerCountriesNeighoboringWaterWithPort : Set.Set String
+countTroops : Dict.Dict Int Player -> PlayerId -> List GameMap.CountryId -> TroopCount.TroopCount
+countTroops players playerId countries =
+    countries
+        |> List.foldl
+            (\countryId totalTroopCount ->
+                case getTroopCountForPlayerCountry countryId playerId players of
+                    Just troopCount ->
+                        TroopCount.addTroopCounts totalTroopCount troopCount
+
+                    Nothing ->
+                        totalTroopCount
+            )
+            TroopCount.noTroops
+
+
+attackAndDefenseStrengthWater : GameMap.CountryId -> PlayerId -> PlayerId -> Dict.Dict Int Player -> GameMap.GameMap -> Dict.Dict String (Set.Set String) -> ( TroopCount.TroopCount, TroopCount.TroopCount )
+attackAndDefenseStrengthWater countryBeingAttackedId attackerId defenderId players gameMap bodyOfWaterNeighbors =
+    let
+        countriesReachableThroughWater : List GameMap.CountryId
+        countriesReachableThroughWater =
+            GameMap.getCountriesThatCanReachCountryThroughWater gameMap countryBeingAttackedId
+
+        attackerCountriesNeighoboringWater : List GameMap.CountryId
+        attackerCountriesNeighoboringWater =
+            countriesReachableThroughWater
+                |> filterCountriesOwnedBy players attackerId
+
+        defenderCountriesNeighboringWater : List GameMap.CountryId
+        defenderCountriesNeighboringWater =
+            countriesReachableThroughWater
+                |> filterCountriesOwnedBy players defenderId
+
+        attackerCountriesNeighoboringWaterWithPort : List GameMap.CountryId
         attackerCountriesNeighoboringWaterWithPort =
             attackerCountriesNeighoboringWater
-                |> Set.filter
-                    (\attackCountryId ->
-                        case getCountryHasPort attackerId (GameMap.CountryId attackCountryId) players of
-                            Just hasPort ->
-                                hasPort
+                |> filterCountriesWithPort players attackerId
 
-                            _ ->
-                                False
-                    )
-
-        defenderCountriesNeighoboringWaterWithPort : Set.Set String
+        defenderCountriesNeighoboringWaterWithPort : List GameMap.CountryId
         defenderCountriesNeighoboringWaterWithPort =
             defenderCountriesNeighboringWater
-                |> Set.filter
-                    (\defenseCountryId ->
-                        case getCountryHasPort defenderId (GameMap.CountryId defenseCountryId) players of
-                            Just hasPort ->
-                                hasPort
-
-                            _ ->
-                                False
+                |> filterCountriesWithPort players defenderId
+                |> List.filter
+                    (\countryId ->
+                        countryId /= countryBeingAttackedId
+                     -- We count this elsewhere
                     )
 
         attackTroopCount : TroopCount.TroopCount
         attackTroopCount =
             attackerCountriesNeighoboringWaterWithPort
-                |> Set.foldl
-                    (\countryId totalTroopCount ->
-                        case getTroopCountForPlayerCountry (GameMap.CountryId countryId) attackerId players of
-                            Just troopCount ->
-                                TroopCount.addTroopCounts totalTroopCount troopCount
-
-                            Nothing ->
-                                totalTroopCount
-                    )
-                    TroopCount.noTroops
+                |> countTroops players attackerId
 
         defenderTroopCount : TroopCount.TroopCount
         defenderTroopCount =
             defenderCountriesNeighoboringWaterWithPort
-                |> Set.foldl
-                    (\countryId totalTroopCount ->
-                        case getTroopCountForPlayerCountry (GameMap.CountryId countryId) defenderId players of
-                            Just troopCount ->
-                                TroopCount.addTroopCounts totalTroopCount troopCount
-
-                            Nothing ->
-                                totalTroopCount
-                    )
-                    TroopCount.noTroops
+                |> countTroops players defenderId
     in
     ( attackTroopCount |> TroopCount.acrossWater, defenderTroopCount |> TroopCount.acrossWater )
 
@@ -677,7 +676,7 @@ attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttrib
         Just opponentTroopCount ->
             let
                 ( attackStrength, defenseStrength ) =
-                    attackAndDefenseStrength clickedCountryId currentPlayerId opponentPlayerId playingGameAttributes.players playingGameAttributes.map.countries playingGameAttributes.map.bodiesOfWater
+                    attackAndDefenseStrength playingGameAttributes.map clickedCountryId currentPlayerId opponentPlayerId playingGameAttributes.players playingGameAttributes.map.countries playingGameAttributes.map.bodiesOfWater
 
                 remainingTroops =
                     opponentTroopCount

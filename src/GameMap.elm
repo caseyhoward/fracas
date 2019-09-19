@@ -4,6 +4,7 @@ module GameMap exposing
     , CountryId(..)
     , GameMap
     , capitolDotsCoordinates
+    , getCountriesThatCanReachCountryThroughWater
     , getCountry
     , getCountryIds
     , isCountryNeighboringWater
@@ -55,6 +56,31 @@ capitolDotsCoordinates area scale =
             (\( x, y ) ->
                 ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
             )
+
+
+getCountriesThatCanReachCountryThroughWater : GameMap -> CountryId -> List CountryId
+getCountriesThatCanReachCountryThroughWater gameMap countryId =
+    let
+        neighboringBodiesOfWater =
+            case getCountry countryId gameMap.countries of
+                Just countryBeingAttacked ->
+                    countryBeingAttacked.neighboringBodiesOfWater
+
+                Nothing ->
+                    -- TODO
+                    Set.empty
+    in
+    neighboringBodiesOfWater
+        |> Set.foldl
+            (\bodyOfWaterId countries ->
+                case Dict.get bodyOfWaterId gameMap.bodiesOfWater of
+                    Just countryIdsNeighboringWater ->
+                        (countryIdsNeighboringWater |> Set.toList |> List.map CountryId) ++ countries
+
+                    _ ->
+                        countries
+            )
+            []
 
 
 getCountry : CountryId -> Dict.Dict String Country -> Maybe Country
