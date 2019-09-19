@@ -1003,7 +1003,7 @@ playerTurnToString players (PlayerTurn playerTurnStage playerId) =
                     playerName ++ ": Place " ++ (numberOfTroopsToPlace playerId players |> TroopCount.pluralize) ++ " in one of your countries"
 
                 AttackAnnexOrPort ->
-                    playerName ++ ": Choose an enemy country to attack, a neutral country to annex, or one of your ccountries bordering water to build a port"
+                    playerName ++ ": Choose an enemy country to attack, a neutral country to annex, or one of your countries bordering water to build a port"
 
                 TroopMovement ->
                     playerName ++ ": Choose a country to move troops from or press the \"Pass\" button for no troop movement"
