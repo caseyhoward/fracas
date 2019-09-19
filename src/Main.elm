@@ -232,15 +232,14 @@ viewPlayingGame activeGame =
                     (renderGameBoard activeGame |> Element.html)
                  ]
                     ++ [ Element.column
-                            [ 100 |> Element.px |> Element.height
-                            , Element.width Element.fill
+                            [ Element.width Element.fill
                             , Element.Border.width 1
                             , Element.Border.color black
                             , Element.Border.solid
                             ]
                             ((case activeGame.error of
                                 Just error ->
-                                    [ Element.text error ]
+                                    [ Element.paragraph [] [ Element.text error ] ]
 
                                 Nothing ->
                                     []
@@ -376,8 +375,13 @@ viewPlayerTurnStatus playerTurn players =
         , Element.Background.color (ActiveGame.getPlayerColorFromPlayerTurn players playerTurn |> colorToElementColor)
         , Element.padding 5
         ]
-        (Element.text
-            (ActiveGame.playerTurnToString players playerTurn)
+        (Element.el
+            [ Element.width Element.fill ]
+            (Element.paragraph []
+                [ Element.text
+                    (ActiveGame.playerTurnToString players playerTurn)
+                ]
+            )
         )
 
 
