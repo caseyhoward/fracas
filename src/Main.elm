@@ -4,6 +4,7 @@ import ActiveGame
 import Browser
 import Collage
 import Collage.Events
+import Collage.Layout
 import Collage.Render
 import Collage.Text
 import Color
@@ -15,6 +16,7 @@ import Element.Font
 import Element.Input
 import GameMap
 import Html exposing (Html)
+import Html.Attributes
 import Maps.Big
 import Random
 import Random.Dict
@@ -218,11 +220,11 @@ viewPlayingGame : ActiveGame.ActiveGame -> Html Msg
 viewPlayingGame activeGame =
     Element.layout [ Element.width Element.fill ]
         (Element.row
-            [ Element.centerX ]
+            [ Element.centerX, Element.width Element.fill ]
             [ viewInfoPanel activeGame
             , Element.column
-                [ Element.centerX ]
-                ([ Element.el [ Element.centerX, Element.width Element.fill ]
+                [ Element.centerX, Element.width Element.fill ]
+                ([ Element.el [ Element.centerX, Element.width Element.fill, Element.height Element.fill ]
                     (renderGameBoard activeGame |> Element.html)
                  ]
                     ++ (case activeGame.error of
@@ -326,7 +328,6 @@ viewConfigureTroopCountIfNecessary : ActiveGame.ActiveGame -> Element.Element Ms
 viewConfigureTroopCountIfNecessary activeGame =
     Element.el
         [ 100 |> Element.px |> Element.height
-        , Element.explain Debug.todo
         ]
         (case activeGame |> ActiveGame.troopToMove of
             Just numberOfTroopsToMove ->
@@ -397,9 +398,34 @@ renderGameBoard activeGame =
         backgroundBorder =
             background
                 |> Collage.outlined (Collage.solid (toFloat ActiveGame.defaultScale / 8.0) (Collage.uniform Color.black))
+
+        gameBoardCollage =
+            Collage.group (countryCollages ++ [ backgroundBorder, backgroundWater ])
+
+        gameBoardHeight =
+            Collage.Layout.height gameBoardCollage
+
+        gameBoardWidth =
+            Collage.Layout.width gameBoardCollage
     in
-    Collage.group (countryCollages ++ [ backgroundBorder, backgroundWater ])
-        |> Collage.Render.svg
+    gameBoardCollage
+        |> Collage.Render.svgExplicit
+            [ Html.Attributes.style "width" "100%"
+            , Html.Attributes.style "max-height" "100%"
+            , Html.Attributes.style "top" "0"
+            , Html.Attributes.style "left" "0"
+            , Html.Attributes.attribute "width" "0"
+            , Html.Attributes.attribute
+                "viewBox"
+                ((0 * gameBoardWidth |> String.fromFloat)
+                    ++ " "
+                    ++ (-1 * gameBoardHeight |> String.fromFloat)
+                    ++ " "
+                    ++ (1 * gameBoardWidth |> String.fromFloat)
+                    ++ " "
+                    ++ (1 * gameBoardHeight |> String.fromFloat)
+                )
+            ]
 
 
 renderCountry : GameMap.CountryId -> ActiveGame.ActiveGame -> Collage.Collage Msg
