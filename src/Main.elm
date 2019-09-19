@@ -227,14 +227,19 @@ viewPlayingGame activeGame =
                 ([ Element.el [ Element.centerX, Element.width Element.fill, Element.height Element.fill ]
                     (renderGameBoard activeGame |> Element.html)
                  ]
-                    ++ (case activeGame.error of
-                            Just error ->
-                                [ Element.text error ]
+                    ++ [ Element.column
+                            [ 100 |> Element.px |> Element.height
+                            ]
+                            ((case activeGame.error of
+                                Just error ->
+                                    [ Element.text error ]
 
-                            Nothing ->
-                                []
-                       )
-                    ++ [ viewPlayerTurnStatus activeGame.currentPlayerTurn activeGame.players ]
+                                Nothing ->
+                                    []
+                             )
+                                ++ [ viewPlayerTurnStatus activeGame.currentPlayerTurn activeGame.players ]
+                            )
+                       ]
                 )
             ]
         )
@@ -332,7 +337,7 @@ viewConfigureTroopCountIfNecessary activeGame =
         (case activeGame |> ActiveGame.troopToMove of
             Just numberOfTroopsToMove ->
                 Element.column
-                    []
+                    [ 50 |> Element.px |> Element.width, Element.padding 10 ]
                     [ Element.Input.text
                         (defaultTextInputAttributes ++ [ Element.alignLeft ])
                         { onChange = UpdateNumberOfTroopsToMove
@@ -358,7 +363,11 @@ viewConfigureTroopCountIfNecessary activeGame =
 
 viewPlayerTurnStatus : ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
 viewPlayerTurnStatus playerTurn players =
-    Element.el [ Element.width Element.fill, Element.Background.color (ActiveGame.getPlayerColorFromPlayerTurn players playerTurn |> colorToElementColor), Element.padding 5 ]
+    Element.el
+        [ Element.width Element.fill
+        , Element.Background.color (ActiveGame.getPlayerColorFromPlayerTurn players playerTurn |> colorToElementColor)
+        , Element.padding 5
+        ]
         (Element.text
             (ActiveGame.playerTurnToString players playerTurn)
         )
