@@ -727,7 +727,7 @@ attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playing
                     playingGameAttributes.players
                         |> updatePlayerTroopCountForCountry opponentPlayerId clickedCountryId remainingTroops
             in
-            updateForSuccessfulAttack updatedPlayers playingGameAttributes
+            updateForSuccessfulAttack { playingGameAttributes | players = updatedPlayers }
 
         OpponentEliminated ->
             let
@@ -736,7 +736,7 @@ attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playing
                         |> takeCountryFromOpponent clickedCountryId currentPlayerId opponentPlayerId
                         |> destroyPlayer opponentPlayerId
             in
-            updateForSuccessfulAttack updatedPlayers playingGameAttributes
+            updateForSuccessfulAttack { playingGameAttributes | players = updatedPlayers }
 
         CurrentPlayerAcquiresOpponentCountry ->
             let
@@ -744,7 +744,7 @@ attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playing
                     playingGameAttributes.players
                         |> takeCountryFromOpponent clickedCountryId currentPlayerId opponentPlayerId
             in
-            updateForSuccessfulAttack updatedPlayers playingGameAttributes
+            updateForSuccessfulAttack { playingGameAttributes | players = updatedPlayers }
 
         NotEnoughTroopsToAttack attackStrength defenseStrength ->
             { playingGameAttributes
@@ -931,7 +931,7 @@ nextPlayerCheckForDeadPlayers players currentPlayerId =
     in
     case getPlayer nextPlayerId players of
         Just newCurrentPlayer ->
-            case newCurrentPlayer.capitolStatus of
+            case newCurrentPlayer |> .capitolStatus of
                 Capitol _ _ ->
                     nextPlayerId
 
@@ -1045,8 +1045,8 @@ troopToMove activeGame =
             Nothing
 
 
-updateForSuccessfulAttack : Dict.Dict Int Player -> ActiveGame -> ActiveGame
-updateForSuccessfulAttack updatedPlayers playingGameAttributes =
+updateForSuccessfulAttack : ActiveGame -> ActiveGame
+updateForSuccessfulAttack playingGameAttributes =
     let
         currentPlayerId =
             playingGameAttributes.currentPlayerTurn |> playerTurnToPlayerId
@@ -1054,7 +1054,7 @@ updateForSuccessfulAttack updatedPlayers playingGameAttributes =
         nextPlayerTurn =
             let
                 capitolsRemaining =
-                    updatedPlayers
+                    playingGameAttributes.players
                         |> Dict.values
                         |> List.foldl
                             (\player capitols ->
@@ -1077,8 +1077,7 @@ updateForSuccessfulAttack updatedPlayers playingGameAttributes =
                 PlayerTurn TroopPlacement (currentPlayerId |> nextPlayerCheckForDeadPlayers playingGameAttributes.players)
     in
     { playingGameAttributes
-        | players = updatedPlayers
-        , currentPlayerTurn = nextPlayerTurn
+        | currentPlayerTurn = nextPlayerTurn
         , error = Nothing
     }
 
