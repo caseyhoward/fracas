@@ -370,7 +370,14 @@ viewPlayerCountryAndTroopCounts activeGame =
 
 viewCountryInfo : ActiveGame.ActiveGame -> Element.Element Msg
 viewCountryInfo activeGame =
-    Element.none
+    case activeGame.countryToShowInfoFor of
+        Just countryToShowInfoForId ->
+            Element.column
+                [ Element.width Element.fill ]
+                [ ActiveGame.getCountryDefenseStrength activeGame countryToShowInfoForId |> TroopCount.toString |> Element.text ]
+
+        Nothing ->
+            Element.none
 
 
 viewPlayerTroopCount :
