@@ -522,28 +522,28 @@ addPortForPlayer (GameMap.CountryId countryId) player =
 
 
 attackAnnexOrPort : GameMap.CountryId -> PlayerId -> ActiveGame -> ActiveGame
-attackAnnexOrPort clickedCountryId currentPlayerId playingGameAttributes =
-    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+attackAnnexOrPort clickedCountryId currentPlayerId activeGame =
+    case getCountryStatus clickedCountryId currentPlayerId activeGame.players of
         OccupiedByCurrentPlayer _ ->
-            attemptToBuildPort currentPlayerId clickedCountryId playingGameAttributes
+            attemptToBuildPort currentPlayerId clickedCountryId activeGame
 
         OccupiedByOpponent opponentPlayerId ->
-            attemptToAttackCountry opponentPlayerId clickedCountryId playingGameAttributes
+            attemptToAttackCountry opponentPlayerId clickedCountryId activeGame
 
         Unoccupied ->
-            attemptToAnnexCountry currentPlayerId clickedCountryId playingGameAttributes
+            attemptToAnnexCountry currentPlayerId clickedCountryId activeGame
 
 
 attemptTroopMovement : GameMap.CountryId -> GameMap.CountryId -> String -> ActiveGame -> ActiveGame
-attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString playingGameAttributes =
-    case getCountryStatus clickedCountryId (getCurrentPlayer playingGameAttributes) playingGameAttributes.players of
+attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString activeGame =
+    case getCountryStatus clickedCountryId (getCurrentPlayer activeGame) activeGame.players of
         OccupiedByCurrentPlayer playerCountryToTroopCount ->
             case String.toInt numberOfTroopsToMoveString of
                 Just numberOfTroopsToMove ->
-                    if isCountryReachableFromOtherCountry fromCountryId clickedCountryId (getCurrentPlayer playingGameAttributes) playingGameAttributes.map.countries playingGameAttributes.players then
+                    if isCountryReachableFromOtherCountry fromCountryId clickedCountryId (getCurrentPlayer activeGame) activeGame.map.countries activeGame.players then
                         let
                             fromCountryTroopCount =
-                                case getPlayer (getCurrentPlayer playingGameAttributes) playingGameAttributes.players of
+                                case getPlayer (getCurrentPlayer activeGame) activeGame.players of
                                     Just currentPlayer1 ->
                                         case getTroopCount fromCountryId currentPlayer1.countryTroopCounts of
                                             Just troopCount ->
@@ -559,42 +559,42 @@ attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString p
                                 TroopCount.numberOfTroopsToMove fromCountryTroopCount numberOfTroopsToMove
 
                             updatedGame =
-                                playingGameAttributes
-                                    |> updatePlayerTroopCountForCountry (getCurrentPlayer playingGameAttributes) fromCountryId (TroopCount.subtractTroopCounts allowedNumberOfTroopsToMove fromCountryTroopCount)
-                                    |> updatePlayerTroopCountForCountry (getCurrentPlayer playingGameAttributes) clickedCountryId (TroopCount.addTroopCounts playerCountryToTroopCount allowedNumberOfTroopsToMove)
+                                activeGame
+                                    |> updatePlayerTroopCountForCountry (getCurrentPlayer activeGame) fromCountryId (TroopCount.subtractTroopCounts allowedNumberOfTroopsToMove fromCountryTroopCount)
+                                    |> updatePlayerTroopCountForCountry (getCurrentPlayer activeGame) clickedCountryId (TroopCount.addTroopCounts playerCountryToTroopCount allowedNumberOfTroopsToMove)
                         in
                         { updatedGame
-                            | currentPlayerTurn = PlayerTurn TroopPlacement (getCurrentPlayer playingGameAttributes |> nextPlayerCheckForDeadPlayers playingGameAttributes.players)
+                            | currentPlayerTurn = PlayerTurn TroopPlacement (getCurrentPlayer activeGame |> nextPlayerCheckForDeadPlayers activeGame.players)
                             , error = Nothing
                         }
 
                     else
-                        { playingGameAttributes | error = Just "You can't move troops between those countries" }
+                        { activeGame | error = Just "You can't move troops between those countries" }
 
                 Nothing ->
-                    { playingGameAttributes | error = Just "Number of troops must be a number" }
+                    { activeGame | error = Just "Number of troops must be a number" }
 
         _ ->
-            { playingGameAttributes | error = Just "You must move troops to your own country" }
+            { activeGame | error = Just "You must move troops to your own country" }
 
 
 attemptToPlaceCapitol : GameMap.CountryId -> PlayerId -> ActiveGame -> ActiveGame
-attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes =
-    case GameMap.getCountry clickedCountryId playingGameAttributes.map.countries of
+attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
+    case GameMap.getCountry clickedCountryId activeGame.map.countries of
         Just clickedCountry ->
-            case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+            case getCountryStatus clickedCountryId currentPlayerId activeGame.players of
                 OccupiedByCurrentPlayer _ ->
-                    { playingGameAttributes | error = Just "Error: Somehow you are placing a second capitol" }
+                    { activeGame | error = Just "Error: Somehow you are placing a second capitol" }
 
                 OccupiedByOpponent _ ->
-                    { playingGameAttributes | error = Just "You must select an unoccuppied country" }
+                    { activeGame | error = Just "You must select an unoccuppied country" }
 
                 Unoccupied ->
-                    case getPlayer currentPlayerId playingGameAttributes.players of
+                    case getPlayer currentPlayerId activeGame.players of
                         Just currentPlayer ->
                             let
                                 neutralTroopCount =
-                                    getTroopCount clickedCountryId playingGameAttributes.neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
+                                    getTroopCount clickedCountryId activeGame.neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
 
                                 updatedPlayer =
                                     { currentPlayer
@@ -604,7 +604,7 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes =
                                     }
 
                                 updatedPlayers =
-                                    updatePlayer currentPlayerId updatedPlayer playingGameAttributes.players
+                                    updatePlayer currentPlayerId updatedPlayer activeGame.players
 
                                 nextPlayerId =
                                     case currentPlayerId of
@@ -620,29 +620,29 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId playingGameAttributes =
                                             else
                                                 PlayerTurn CapitolPlacement nextPlayerId
                             in
-                            { playingGameAttributes
+                            { activeGame
                                 | players = updatedPlayers
-                                , neutralCountryTroops = destroyTroops clickedCountryId playingGameAttributes.neutralCountryTroops
+                                , neutralCountryTroops = destroyTroops clickedCountryId activeGame.neutralCountryTroops
                                 , currentPlayerTurn = nextPlayerTurn
                                 , error = Nothing
                             }
 
                         Nothing ->
-                            { playingGameAttributes | error = Just "Something bad happened" }
+                            { activeGame | error = Just "Something bad happened" }
 
         _ ->
-            { playingGameAttributes
+            { activeGame
                 | error = Just "Something bad happened"
             }
 
 
 attemptTroopPlacement : GameMap.CountryId -> PlayerId -> TroopCount.TroopCount -> ActiveGame -> ActiveGame
-attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace playingGameAttributes =
-    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace activeGame =
+    case getCountryStatus clickedCountryId currentPlayerId activeGame.players of
         OccupiedByCurrentPlayer clickedCountryTroopCount ->
             let
                 updatedGame =
-                    playingGameAttributes |> updatePlayerTroopCountForCountry currentPlayerId clickedCountryId (TroopCount.addTroopCounts clickedCountryTroopCount troopsToPlace)
+                    activeGame |> updatePlayerTroopCountForCountry currentPlayerId clickedCountryId (TroopCount.addTroopCounts clickedCountryTroopCount troopsToPlace)
             in
             { updatedGame
                 | currentPlayerTurn = PlayerTurn AttackAnnexOrPort currentPlayerId
@@ -650,20 +650,20 @@ attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace playingGame
             }
 
         OccupiedByOpponent _ ->
-            { playingGameAttributes | error = Just "You must put troops in your own country" }
+            { activeGame | error = Just "You must put troops in your own country" }
 
         Unoccupied ->
-            { playingGameAttributes | error = Just "You must put troops in your own country" }
+            { activeGame | error = Just "You must put troops in your own country" }
 
 
 attemptToBuildPort : PlayerId -> GameMap.CountryId -> ActiveGame -> ActiveGame
-attemptToBuildPort currentPlayerId clickedCountryId playingGameAttributes =
-    case getTroopCountForCountry clickedCountryId playingGameAttributes.players of
+attemptToBuildPort currentPlayerId clickedCountryId activeGame =
+    case getTroopCountForCountry clickedCountryId activeGame.players of
         Just _ ->
-            buildPort currentPlayerId clickedCountryId playingGameAttributes
+            buildPort currentPlayerId clickedCountryId activeGame
 
         Nothing ->
-            { playingGameAttributes | error = Just "You can't build a port in a country you don't own" }
+            { activeGame | error = Just "You can't build a port in a country you don't own" }
 
 
 attackResult : GameMap.CountryId -> ActiveGame -> AttackResult
@@ -717,71 +717,71 @@ attackResult clickedCountryId activeGame =
 
 
 attemptSelectTroopMovementFromCountry : GameMap.CountryId -> PlayerId -> ActiveGame -> ActiveGame
-attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId playingGameAttributes =
-    case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
+attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame =
+    case getCountryStatus clickedCountryId currentPlayerId activeGame.players of
         OccupiedByCurrentPlayer troopCount ->
             if TroopCount.hasTroops troopCount then
-                { playingGameAttributes
+                { activeGame
                     | currentPlayerTurn =
                         PlayerTurn (TroopMovementFromSelected clickedCountryId (TroopCount.toString troopCount)) currentPlayerId
                     , error = Nothing
                 }
 
             else
-                { playingGameAttributes | error = Just "Select a country with troops" }
+                { activeGame | error = Just "Select a country with troops" }
 
         _ ->
-            { playingGameAttributes | error = Just "You must move troops from your own country" }
+            { activeGame | error = Just "You must move troops from your own country" }
 
 
 attemptToAnnexCountry : PlayerId -> GameMap.CountryId -> ActiveGame -> ActiveGame
-attemptToAnnexCountry currentPlayerId clickedCountryId playingGameAttributes =
-    if canAnnexCountry playingGameAttributes.map currentPlayerId playingGameAttributes.players clickedCountryId then
+attemptToAnnexCountry currentPlayerId clickedCountryId activeGame =
+    if canAnnexCountry activeGame.map currentPlayerId activeGame.players clickedCountryId then
         let
             neutralTroopCount =
-                getTroopCount clickedCountryId playingGameAttributes.neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
+                getTroopCount clickedCountryId activeGame.neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
 
             updatedGame =
-                updatePlayerTroopCountForCountry currentPlayerId clickedCountryId neutralTroopCount playingGameAttributes
+                updatePlayerTroopCountForCountry currentPlayerId clickedCountryId neutralTroopCount activeGame
         in
         { updatedGame
             | currentPlayerTurn = PlayerTurn TroopMovement currentPlayerId
-            , neutralCountryTroops = removeTroopCount clickedCountryId playingGameAttributes.neutralCountryTroops
+            , neutralCountryTroops = removeTroopCount clickedCountryId activeGame.neutralCountryTroops
             , error = Nothing
         }
 
     else
-        { playingGameAttributes
+        { activeGame
             | error = Just "You can't annex that country"
         }
 
 
 attemptToAttackCountry : PlayerId -> GameMap.CountryId -> ActiveGame -> ActiveGame
-attemptToAttackCountry opponentPlayerId clickedCountryId playingGameAttributes =
-    case attackResult clickedCountryId playingGameAttributes of
+attemptToAttackCountry opponentPlayerId clickedCountryId activeGame =
+    case attackResult clickedCountryId activeGame of
         OpponentCountryLosesTroops remainingTroops ->
-            playingGameAttributes
+            activeGame
                 |> updatePlayerTroopCountForCountry opponentPlayerId clickedCountryId remainingTroops
                 |> updateForSuccessfulAttack
 
         OpponentEliminated ->
-            playingGameAttributes
+            activeGame
                 |> takeCountryFromOpponent clickedCountryId
                 |> destroyPlayer opponentPlayerId
                 |> updateForSuccessfulAttack
 
         CurrentPlayerAcquiresOpponentCountry ->
-            playingGameAttributes
+            activeGame
                 |> takeCountryFromOpponent clickedCountryId
                 |> updateForSuccessfulAttack
 
         NotEnoughTroopsToAttack attackStrength defenseStrength ->
-            { playingGameAttributes
+            { activeGame
                 | error = Just ("Not enough to attack: attack strength = " ++ TroopCount.toString attackStrength ++ ", defense strength = " ++ TroopCount.toString defenseStrength)
             }
 
         AttackResultError errorMessage ->
-            { playingGameAttributes
+            { activeGame
                 | error = Just errorMessage
             }
 
@@ -895,28 +895,28 @@ playerHasMoreThanOneCountry players playerId =
 
 
 buildPort : PlayerId -> GameMap.CountryId -> ActiveGame -> ActiveGame
-buildPort playerId countryId playingGameAttributes =
+buildPort playerId countryId activeGame =
     -- We already had to check that the player owned this country before so no need to do that here
-    case GameMap.isCountryNeighboringWater countryId playingGameAttributes.map.countries of
+    case GameMap.isCountryNeighboringWater countryId activeGame.map.countries of
         Just isNeighboringWater ->
             if isNeighboringWater then
-                case getCountryHasPort playerId countryId playingGameAttributes.players of
+                case getCountryHasPort playerId countryId activeGame.players of
                     Just hasPort ->
                         if hasPort then
-                            { playingGameAttributes | error = Just "This country already has a port" }
+                            { activeGame | error = Just "This country already has a port" }
 
                         else
                             let
                                 updated =
-                                    playingGameAttributes
+                                    activeGame
                                         |> updatePlayersWithPlayer playerId (addPortForPlayer countryId)
 
                                 nextPlayerTurn =
-                                    if playerHasMoreThanOneCountry playingGameAttributes.players playerId then
+                                    if playerHasMoreThanOneCountry activeGame.players playerId then
                                         PlayerTurn TroopMovement playerId
 
                                     else
-                                        PlayerTurn TroopPlacement (playerId |> nextPlayerCheckForDeadPlayers playingGameAttributes.players)
+                                        PlayerTurn TroopPlacement (playerId |> nextPlayerCheckForDeadPlayers activeGame.players)
                             in
                             { updated
                                 | currentPlayerTurn = nextPlayerTurn
@@ -924,13 +924,13 @@ buildPort playerId countryId playingGameAttributes =
                             }
 
                     Nothing ->
-                        { playingGameAttributes | error = Just "Error while building port" }
+                        { activeGame | error = Just "Error while building port" }
 
             else
-                { playingGameAttributes | error = Just "A country must be next to water to build a port" }
+                { activeGame | error = Just "A country must be next to water to build a port" }
 
         Nothing ->
-            { playingGameAttributes | error = Just "Error checking if country borders water" }
+            { activeGame | error = Just "Error checking if country borders water" }
 
 
 canAnnexCountry : GameMap.GameMap -> PlayerId -> Dict.Dict Int Player -> GameMap.CountryId -> Bool
@@ -1196,15 +1196,15 @@ troopsToMove activeGame =
 
 
 updateForSuccessfulAttack : ActiveGame -> ActiveGame
-updateForSuccessfulAttack playingGameAttributes =
+updateForSuccessfulAttack activeGame =
     let
         currentPlayerId =
-            playingGameAttributes.currentPlayerTurn |> playerTurnToPlayerId
+            activeGame.currentPlayerTurn |> playerTurnToPlayerId
 
         nextPlayerTurn =
             let
                 capitolsRemaining =
-                    playingGameAttributes.players
+                    activeGame.players
                         |> Dict.values
                         |> List.foldl
                             (\player capitols ->
@@ -1220,13 +1220,13 @@ updateForSuccessfulAttack playingGameAttributes =
             if List.length capitolsRemaining == 1 then
                 PlayerTurn GameOver currentPlayerId
 
-            else if playerHasMoreThanOneCountry playingGameAttributes.players currentPlayerId then
+            else if playerHasMoreThanOneCountry activeGame.players currentPlayerId then
                 PlayerTurn TroopMovement currentPlayerId
 
             else
-                PlayerTurn TroopPlacement (currentPlayerId |> nextPlayerCheckForDeadPlayers playingGameAttributes.players)
+                PlayerTurn TroopPlacement (currentPlayerId |> nextPlayerCheckForDeadPlayers activeGame.players)
     in
-    { playingGameAttributes
+    { activeGame
         | currentPlayerTurn = nextPlayerTurn
         , error = Nothing
     }
@@ -1265,17 +1265,17 @@ updatePlayerTroopCountForCountry playerId countryId troops activeGame =
 
 
 updatePlayersWithPlayer : PlayerId -> (Player -> Player) -> ActiveGame -> ActiveGame
-updatePlayersWithPlayer playerId toUpdatedPlayer playingGameAttributes =
-    case getPlayer playerId playingGameAttributes.players of
+updatePlayersWithPlayer playerId toUpdatedPlayer activeGame =
+    case getPlayer playerId activeGame.players of
         Just player ->
-            { playingGameAttributes
+            { activeGame
                 | players =
-                    playingGameAttributes.players
+                    activeGame.players
                         |> updatePlayer playerId (toUpdatedPlayer player)
             }
 
         Nothing ->
-            { playingGameAttributes | error = Just "some error" }
+            { activeGame | error = Just "some error" }
 
 
 updateTroopCount : GameMap.CountryId -> TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount
