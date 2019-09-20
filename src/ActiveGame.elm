@@ -424,40 +424,42 @@ getPlayerTurnStageFromPlayerTurn playerTurn =
             playerTurnStage
 
 
-handleCountryMouseUpFromPlayer : GameMap.CountryId -> GameMap.GameMap -> ActiveGame -> ActiveGame
-handleCountryMouseUpFromPlayer clickedCountryId gameMap activeGame =
+handleCountryMouseUpFromPlayer : GameMap.CountryId -> ActiveGame -> ActiveGame
+handleCountryMouseUpFromPlayer clickedCountryId activeGame =
     let
-      updatedActiveGame = case activeGame.countryToShowInfoFor of
-          Just countryToShowInfoForId ->
-              if clickedCountryId == countryToShowInfoForId then
-                  case activeGame.currentPlayerTurn of
-                      PlayerTurn playerTurnStage currentPlayerId ->
-                          case playerTurnStage of
-                              CapitolPlacement ->
-                                  attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
+        updatedActiveGame =
+            case activeGame.countryToShowInfoFor of
+                Just countryToShowInfoForId ->
+                    if clickedCountryId == countryToShowInfoForId then
+                        case activeGame.currentPlayerTurn of
+                            PlayerTurn playerTurnStage currentPlayerId ->
+                                case playerTurnStage of
+                                    CapitolPlacement ->
+                                        attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
 
-                              TroopPlacement ->
-                                  attemptTroopPlacement clickedCountryId currentPlayerId (numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
+                                    TroopPlacement ->
+                                        attemptTroopPlacement clickedCountryId currentPlayerId (numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
 
-                              AttackAnnexOrPort ->
-                                  attackAnnexOrPort clickedCountryId currentPlayerId gameMap activeGame
+                                    AttackAnnexOrPort ->
+                                        attackAnnexOrPort clickedCountryId currentPlayerId activeGame
 
-                              TroopMovement ->
-                                  attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
+                                    TroopMovement ->
+                                        attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
 
-                              TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
-                                  attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroopsToMoveString activeGame
+                                    TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
+                                        attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroopsToMoveString activeGame
 
-                              GameOver ->
-                                  { activeGame | error = Nothing }
+                                    GameOver ->
+                                        { activeGame | error = Nothing }
 
-              else
-                  activeGame
+                    else
+                        activeGame
 
-          Nothing ->
-              activeGame
+                Nothing ->
+                    activeGame
     in
-      {updatedActiveGame | countryToShowInfoFor = Nothing}
+    { updatedActiveGame | countryToShowInfoFor = Nothing }
+
 
 updateCountryToShowInfoFor : GameMap.CountryId -> ActiveGame -> ActiveGame
 updateCountryToShowInfoFor countryMouseDownId activeGame =
@@ -528,14 +530,14 @@ addPortForPlayer (GameMap.CountryId countryId) player =
     { player | ports = player.ports |> Set.insert countryId }
 
 
-attackAnnexOrPort : GameMap.CountryId -> PlayerId -> GameMap.GameMap -> ActiveGame -> ActiveGame
-attackAnnexOrPort clickedCountryId currentPlayerId gameMap playingGameAttributes =
+attackAnnexOrPort : GameMap.CountryId -> PlayerId -> ActiveGame -> ActiveGame
+attackAnnexOrPort clickedCountryId currentPlayerId playingGameAttributes =
     case getCountryStatus clickedCountryId currentPlayerId playingGameAttributes.players of
         OccupiedByCurrentPlayer _ ->
             attemptToBuildPort currentPlayerId clickedCountryId playingGameAttributes
 
         OccupiedByOpponent opponentPlayerId ->
-            attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId gameMap playingGameAttributes
+            attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes
 
         Unoccupied ->
             attemptToAnnexCountry currentPlayerId clickedCountryId playingGameAttributes
@@ -675,16 +677,16 @@ attemptToBuildPort currentPlayerId clickedCountryId playingGameAttributes =
             { playingGameAttributes | error = Just "You can't build a port in a country you don't own" }
 
 
-attackResult : PlayerId -> PlayerId -> GameMap.CountryId -> ActiveGame -> GameMap.GameMap -> AttackResult
-attackResult currentPlayerId opponentPlayerId clickedCountryId activeGame gameMap =
+attackResult : PlayerId -> PlayerId -> GameMap.CountryId -> ActiveGame -> AttackResult
+attackResult currentPlayerId opponentPlayerId clickedCountryId activeGame =
     case getTroopCountForPlayerCountry clickedCountryId opponentPlayerId activeGame.players of
         Just opponentTroopCount ->
             let
                 landAttackStrength =
-                    getLandAttackStrength clickedCountryId currentPlayerId activeGame.players gameMap.countries
+                    getLandAttackStrength clickedCountryId currentPlayerId activeGame.players activeGame.map.countries
 
                 waterAttackStrength =
-                    getWaterAttackStrength clickedCountryId currentPlayerId activeGame.players gameMap
+                    getWaterAttackStrength clickedCountryId currentPlayerId activeGame.players activeGame.map
 
                 defenseStrength =
                     getCountryDefenseStrength activeGame clickedCountryId
@@ -758,9 +760,9 @@ attemptToAnnexCountry currentPlayerId clickedCountryId playingGameAttributes =
         }
 
 
-attemptToAttackCountry : PlayerId -> PlayerId -> GameMap.CountryId -> GameMap.GameMap -> ActiveGame -> ActiveGame
-attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId gameMap playingGameAttributes =
-    case attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes gameMap of
+attemptToAttackCountry : PlayerId -> PlayerId -> GameMap.CountryId -> ActiveGame -> ActiveGame
+attemptToAttackCountry currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes =
+    case attackResult currentPlayerId opponentPlayerId clickedCountryId playingGameAttributes of
         OpponentCountryLosesTroops remainingTroops ->
             let
                 updatedPlayers =

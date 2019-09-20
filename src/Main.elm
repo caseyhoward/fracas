@@ -148,7 +148,7 @@ update msg model =
         PlayingGame attributes ->
             case msg of
                 CountryMouseUp clickedCountryId ->
-                    ( PlayingGame (ActiveGame.handleCountryMouseUpFromPlayer clickedCountryId attributes.map attributes)
+                    ( PlayingGame (ActiveGame.handleCountryMouseUpFromPlayer clickedCountryId attributes)
                     , Cmd.none
                     )
 
@@ -403,7 +403,7 @@ viewCountryInfo activeGame =
                                     (Element.text "Country Information")
                                 , Element.row [ Element.width Element.fill, Element.Font.size 14, Element.padding 3 ]
                                     [ Element.el [] (Element.text "Defense")
-                                    , Element.el [Element.alignRight] (ActiveGame.getCountryDefenseStrength activeGame countryToShowInfoForId |> TroopCount.toString |> Element.text)
+                                    , Element.el [ Element.alignRight ] (ActiveGame.getCountryDefenseStrength activeGame countryToShowInfoForId |> TroopCount.toString |> Element.text)
                                     ]
                                 ]
 
