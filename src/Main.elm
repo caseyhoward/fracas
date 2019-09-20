@@ -22,6 +22,7 @@ import Html.Attributes
 import Html.Events
 import Json.Decode as Json
 import Maps.MobileFriendlier
+import Maps.UnitedStates
 import Random
 import Random.Dict
 import Random.List
@@ -139,7 +140,7 @@ update msg model =
         PlayingGame attributes ->
             case msg of
                 CountryClicked clickedCountryId ->
-                    ( PlayingGame (ActiveGame.handleCountryClickFromPlayer clickedCountryId attributes)
+                    ( PlayingGame (ActiveGame.handleCountryClickFromPlayer clickedCountryId attributes.map attributes)
                     , Cmd.none
                     )
 
@@ -178,7 +179,7 @@ startGame : ConfigurationAttributes -> ( Model, Cmd Msg )
 startGame configurationOptions =
     let
         map =
-            GameMap.parse Maps.MobileFriendlier.map ActiveGame.pixelsPerMapSquare
+            GameMap.parse Maps.UnitedStates.map ActiveGame.pixelsPerMapSquare
     in
     ( GeneratingRandomTroopCounts configurationOptions map
     , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
@@ -670,7 +671,7 @@ renderTroopCount ( medianX, medianY ) troopCount =
             |> TroopCount.toString
             |> Collage.Text.fromString
             |> Collage.Text.color Color.black
-            |> Collage.Text.size (toFloat ActiveGame.pixelsPerMapSquare * 0.6 |> ceiling)
+            |> Collage.Text.size (toFloat ActiveGame.pixelsPerMapSquare * 0.8 |> ceiling)
             |> Collage.rendered
             |> Collage.shift ( (toFloat medianX + 0.5) * toFloat ActiveGame.pixelsPerMapSquare, (toFloat medianY + 0.5) * toFloat ActiveGame.pixelsPerMapSquare )
 
