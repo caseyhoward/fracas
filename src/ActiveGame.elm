@@ -24,7 +24,8 @@ module ActiveGame exposing
     , playerIdToString
     , playerTurnToString
     , start
-    , troopToMove
+    , troopsToMove
+    , updateCountryToShowInfoFor
     , updateNumberOfTroopsToMove
     )
 
@@ -42,6 +43,7 @@ type alias ActiveGame =
     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
     , error : Maybe String
     , numberOfPlayers : Int
+    , countryToShowInfoFor : Maybe GameMap.CountryId
     }
 
 
@@ -273,32 +275,30 @@ getPlayerTurnStageFromPlayerTurn playerTurn =
 handleCountryClickFromPlayer : GameMap.CountryId -> GameMap.GameMap -> ActiveGame -> ActiveGame
 handleCountryClickFromPlayer clickedCountryId gameMap activeGame =
     case activeGame.currentPlayerTurn of
-        PlayerTurn _ playerId ->
-            case getPlayer playerId activeGame.players of
-                Just _ ->
-                    case activeGame.currentPlayerTurn of
-                        PlayerTurn playerTurnStage currentPlayerId ->
-                            case playerTurnStage of
-                                CapitolPlacement ->
-                                    attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
+        PlayerTurn playerTurnStage currentPlayerId ->
+            case playerTurnStage of
+                CapitolPlacement ->
+                    attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
 
-                                TroopPlacement ->
-                                    attemptTroopPlacement clickedCountryId currentPlayerId (numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
+                TroopPlacement ->
+                    attemptTroopPlacement clickedCountryId currentPlayerId (numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
 
-                                AttackAnnexOrPort ->
-                                    attackAnnexOrPort clickedCountryId currentPlayerId gameMap activeGame
+                AttackAnnexOrPort ->
+                    attackAnnexOrPort clickedCountryId currentPlayerId gameMap activeGame
 
-                                TroopMovement ->
-                                    attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
+                TroopMovement ->
+                    attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
 
-                                TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
-                                    attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroopsToMoveString activeGame
+                TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
+                    attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroopsToMoveString activeGame
 
-                                GameOver ->
-                                    { activeGame | error = Nothing }
+                GameOver ->
+                    { activeGame | error = Nothing }
 
-                Nothing ->
-                    { activeGame | error = Just "Error handling click" }
+
+updateCountryToShowInfoFor : GameMap.CountryId -> ActiveGame -> ActiveGame
+updateCountryToShowInfoFor countryMouseDownId activeGame =
+    { activeGame | countryToShowInfoFor = Just countryMouseDownId }
 
 
 isCountryIdCapitol : PlayerId -> GameMap.CountryId -> Dict.Dict Int Player -> Maybe Bool
@@ -352,6 +352,7 @@ start map numberOfPlayers neutralTroopCounts =
     , error = Nothing
     , numberOfPlayers = numberOfPlayers
     , neutralCountryTroops = neutralTroopCounts
+    , countryToShowInfoFor = Nothing
     }
 
 
@@ -1098,8 +1099,8 @@ takeCountryFromOpponent countryId currentPlayerId opponentPlayerId players =
         |> updatePlayerTroopCountForCountry currentPlayerId countryId TroopCount.noTroops
 
 
-troopToMove : ActiveGame -> Maybe String
-troopToMove activeGame =
+troopsToMove : ActiveGame -> Maybe String
+troopsToMove activeGame =
     case activeGame.currentPlayerTurn of
         PlayerTurn (TroopMovementFromSelected _ troops) _ ->
             Just troops
