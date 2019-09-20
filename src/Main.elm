@@ -80,7 +80,7 @@ init =
 
 
 type Msg
-    = CountryClicked GameMap.CountryId
+    = CountryMouseUp GameMap.CountryId
     | CountryMouseDown GameMap.CountryId
     | NumberOfPlayersChanged String
     | StartGameClicked
@@ -112,7 +112,7 @@ update msg model =
                 Pass ->
                     ( model, Cmd.none )
 
-                CountryClicked _ ->
+                CountryMouseUp _ ->
                     ( model, Cmd.none )
 
                 CountryMouseDown _ ->
@@ -143,8 +143,8 @@ update msg model =
 
         PlayingGame attributes ->
             case msg of
-                CountryClicked clickedCountryId ->
-                    ( PlayingGame (ActiveGame.handleCountryClickFromPlayer clickedCountryId attributes.map attributes)
+                CountryMouseUp clickedCountryId ->
+                    ( PlayingGame (ActiveGame.handleCountryMouseUpFromPlayer clickedCountryId attributes.map attributes)
                     , Cmd.none
                     )
 
@@ -374,7 +374,9 @@ viewCountryInfo activeGame =
         Just countryToShowInfoForId ->
             Element.column
                 [ Element.width Element.fill ]
-                [ ActiveGame.getCountryDefenseStrength activeGame countryToShowInfoForId |> TroopCount.toString |> Element.text ]
+                [ Element.el [] (Element.text "Defense")
+                , ActiveGame.getCountryDefenseStrength activeGame countryToShowInfoForId |> TroopCount.toString |> Element.text
+                ]
 
         Nothing ->
             Element.none
@@ -667,7 +669,7 @@ renderCountry countryId activeGame =
                                , renderArea country.polygon player.color player.capitolStatus (shouldShowCountryInfo activeGame countryId) countryId
                                ]
                         )
-                        |> Collage.Events.onClick (CountryClicked countryId)
+                        |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
                         |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
 
                 _ ->
@@ -680,14 +682,14 @@ renderCountry countryId activeGame =
                         [ renderTroopCount country.center troopCount
                         , renderArea country.polygon Color.gray ActiveGame.NoCapitol (shouldShowCountryInfo activeGame countryId) countryId
                         ]
-                        |> Collage.Events.onClick (CountryClicked countryId)
+                        |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
                         |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
 
                 _ ->
                     Collage.group
                         [ renderArea country.polygon Color.gray ActiveGame.NoCapitol (shouldShowCountryInfo activeGame countryId) countryId
                         ]
-                        |> Collage.Events.onClick (CountryClicked countryId)
+                        |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
                         |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
 
         _ ->

@@ -18,7 +18,7 @@ module ActiveGame exposing
     , getPlayerTurnStageFromPlayerTurn
     , getTroopCount
     , getTroopCountForPlayerCountry
-    , handleCountryClickFromPlayer
+    , handleCountryMouseUpFromPlayer
     , isCountryIdCapitol
     , pass
     , pixelsPerMapSquare
@@ -265,7 +265,6 @@ getDefenseThroughWater activeGame countryId =
                     )
                     Dict.empty
 
-        --  |> TroopCount.acrossWater
         Nothing ->
             Dict.empty
 
@@ -274,7 +273,7 @@ getCountryDefenseStrength : ActiveGame -> GameMap.CountryId -> TroopCount.TroopC
 getCountryDefenseStrength activeGame countryId =
     let
         countryDefense =
-            (Debug.log "countryDefense" (getCountryDefense activeGame countryId))
+            getCountryDefense activeGame countryId
 
         neighborDefense =
             countryDefense.neighboringThroughWaterDefense
@@ -284,12 +283,11 @@ getCountryDefenseStrength activeGame countryId =
         waterDefense =
             countryDefense.neighboringCountryDefense
                 |> Dict.values
-                |> List.foldl (\troopCount result -> TroopCount.addTroopCounts (troopCount ) result) TroopCount.noTroops
+                |> List.foldl (\troopCount result -> TroopCount.addTroopCounts troopCount result) TroopCount.noTroops
     in
     countryDefense.countryDefense
         |> TroopCount.addTroopCounts neighborDefense
         |> TroopCount.addTroopCounts waterDefense
-
 
 
 pixelsPerMapSquare : Int
@@ -412,29 +410,34 @@ getPlayerTurnStageFromPlayerTurn playerTurn =
             playerTurnStage
 
 
-handleCountryClickFromPlayer : GameMap.CountryId -> GameMap.GameMap -> ActiveGame -> ActiveGame
-handleCountryClickFromPlayer clickedCountryId gameMap activeGame =
-    case activeGame.currentPlayerTurn of
-        PlayerTurn playerTurnStage currentPlayerId ->
-            case playerTurnStage of
-                CapitolPlacement ->
-                    attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
+handleCountryMouseUpFromPlayer : GameMap.CountryId -> GameMap.GameMap -> ActiveGame -> ActiveGame
+handleCountryMouseUpFromPlayer clickedCountryId gameMap activeGame =
+    case activeGame.countryToShowInfoFor of
+        Just countryToShowInfoForId ->
+          if clickedCountryId == countryToShowInfoForId then
+            case activeGame.currentPlayerTurn of
+                PlayerTurn playerTurnStage currentPlayerId ->
+                    case playerTurnStage of
+                        CapitolPlacement ->
+                            attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
 
-                TroopPlacement ->
-                    attemptTroopPlacement clickedCountryId currentPlayerId (numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
+                        TroopPlacement ->
+                            attemptTroopPlacement clickedCountryId currentPlayerId (numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
 
-                AttackAnnexOrPort ->
-                    attackAnnexOrPort clickedCountryId currentPlayerId gameMap activeGame
+                        AttackAnnexOrPort ->
+                            attackAnnexOrPort clickedCountryId currentPlayerId gameMap activeGame
 
-                TroopMovement ->
-                    attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
+                        TroopMovement ->
+                            attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
 
-                TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
-                    attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroopsToMoveString activeGame
+                        TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
+                            attemptTroopMovement fromCountryId clickedCountryId currentPlayerId numberOfTroopsToMoveString activeGame
 
-                GameOver ->
-                    { activeGame | error = Nothing }
-
+                        GameOver ->
+                            { activeGame | error = Nothing }
+          else
+            activeGame
+        Nothing -> activeGame
 
 updateCountryToShowInfoFor : GameMap.CountryId -> ActiveGame -> ActiveGame
 updateCountryToShowInfoFor countryMouseDownId activeGame =
