@@ -704,7 +704,7 @@ renderCountry countryId activeGame =
         ( Just countryOwnerId, Just country ) ->
             case
                 ( ActiveGame.getPlayer countryOwnerId activeGame.players
-                , ActiveGame.getTroopCountForPlayerCountry countryId countryOwnerId activeGame.players
+                , ActiveGame.getTroopCountForCountry countryId activeGame.players
                 , ActiveGame.getCountryHasPort countryOwnerId countryId activeGame.players
                 )
             of
