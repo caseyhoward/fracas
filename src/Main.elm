@@ -82,6 +82,7 @@ init =
 type Msg
     = CountryMouseUp GameMap.CountryId
     | CountryMouseDown GameMap.CountryId
+    | CountryMouseOut GameMap.CountryId
     | NumberOfPlayersChanged String
     | StartGameClicked
     | Pass
@@ -113,6 +114,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 CountryMouseUp _ ->
+                    ( model, Cmd.none )
+
+                CountryMouseOut _ ->
                     ( model, Cmd.none )
 
                 CountryMouseDown _ ->
@@ -150,6 +154,18 @@ update msg model =
 
                 CountryMouseDown clickedCountryId ->
                     ( PlayingGame (ActiveGame.updateCountryToShowInfoFor clickedCountryId attributes), Cmd.none )
+
+                CountryMouseOut mouseOutCountryId ->
+                    case attributes.countryToShowInfoFor of
+                        Just countryId ->
+                            if countryId == mouseOutCountryId then
+                                ( PlayingGame { attributes | countryToShowInfoFor = Nothing }, Cmd.none )
+
+                            else
+                                ( model, Cmd.none )
+
+                        Nothing ->
+                            ( model, Cmd.none )
 
                 Pass ->
                     ( ActiveGame.pass attributes |> PlayingGame, Cmd.none )
@@ -372,11 +388,30 @@ viewCountryInfo : ActiveGame.ActiveGame -> Element.Element Msg
 viewCountryInfo activeGame =
     case activeGame.countryToShowInfoFor of
         Just countryToShowInfoForId ->
-            Element.column
-                [ Element.width Element.fill ]
-                [ Element.el [] (Element.text "Defense")
-                , ActiveGame.getCountryDefenseStrength activeGame countryToShowInfoForId |> TroopCount.toString |> Element.text
-                ]
+            case ActiveGame.findCountryOwner countryToShowInfoForId activeGame.players of
+                Just playerId ->
+                    case ActiveGame.getPlayer playerId activeGame.players of
+                        Just player ->
+                            Element.column
+                                [ Element.width Element.fill ]
+                                [ Element.el
+                                    [ Element.Background.color (player.color |> colorToElementColor)
+                                    , Element.Font.size 14
+                                    , Element.width Element.fill
+                                    , Element.padding 3
+                                    ]
+                                    (Element.text "Country Information")
+                                , Element.row [ Element.width Element.fill, Element.Font.size 14, Element.padding 3 ]
+                                    [ Element.el [] (Element.text "Defense")
+                                    , Element.el [Element.alignRight] (ActiveGame.getCountryDefenseStrength activeGame countryToShowInfoForId |> TroopCount.toString |> Element.text)
+                                    ]
+                                ]
+
+                        Nothing ->
+                            Element.none
+
+                Nothing ->
+                    Element.none
 
         Nothing ->
             Element.none
@@ -583,11 +618,14 @@ renderGameBoard activeGame =
                                 if countryToShowInfoForId == countryId then
                                     0
 
-                                else
+                                else if ActiveGame.isCountryDefending activeGame countryToShowInfoForId countryId then
                                     1
 
+                                else
+                                    100
+
                             Nothing ->
-                                1
+                                100
                     )
                 |> List.map
                     (\countryId -> renderCountry countryId activeGame)
@@ -637,14 +675,27 @@ renderGameBoard activeGame =
             ]
 
 
-shouldShowCountryInfo : ActiveGame.ActiveGame -> GameMap.CountryId -> Bool
-shouldShowCountryInfo activeGame countryId =
+type CountryInfoStatus
+    = CountryInfoSelectedCountry
+    | CountryInfoDefending
+    | NoInfo
+
+
+getCountryInfoStatus : ActiveGame.ActiveGame -> GameMap.CountryId -> CountryInfoStatus
+getCountryInfoStatus activeGame countryId =
     case activeGame.countryToShowInfoFor of
         Just countryToShowInfoForId ->
-            countryToShowInfoForId == countryId
+            if countryToShowInfoForId == countryId then
+                CountryInfoSelectedCountry
+
+            else if ActiveGame.isCountryDefending activeGame countryToShowInfoForId countryId then
+                CountryInfoDefending
+
+            else
+                NoInfo
 
         Nothing ->
-            False
+            NoInfo
 
 
 renderCountry : GameMap.CountryId -> ActiveGame.ActiveGame -> Collage.Collage Msg
@@ -666,11 +717,12 @@ renderCountry countryId activeGame =
                             []
                          )
                             ++ [ renderTroopCount country.center troopCount
-                               , renderArea country.polygon player.color player.capitolStatus (shouldShowCountryInfo activeGame countryId) countryId
+                               , renderArea country.polygon player.color player.capitolStatus (getCountryInfoStatus activeGame countryId) countryId
                                ]
                         )
                         |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
                         |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
+                        |> Collage.Events.onMouseLeave (\_ -> CountryMouseOut countryId)
 
                 _ ->
                     Collage.Text.fromString "Error rendering country 1" |> Collage.rendered
@@ -680,17 +732,19 @@ renderCountry countryId activeGame =
                 Just troopCount ->
                     Collage.group
                         [ renderTroopCount country.center troopCount
-                        , renderArea country.polygon Color.gray ActiveGame.NoCapitol (shouldShowCountryInfo activeGame countryId) countryId
+                        , renderArea country.polygon Color.gray ActiveGame.NoCapitol (getCountryInfoStatus activeGame countryId) countryId
                         ]
                         |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
                         |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
+                        |> Collage.Events.onMouseLeave (\_ -> CountryMouseOut countryId)
 
                 _ ->
                     Collage.group
-                        [ renderArea country.polygon Color.gray ActiveGame.NoCapitol (shouldShowCountryInfo activeGame countryId) countryId
+                        [ renderArea country.polygon Color.gray ActiveGame.NoCapitol (getCountryInfoStatus activeGame countryId) countryId
                         ]
                         |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
                         |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
+                        |> Collage.Events.onMouseLeave (\_ -> CountryMouseOut countryId)
 
         _ ->
             Collage.Text.fromString "Error rendering country 4" |> Collage.rendered
@@ -727,8 +781,8 @@ renderTroopCount ( medianX, medianY ) troopCount =
         Collage.group []
 
 
-renderArea : List ( Float, Float ) -> Color.Color -> ActiveGame.CapitolStatus -> Bool -> GameMap.CountryId -> Collage.Collage msg
-renderArea polygonPoints color capitolStatus shouldShowInfo countryId =
+renderArea : List ( Float, Float ) -> Color.Color -> ActiveGame.CapitolStatus -> CountryInfoStatus -> GameMap.CountryId -> Collage.Collage msg
+renderArea polygonPoints color capitolStatus countryInfoStatus countryId =
     let
         ( capitolDot, capitolDotsCoords ) =
             case capitolStatus of
@@ -754,19 +808,27 @@ renderArea polygonPoints color capitolStatus shouldShowInfo countryId =
             Collage.polygon polygonPoints
 
         polygonBorder =
-            if shouldShowInfo then
-                polygon
-                    |> Collage.outlined
-                        (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
-                            (Collage.uniform Color.white)
-                        )
+            case countryInfoStatus of
+                CountryInfoSelectedCountry ->
+                    polygon
+                        |> Collage.outlined
+                            (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                                (Collage.uniform Color.white)
+                            )
 
-            else
-                polygon
-                    |> Collage.outlined
-                        (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 24.0)
-                            (Collage.uniform countryBorderColor)
-                        )
+                CountryInfoDefending ->
+                    polygon
+                        |> Collage.outlined
+                            (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                                (Collage.uniform Color.green)
+                            )
+
+                NoInfo ->
+                    polygon
+                        |> Collage.outlined
+                            (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 24.0)
+                                (Collage.uniform countryBorderColor)
+                            )
 
         polygonFill =
             polygon

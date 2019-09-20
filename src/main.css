@@ -24,3 +24,10 @@ img {
   margin: 20px 0;
   max-width: 200px;
 } */
+
+svg text {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
