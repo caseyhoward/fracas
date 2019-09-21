@@ -31,7 +31,8 @@ module ActiveGame exposing
     , pixelsPerMapSquare
     , playerIdToString
     , playerTurnToString
-    , start,stopShowingCountryHelperOutlines
+    , start
+    , stopShowingCountryHelperOutlines
     ,  troopsToMove
        -- , updateCountryToShowInfoFor
 
@@ -385,9 +386,6 @@ findCountryOwner (GameMap.CountryId countryId) players =
             Nothing
 
 
-
-
-
 getPlayerCountryAndTroopCounts : ActiveGame -> List { playerId : PlayerId, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
 getPlayerCountryAndTroopCounts activeGame =
     activeGame.players
@@ -473,9 +471,11 @@ getPlayerTurnStageFromPlayerTurn playerTurn =
         PlayerTurn playerTurnStage _ ->
             playerTurnStage
 
-stopShowingCountryHelperOutlines:  ActiveGame -> ActiveGame
+
+stopShowingCountryHelperOutlines : ActiveGame -> ActiveGame
 stopShowingCountryHelperOutlines activeGame =
     { activeGame | countryBorderHelperOutlines = CountryBorderHelperOutlineInactive }
+
 
 handleCountryMouseUpFromPlayer : GameMap.CountryId -> ActiveGame -> ActiveGame
 handleCountryMouseUpFromPlayer clickedCountryId activeGame =
@@ -550,7 +550,7 @@ handleCountryMouseOut mouseOutCountryId activeGame =
     case activeGame.countryBorderHelperOutlines of
         CountryBorderHelperOutlineWaitingForDelay countryId ->
             if countryId == mouseOutCountryId then
-                 { activeGame | countryBorderHelperOutlines = CountryBorderHelperOutlineInactive }
+                { activeGame | countryBorderHelperOutlines = CountryBorderHelperOutlineInactive }
 
             else
                 activeGame
@@ -846,7 +846,7 @@ getCountryAttackers activeGame countryId =
                     (\waterNeighborCountry result ->
                         case findCountryOwner waterNeighborCountry activeGame.players of
                             Just neighborId ->
-                                ( neighborId, countryId ) :: result
+                                ( neighborId, waterNeighborCountry ) :: result
 
                             Nothing ->
                                 result
