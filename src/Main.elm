@@ -621,6 +621,9 @@ renderGameBoard activeGame =
                                 else if ActiveGame.isCountryDefending activeGame countryToShowInfoForId countryId then
                                     1
 
+                                else if ActiveGame.isCountryAttacking activeGame countryToShowInfoForId countryId then
+                                    1
+
                                 else
                                     100
 
@@ -812,6 +815,13 @@ renderArea polygonPoints color capitolStatus countryInfoStatus countryId =
             Collage.polygon polygonPoints
 
         polygonBorder =
+            polygon
+                |> Collage.outlined
+                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 24.0)
+                        (Collage.uniform countryBorderColor)
+                    )
+
+        polygonExtraBorder =
             case countryInfoStatus of
                 CountryInfoSelectedCountry ->
                     polygon
@@ -853,7 +863,7 @@ renderArea polygonPoints color capitolStatus countryInfoStatus countryId =
                     )
                     []
     in
-    Collage.group (drawnDots ++ [ polygonBorder, polygonFill ])
+    Collage.group (drawnDots ++ [ polygonExtraBorder, polygonBorder, polygonFill ])
 
 
 
