@@ -483,30 +483,8 @@ handleCountryMouseUpFromPlayer clickedCountryId activeGame =
     let
         updatedActiveGame =
             case activeGame.countryBorderHelperOutlines of
-                CountryBorderHelperOutlineActive countryToShowInfoForId ->
-                    if clickedCountryId == countryToShowInfoForId then
-                        case activeGame.currentPlayerTurn of
-                            PlayerTurn playerTurnStage currentPlayerId ->
-                                case playerTurnStage of
-                                    CapitolPlacement ->
-                                        attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
+                CountryBorderHelperOutlineActive _ ->
 
-                                    TroopPlacement ->
-                                        attemptTroopPlacement clickedCountryId currentPlayerId (numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
-
-                                    AttackAnnexOrPort ->
-                                        attackAnnexOrPort clickedCountryId currentPlayerId activeGame
-
-                                    TroopMovement ->
-                                        attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
-
-                                    TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
-                                        attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString activeGame
-
-                                    GameOver ->
-                                        { activeGame | error = Nothing }
-
-                    else
                         activeGame
 
                 CountryBorderHelperOutlineInactive ->
@@ -561,9 +539,6 @@ handleCountryMouseOut mouseOutCountryId activeGame =
 
 
 
--- updateCountryToShowInfoFor : GameMap.CountryId -> ActiveGame -> ActiveGame
--- updateCountryToShowInfoFor countryMouseDownId activeGame =
---     { activeGame | countryBorderHelperOutlines = Just countryMouseDownId }
 
 
 isCountryIdCapitol : PlayerId -> GameMap.CountryId -> Dict.Dict Int Player -> Maybe Bool
