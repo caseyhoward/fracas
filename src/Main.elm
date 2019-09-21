@@ -396,6 +396,38 @@ viewPlayerCountryAndTroopCounts activeGame =
         )
 
 
+attackerInfo : ActiveGame.PlayerId -> ActiveGame.ActiveGame -> Dict.Dict Int TroopCount.TroopCount -> Element.Element Msg
+attackerInfo countyOwnerPlayerId activeGame attackerStrengthPerPlayer =
+    Element.column
+        [ Element.width Element.fill, Element.spacing 3 ]
+        (attackerStrengthPerPlayer
+            |> Dict.toList
+            |> List.filter
+                (\( playerId, troopCount ) ->
+                    ActiveGame.PlayerId playerId /= countyOwnerPlayerId && troopCount /= TroopCount.noTroops
+                )
+            |> List.map
+                (\( playerId, troopCount ) ->
+                    case ActiveGame.getPlayer (ActiveGame.PlayerId playerId) activeGame.players of
+                        Just player ->
+                            Element.row
+                                [ Element.width Element.fill
+                                , Element.Font.size 14
+                                , Element.padding 3
+                                , Element.Background.color (player.color |> colorToElementColor)
+                                ]
+                                [ Element.el [] (Element.text player.name)
+                                , Element.el
+                                    [ Element.alignRight ]
+                                    (troopCount |> TroopCount.toString |> Element.text)
+                                ]
+
+                        Nothing ->
+                            Element.none
+                )
+        )
+
+
 viewCountryInfo : ActiveGame.ActiveGame -> Element.Element Msg
 viewCountryInfo activeGame =
     case activeGame.countryBorderHelperOutlines of
@@ -405,7 +437,7 @@ viewCountryInfo activeGame =
                     case ActiveGame.getPlayer playerId activeGame.players of
                         Just player ->
                             Element.column
-                                [ Element.width Element.fill ]
+                                [ Element.width Element.fill, Element.spacing 5 ]
                                 [ Element.el
                                     [ Element.Background.color (player.color |> colorToElementColor)
                                     , Element.Font.size 14
@@ -413,9 +445,33 @@ viewCountryInfo activeGame =
                                     , Element.padding 3
                                     ]
                                     (Element.text "Country Information")
-                                , Element.row [ Element.width Element.fill, Element.Font.size 14, Element.padding 3 ]
+                                , Element.row
+                                    [ Element.width Element.fill
+                                    , Element.Font.size 14
+                                    , Element.padding 3
+                                    , Element.Border.color (Color.lightGreen |> colorToElementColor)
+                                    , Element.Border.solid
+                                    , Element.Border.width 3
+                                    ]
                                     [ Element.el [] (Element.text "Defense")
-                                    , Element.el [ Element.alignRight ] (ActiveGame.getCountryDefenseStrength activeGame countryToShowInfoForId |> TroopCount.toString |> Element.text)
+                                    , Element.el
+                                        [ Element.alignRight ]
+                                        (ActiveGame.getCountryDefenseStrength activeGame countryToShowInfoForId |> TroopCount.toString |> Element.text)
+                                    ]
+                                , Element.column
+                                    [ Element.width Element.fill
+                                    , Element.Font.size 14
+                                    , Element.padding 3
+                                    , Element.spacing 3
+                                    , Element.Border.color (Color.red |> colorToElementColor)
+                                    , Element.Border.solid
+                                    , Element.Border.width 3
+                                    ]
+                                    [ Element.el
+                                        [ Element.width Element.fill ]
+                                        (Element.text "Opponent attack")
+                                    , ActiveGame.getAttackStrengthPerPlayer activeGame countryToShowInfoForId
+                                        |> attackerInfo playerId activeGame 
                                     ]
                                 ]
 

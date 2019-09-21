@@ -3,17 +3,18 @@ module ActiveGame exposing
     , CapitolStatus(..)
     , CountryBorderHelperOutlineStatus(..)
     , Player
-    , PlayerId
+    , PlayerId(..)
     , PlayerTurn
     , canCurrentPlayerCancelTroopMovement
     , canCurrentPlayerPass
     , cancelMovingTroops
     , findCountryOwner
+    , getCountryAttackers
     , getCountryDefenders
     , getCountryDefenseStrength
     , getCountryHasPort
     , getCurrentPlayer
-    , getDefaultColor
+    , getDefaultColor,getAttackStrengthPerPlayer
     , getPlayer
     , getPlayerColorFromPlayerTurn
     , getPlayerCountryAndTroopCounts
@@ -772,6 +773,33 @@ attemptToBuildPort currentPlayerId clickedCountryId activeGame =
 
         Nothing ->
             { activeGame | error = Just "You can't build a port in a country you don't own" }
+
+
+getAttackStrengthPerPlayer : ActiveGame ->   GameMap.CountryId -> Dict.Dict Int TroopCount.TroopCount
+getAttackStrengthPerPlayer activeGame countryId =
+    getCountryAttackers activeGame countryId
+        |> Dict.map
+            (\_ attacker ->
+                let
+                    neighborAttack =
+                        attacker.neighboringCountryAttackers
+                            |> Dict.foldl
+                                (\_ troopCount result ->
+                                    TroopCount.addTroopCounts troopCount result
+                                )
+                                TroopCount.noTroops
+
+                    waterAttack =
+                        attacker.neighboringThroughWaterAttackers
+                            |> Dict.foldl
+                                (\_ troopCount result ->
+                                    TroopCount.addTroopCounts (troopCount |> TroopCount.acrossWater) result
+                                )
+                                TroopCount.noTroops
+                in
+                TroopCount.addTroopCounts neighborAttack waterAttack
+            )
+
 
 
 getCountryAttackers : ActiveGame -> GameMap.CountryId -> CountryAttackers
