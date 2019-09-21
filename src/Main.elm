@@ -678,6 +678,7 @@ renderGameBoard activeGame =
 type CountryInfoStatus
     = CountryInfoSelectedCountry
     | CountryInfoDefending
+    | CountryInfoAttacking
     | NoInfo
 
 
@@ -690,6 +691,9 @@ getCountryInfoStatus activeGame countryId =
 
             else if ActiveGame.isCountryDefending activeGame countryToShowInfoForId countryId then
                 CountryInfoDefending
+
+            else if ActiveGame.isCountryAttacking activeGame countryToShowInfoForId countryId then
+                CountryInfoAttacking
 
             else
                 NoInfo
@@ -705,7 +709,7 @@ renderCountry countryId activeGame =
             case
                 ( ActiveGame.getPlayer countryOwnerId activeGame.players
                 , ActiveGame.getTroopCountForCountry countryId activeGame.players
-                , ActiveGame.getCountryHasPort countryOwnerId countryId activeGame.players
+                , ActiveGame.getCountryHasPort countryId activeGame.players
                 )
             of
                 ( Just player, Just troopCount, Just hasPort ) ->
@@ -821,6 +825,13 @@ renderArea polygonPoints color capitolStatus countryInfoStatus countryId =
                         |> Collage.outlined
                             (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
                                 (Collage.uniform Color.green)
+                            )
+
+                CountryInfoAttacking ->
+                    polygon
+                        |> Collage.outlined
+                            (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                                (Collage.uniform Color.red)
                             )
 
                 NoInfo ->
