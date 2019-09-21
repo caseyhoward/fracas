@@ -979,8 +979,8 @@ attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGam
                 { activeGame
                     | currentPlayerTurn =
                         PlayerTurn (TroopMovementFromSelected clickedCountryId (TroopCount.toString troopCount)) currentPlayerId
-                    , error = Nothing
                 }
+                    |> clearError
 
             else
                 { activeGame | error = Just "Select a country with troops" }
@@ -1002,8 +1002,8 @@ attemptToAnnexCountry currentPlayerId clickedCountryId activeGame =
         { updatedGame
             | currentPlayerTurn = PlayerTurn TroopMovement currentPlayerId
             , neutralCountryTroops = removeTroopCount clickedCountryId activeGame.neutralCountryTroops
-            , error = Nothing
         }
+            |> clearError
 
     else
         { activeGame
@@ -1400,10 +1400,6 @@ removePlayerCountry (GameMap.CountryId countryId) activeGame =
 
         Nothing ->
             activeGame
-
-
-
--- updatePlayersWithPlayer : PlayerId -> (Player -> Player) -> ActiveGame -> ActiveGame
 
 
 removeTroopCount : GameMap.CountryId -> Dict.Dict String TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount

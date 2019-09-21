@@ -119,12 +119,9 @@ parse text scale =
                     (\coordinates areaId gameMap ->
                         if isCountry areaId then
                             let
-                                country =
-                                    case Dict.get areaId gameMap.countries of
-                                        Just existingCountry ->
-                                            existingCountry
-
-                                        Nothing ->
+                                updatedCountry =
+                                    Dict.get areaId gameMap.countries
+                                        |> Maybe.withDefault
                                             { neighboringCountries = Set.empty
                                             , neighboringBodiesOfWater = Set.empty
                                             , coordinates = Set.singleton coordinates
@@ -132,9 +129,6 @@ parse text scale =
                                             , center = ( 0, 0 )
                                             , waterEdges = Set.empty
                                             }
-
-                                updatedCountry =
-                                    country
                                         |> updateCountryWhileParsing areaId coordinates dimensions map
                             in
                             { gameMap | countries = Dict.insert areaId updatedCountry gameMap.countries }
@@ -142,15 +136,15 @@ parse text scale =
                         else
                             let
                                 bodyOfWaterNeighborCountries =
-                                    case Dict.get areaId gameMap.bodiesOfWaterNeighborCountries of
-                                        Just existingBodyOfWater ->
-                                            existingBodyOfWater
-
-                                        Nothing ->
-                                            Set.empty
+                                    Dict.get areaId gameMap.bodiesOfWaterNeighborCountries
+                                        |> Maybe.withDefault Set.empty
                             in
                             { gameMap
-                                | bodiesOfWaterNeighborCountries = Dict.insert areaId (updateBodyOfWater areaId coordinates dimensions map bodyOfWaterNeighborCountries) gameMap.bodiesOfWaterNeighborCountries
+                                | bodiesOfWaterNeighborCountries =
+                                    gameMap.bodiesOfWaterNeighborCountries
+                                        |> Dict.insert
+                                            areaId
+                                            (updateBodyOfWater areaId coordinates dimensions map bodyOfWaterNeighborCountries)
                             }
                     )
                     { countries = Dict.empty, bodiesOfWaterNeighborCountries = Dict.empty, dimensions = dimensions }
@@ -167,13 +161,12 @@ parse text scale =
                             edgesWithNeigborCoordinate
                                 |> Set.filter
                                     (\( neighborCoordinate, _ ) ->
-                                        case Dict.get neighborCoordinate map of
-                                            Just countryIdString ->
-                                                not (isCountry countryIdString)
-
-                                            Nothing ->
-                                                -- shouldn't happen
-                                                False
+                                        Dict.get neighborCoordinate map
+                                            |> Maybe.map
+                                                (\countryIdString ->
+                                                    not (isCountry countryIdString)
+                                                )
+                                            |> Maybe.withDefault False
                                     )
                                 |> Set.map Tuple.second
                     in
