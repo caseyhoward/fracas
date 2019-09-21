@@ -1,6 +1,7 @@
 module ActiveGame exposing
     ( ActiveGame
     , CapitolStatus(..)
+    , CountryBorderHelperOutlineStatus(..)
     , Player
     , PlayerId
     , PlayerTurn
@@ -19,18 +20,23 @@ module ActiveGame exposing
     , getPlayerTurnStageFromPlayerTurn
     , getTroopCount
     , getTroopCountForCountry
+    , handleCountryMouseDown
+    , handleCountryMouseOut
     , handleCountryMouseUpFromPlayer
     , isCountryAttacking
     , isCountryDefending
     , isCountryIdCapitol
+    , makeCountryHelperOutlinesActive
     , pass
     , pixelsPerMapSquare
     , playerIdToString
     , playerTurnToString
-    , start
-    , troopsToMove
-    , updateCountryToShowInfoFor
+    , start,stopShowingCountryHelperOutlines
+    ,  troopsToMove
+       -- , updateCountryToShowInfoFor
+
     , updateNumberOfTroopsToMove
+    , waitingToShowCountryHelperOutlines
     )
 
 import Color
@@ -47,8 +53,23 @@ type alias ActiveGame =
     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
     , error : Maybe String
     , numberOfPlayers : Int
-    , countryToShowInfoFor : Maybe GameMap.CountryId
+    , countryBorderHelperOutlines : CountryBorderHelperOutlineStatus
     }
+
+
+type CountryBorderHelperOutlineStatus
+    = CountryBorderHelperOutlineWaitingForDelay GameMap.CountryId
+    | CountryBorderHelperOutlineInactive
+    | CountryBorderHelperOutlineActive GameMap.CountryId
+
+
+makeCountryHelperOutlinesActive activeGame =
+    case activeGame.countryBorderHelperOutlines of
+        CountryBorderHelperOutlineWaitingForDelay countryId ->
+            { activeGame | countryBorderHelperOutlines = CountryBorderHelperOutlineActive countryId }
+
+        _ ->
+            activeGame
 
 
 type PlayerId
@@ -136,6 +157,16 @@ defaultPlayerColors =
 
 
 -- Exposed
+
+
+waitingToShowCountryHelperOutlines : ActiveGame -> Bool
+waitingToShowCountryHelperOutlines activeGame =
+    case activeGame.countryBorderHelperOutlines of
+        CountryBorderHelperOutlineWaitingForDelay _ ->
+            True
+
+        _ ->
+            False
 
 
 cancelMovingTroops : ActiveGame -> ActiveGame
@@ -354,20 +385,7 @@ findCountryOwner (GameMap.CountryId countryId) players =
             Nothing
 
 
-findCountryOwnerAndTroopCount : GameMap.CountryId -> Dict.Dict Int Player -> Maybe ( PlayerId, TroopCount.TroopCount )
-findCountryOwnerAndTroopCount (GameMap.CountryId countryId) players =
-    players
-        |> Dict.foldl
-            (\playerId player result ->
-                case result of
-                    Just _ ->
-                        result
 
-                    Nothing ->
-                        Dict.get countryId player.countryTroopCounts
-                            |> Maybe.map (\troopCount -> ( PlayerId playerId, troopCount ))
-            )
-            Nothing
 
 
 getPlayerCountryAndTroopCounts : ActiveGame -> List { playerId : PlayerId, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
@@ -455,13 +473,16 @@ getPlayerTurnStageFromPlayerTurn playerTurn =
         PlayerTurn playerTurnStage _ ->
             playerTurnStage
 
+stopShowingCountryHelperOutlines:  ActiveGame -> ActiveGame
+stopShowingCountryHelperOutlines activeGame =
+    { activeGame | countryBorderHelperOutlines = CountryBorderHelperOutlineInactive }
 
 handleCountryMouseUpFromPlayer : GameMap.CountryId -> ActiveGame -> ActiveGame
 handleCountryMouseUpFromPlayer clickedCountryId activeGame =
     let
         updatedActiveGame =
-            case activeGame.countryToShowInfoFor of
-                Just countryToShowInfoForId ->
+            case activeGame.countryBorderHelperOutlines of
+                CountryBorderHelperOutlineActive countryToShowInfoForId ->
                     if clickedCountryId == countryToShowInfoForId then
                         case activeGame.currentPlayerTurn of
                             PlayerTurn playerTurnStage currentPlayerId ->
@@ -487,15 +508,61 @@ handleCountryMouseUpFromPlayer clickedCountryId activeGame =
                     else
                         activeGame
 
-                Nothing ->
+                CountryBorderHelperOutlineInactive ->
                     activeGame
+
+                CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
+                    if clickedCountryId == countryToShowInfoForId then
+                        case activeGame.currentPlayerTurn of
+                            PlayerTurn playerTurnStage currentPlayerId ->
+                                case playerTurnStage of
+                                    CapitolPlacement ->
+                                        attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
+
+                                    TroopPlacement ->
+                                        attemptTroopPlacement clickedCountryId currentPlayerId (numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
+
+                                    AttackAnnexOrPort ->
+                                        attackAnnexOrPort clickedCountryId currentPlayerId activeGame
+
+                                    TroopMovement ->
+                                        attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
+
+                                    TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
+                                        attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString activeGame
+
+                                    GameOver ->
+                                        { activeGame | error = Nothing }
+
+                    else
+                        activeGame
     in
-    { updatedActiveGame | countryToShowInfoFor = Nothing }
+    { updatedActiveGame | countryBorderHelperOutlines = CountryBorderHelperOutlineInactive }
 
 
-updateCountryToShowInfoFor : GameMap.CountryId -> ActiveGame -> ActiveGame
-updateCountryToShowInfoFor countryMouseDownId activeGame =
-    { activeGame | countryToShowInfoFor = Just countryMouseDownId }
+handleCountryMouseDown : GameMap.CountryId -> ActiveGame -> ActiveGame
+handleCountryMouseDown countryId activeGame =
+    { activeGame | countryBorderHelperOutlines = CountryBorderHelperOutlineWaitingForDelay countryId }
+
+
+handleCountryMouseOut : GameMap.CountryId -> ActiveGame -> ActiveGame
+handleCountryMouseOut mouseOutCountryId activeGame =
+    case activeGame.countryBorderHelperOutlines of
+        CountryBorderHelperOutlineWaitingForDelay countryId ->
+            if countryId == mouseOutCountryId then
+                 { activeGame | countryBorderHelperOutlines = CountryBorderHelperOutlineInactive }
+
+            else
+                activeGame
+
+        _ ->
+            activeGame
+
+
+
+-- updateCountryToShowInfoFor : GameMap.CountryId -> ActiveGame -> ActiveGame
+-- updateCountryToShowInfoFor countryMouseDownId activeGame =
+--     { activeGame | countryBorderHelperOutlines = Just countryMouseDownId }
 
 
 isCountryIdCapitol : PlayerId -> GameMap.CountryId -> Dict.Dict Int Player -> Maybe Bool
@@ -549,7 +616,7 @@ start map numberOfPlayers neutralTroopCounts =
     , error = Nothing
     , numberOfPlayers = numberOfPlayers
     , neutralCountryTroops = neutralTroopCounts
-    , countryToShowInfoFor = Nothing
+    , countryBorderHelperOutlines = CountryBorderHelperOutlineInactive
     }
 
 

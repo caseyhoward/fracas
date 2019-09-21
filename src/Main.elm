@@ -14,6 +14,7 @@ import Dict
 import Element
 import Element.Background
 import Element.Border
+import Element.Events
 import Element.Font
 import Element.Input
 import GameMap
@@ -27,6 +28,7 @@ import Random
 import Random.Dict
 import Random.List
 import Set
+import Time
 import TroopCount
 
 
@@ -42,6 +44,11 @@ maximumNeutralCountryTroops =
 countryBorderColor : Color.Color
 countryBorderColor =
     Color.black
+
+
+countryOutlineDelayMilliseconds : Float
+countryOutlineDelayMilliseconds =
+    300
 
 
 
@@ -83,6 +90,7 @@ type Msg
     = CountryMouseUp GameMap.CountryId
     | CountryMouseDown GameMap.CountryId
     | CountryMouseOut GameMap.CountryId
+    | MouseUp
     | NumberOfPlayersChanged String
     | StartGameClicked
     | Pass
@@ -90,6 +98,7 @@ type Msg
     | UpdateNumberOfTroopsToMove String
     | CancelMovingTroops
     | NumberOfPlayersKeyPressed Int
+    | ShowCountryBorderHelper
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -131,6 +140,12 @@ update msg model =
                 CancelMovingTroops ->
                     ( model, Cmd.none )
 
+                ShowCountryBorderHelper ->
+                    ( model, Cmd.none )
+
+                MouseUp ->
+                    ( model, Cmd.none )
+
         GeneratingRandomTroopCounts configurationOptions map ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
@@ -153,19 +168,13 @@ update msg model =
                     )
 
                 CountryMouseDown clickedCountryId ->
-                    ( PlayingGame (ActiveGame.updateCountryToShowInfoFor clickedCountryId attributes), Cmd.none )
+                    ( PlayingGame (ActiveGame.handleCountryMouseDown clickedCountryId attributes), Cmd.none )
 
                 CountryMouseOut mouseOutCountryId ->
-                    case attributes.countryToShowInfoFor of
-                        Just countryId ->
-                            if countryId == mouseOutCountryId then
-                                ( PlayingGame { attributes | countryToShowInfoFor = Nothing }, Cmd.none )
+                    ( PlayingGame (ActiveGame.handleCountryMouseOut mouseOutCountryId attributes), Cmd.none )
 
-                            else
-                                ( model, Cmd.none )
-
-                        Nothing ->
-                            ( model, Cmd.none )
+                MouseUp ->
+                    ( PlayingGame (ActiveGame.stopShowingCountryHelperOutlines attributes), Cmd.none )
 
                 Pass ->
                     ( ActiveGame.pass attributes |> PlayingGame, Cmd.none )
@@ -187,6 +196,9 @@ update msg model =
 
                 NumberOfPlayersKeyPressed _ ->
                     ( model, Cmd.none )
+
+                ShowCountryBorderHelper ->
+                    ( PlayingGame (ActiveGame.makeCountryHelperOutlinesActive attributes), Cmd.none )
 
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)
@@ -293,7 +305,7 @@ centerText text =
 
 viewPlayingGame : ActiveGame.ActiveGame -> Html.Html Msg
 viewPlayingGame activeGame =
-    Element.layout [ Element.width Element.fill ]
+    Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.row
             [ Element.centerX, Element.width Element.fill ]
             [ viewInfoPanel activeGame
@@ -386,8 +398,8 @@ viewPlayerCountryAndTroopCounts activeGame =
 
 viewCountryInfo : ActiveGame.ActiveGame -> Element.Element Msg
 viewCountryInfo activeGame =
-    case activeGame.countryToShowInfoFor of
-        Just countryToShowInfoForId ->
+    case activeGame.countryBorderHelperOutlines of
+        ActiveGame.CountryBorderHelperOutlineActive countryToShowInfoForId ->
             case ActiveGame.findCountryOwner countryToShowInfoForId activeGame.players of
                 Just playerId ->
                     case ActiveGame.getPlayer playerId activeGame.players of
@@ -413,7 +425,7 @@ viewCountryInfo activeGame =
                 Nothing ->
                     Element.none
 
-        Nothing ->
+        _ ->
             Element.none
 
 
@@ -613,8 +625,8 @@ renderGameBoard activeGame =
                 |> GameMap.getCountryIds
                 |> List.sortBy
                     (\countryId ->
-                        case activeGame.countryToShowInfoFor of
-                            Just countryToShowInfoForId ->
+                        case activeGame.countryBorderHelperOutlines of
+                            ActiveGame.CountryBorderHelperOutlineActive countryToShowInfoForId ->
                                 if countryToShowInfoForId == countryId then
                                     0
 
@@ -627,7 +639,7 @@ renderGameBoard activeGame =
                                 else
                                     100
 
-                            Nothing ->
+                            _ ->
                                 100
                     )
                 |> List.map
@@ -687,8 +699,8 @@ type CountryInfoStatus
 
 getCountryInfoStatus : ActiveGame.ActiveGame -> GameMap.CountryId -> CountryInfoStatus
 getCountryInfoStatus activeGame countryId =
-    case activeGame.countryToShowInfoFor of
-        Just countryToShowInfoForId ->
+    case activeGame.countryBorderHelperOutlines of
+        ActiveGame.CountryBorderHelperOutlineActive countryToShowInfoForId ->
             if countryToShowInfoForId == countryId then
                 CountryInfoSelectedCountry
 
@@ -701,7 +713,7 @@ getCountryInfoStatus activeGame countryId =
             else
                 NoInfo
 
-        Nothing ->
+        _ ->
             NoInfo
 
 
@@ -815,13 +827,6 @@ renderArea polygonPoints color capitolStatus countryInfoStatus countryId =
             Collage.polygon polygonPoints
 
         polygonBorder =
-            polygon
-                |> Collage.outlined
-                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 24.0)
-                        (Collage.uniform countryBorderColor)
-                    )
-
-        polygonExtraBorder =
             case countryInfoStatus of
                 CountryInfoSelectedCountry ->
                     polygon
@@ -863,7 +868,7 @@ renderArea polygonPoints color capitolStatus countryInfoStatus countryId =
                     )
                     []
     in
-    Collage.group (drawnDots ++ [ polygonExtraBorder, polygonBorder, polygonFill ])
+    Collage.group (drawnDots ++ [ polygonBorder, polygonFill ])
 
 
 
@@ -871,5 +876,14 @@ renderArea polygonPoints color capitolStatus countryInfoStatus countryId =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
+subscriptions model =
+    case model of
+        PlayingGame activeGame ->
+            if ActiveGame.waitingToShowCountryHelperOutlines activeGame then
+                Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
+
+            else
+                Sub.none
+
+        _ ->
+            Sub.none
