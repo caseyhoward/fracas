@@ -471,7 +471,7 @@ viewCountryInfo activeGame =
                                         [ Element.width Element.fill ]
                                         (Element.text "Opponent attack")
                                     , ActiveGame.getAttackStrengthPerPlayer activeGame countryToShowInfoForId
-                                        |> attackerInfo playerId activeGame 
+                                        |> attackerInfo playerId activeGame
                                     ]
                                 ]
 
@@ -792,7 +792,7 @@ renderCountry countryId activeGame =
                             []
                          )
                             ++ [ renderTroopCount country.center troopCount
-                               , renderArea country.polygon player.color player.capitolStatus (getCountryInfoStatus activeGame countryId) countryId
+                               , renderArea activeGame country.polygon player.color player.capitolStatus (getCountryInfoStatus activeGame countryId) countryId
                                ]
                         )
                         |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
@@ -807,7 +807,7 @@ renderCountry countryId activeGame =
                 Just troopCount ->
                     Collage.group
                         [ renderTroopCount country.center troopCount
-                        , renderArea country.polygon Color.gray ActiveGame.NoCapitol (getCountryInfoStatus activeGame countryId) countryId
+                        , renderArea activeGame country.polygon Color.gray ActiveGame.NoCapitol (getCountryInfoStatus activeGame countryId) countryId
                         ]
                         |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
                         |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
@@ -815,8 +815,7 @@ renderCountry countryId activeGame =
 
                 _ ->
                     Collage.group
-                        [ renderArea country.polygon Color.gray ActiveGame.NoCapitol (getCountryInfoStatus activeGame countryId) countryId
-                        ]
+                        [ renderArea activeGame country.polygon Color.gray ActiveGame.NoCapitol (getCountryInfoStatus activeGame countryId) countryId ]
                         |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
                         |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
                         |> Collage.Events.onMouseLeave (\_ -> CountryMouseOut countryId)
@@ -856,8 +855,8 @@ renderTroopCount ( medianX, medianY ) troopCount =
         Collage.group []
 
 
-renderArea : List ( Float, Float ) -> Color.Color -> ActiveGame.CapitolStatus -> CountryInfoStatus -> GameMap.CountryId -> Collage.Collage msg
-renderArea polygonPoints color capitolStatus countryInfoStatus countryId =
+renderArea : ActiveGame.ActiveGame -> List ( Float, Float ) -> Color.Color -> ActiveGame.CapitolStatus -> CountryInfoStatus -> GameMap.CountryId -> Collage.Collage msg
+renderArea activeGame polygonPoints color capitolStatus countryInfoStatus countryId =
     let
         ( capitolDot, capitolDotsCoords ) =
             case capitolStatus of

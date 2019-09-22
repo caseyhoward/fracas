@@ -9,12 +9,13 @@ module ActiveGame exposing
     , canCurrentPlayerPass
     , cancelMovingTroops
     , findCountryOwner
+    , getAttackStrengthPerPlayer
     , getCountryAttackers
     , getCountryDefenders
     , getCountryDefenseStrength
     , getCountryHasPort
     , getCurrentPlayer
-    , getDefaultColor,getAttackStrengthPerPlayer
+    , getDefaultColor
     , getPlayer
     , getPlayerColorFromPlayerTurn
     , getPlayerCountryAndTroopCounts
@@ -484,8 +485,7 @@ handleCountryMouseUpFromPlayer clickedCountryId activeGame =
         updatedActiveGame =
             case activeGame.countryBorderHelperOutlines of
                 CountryBorderHelperOutlineActive _ ->
-
-                        activeGame
+                    activeGame
 
                 CountryBorderHelperOutlineInactive ->
                     activeGame
@@ -536,9 +536,6 @@ handleCountryMouseOut mouseOutCountryId activeGame =
 
         _ ->
             activeGame
-
-
-
 
 
 isCountryIdCapitol : PlayerId -> GameMap.CountryId -> Dict.Dict Int Player -> Maybe Bool
@@ -750,7 +747,7 @@ attemptToBuildPort currentPlayerId clickedCountryId activeGame =
             { activeGame | error = Just "You can't build a port in a country you don't own" }
 
 
-getAttackStrengthPerPlayer : ActiveGame ->   GameMap.CountryId -> Dict.Dict Int TroopCount.TroopCount
+getAttackStrengthPerPlayer : ActiveGame -> GameMap.CountryId -> Dict.Dict Int TroopCount.TroopCount
 getAttackStrengthPerPlayer activeGame countryId =
     getCountryAttackers activeGame countryId
         |> Dict.map
@@ -774,7 +771,6 @@ getAttackStrengthPerPlayer activeGame countryId =
                 in
                 TroopCount.addTroopCounts neighborAttack waterAttack
             )
-
 
 
 getCountryAttackers : ActiveGame -> GameMap.CountryId -> CountryAttackers
@@ -899,79 +895,122 @@ getCountryAttackers activeGame countryId =
             Dict.empty
 
 
-getWaterAttackStrength : PlayerId -> GameMap.CountryId -> ActiveGame -> TroopCount.TroopCount
-getWaterAttackStrength attackerId countryBeingAttackedId activeGame =
-    let
-        countriesReachableThroughWater : List GameMap.CountryId
-        countriesReachableThroughWater =
-            GameMap.getCountriesThatCanReachCountryThroughWater activeGame.map countryBeingAttackedId
 
-        attackerCountriesNeighoboringWater : List GameMap.CountryId
-        attackerCountriesNeighoboringWater =
-            countriesReachableThroughWater
-                |> filterCountriesOwnedBy activeGame.players attackerId
-
-        attackerCountriesNeighoboringWaterWithPort : List GameMap.CountryId
-        attackerCountriesNeighoboringWaterWithPort =
-            attackerCountriesNeighoboringWater
-                |> filterCountriesWithPort activeGame.players
-
-        attackTroopCount : TroopCount.TroopCount
-        attackTroopCount =
-            attackerCountriesNeighoboringWaterWithPort
-                |> countAllTroops activeGame.players
-    in
-    attackTroopCount |> TroopCount.acrossWater
+-- getWaterAttackStrength : PlayerId -> GameMap.CountryId -> ActiveGame -> TroopCount.TroopCount
+-- getWaterAttackStrength attackerId countryBeingAttackedId activeGame =
+--     let
+--         countriesReachableThroughWater : List GameMap.CountryId
+--         countriesReachableThroughWater =
+--             GameMap.getCountriesThatCanReachCountryThroughWater activeGame.map countryBeingAttackedId
+--         attackerCountriesNeighoboringWater : List GameMap.CountryId
+--         attackerCountriesNeighoboringWater =
+--             countriesReachableThroughWater
+--                 |> filterCountriesOwnedBy activeGame.players attackerId
+--         attackerCountriesNeighoboringWaterWithPort : List GameMap.CountryId
+--         attackerCountriesNeighoboringWaterWithPort =
+--             attackerCountriesNeighoboringWater
+--                 |> filterCountriesWithPort activeGame.players
+--         attackTroopCount : TroopCount.TroopCount
+--         attackTroopCount =
+--             attackerCountriesNeighoboringWaterWithPort
+--                 |> countAllTroops activeGame.players
+--     in
+--     attackTroopCount |> TroopCount.acrossWater
 
 
 attackResult : GameMap.CountryId -> ActiveGame -> AttackResult
 attackResult clickedCountryId activeGame =
     case findCountryOwner clickedCountryId activeGame.players of
         Just opponentPlayerId ->
-            case getTroopCountForCountry clickedCountryId activeGame.players of
-                Just opponentTroopCount ->
-                    let
-                        landAttackStrength =
-                            getLandAttackStrength clickedCountryId (getCurrentPlayer activeGame) activeGame
+            let
+                countryAttackers =
+                    getAttackStrengthPerPlayer activeGame clickedCountryId
 
-                        waterAttackStrength =
-                            getWaterAttackStrength (getCurrentPlayer activeGame) clickedCountryId activeGame
+                currentPlayerId =
+                    getCurrentPlayer activeGame
 
-                        defenseStrength =
-                            getCountryDefenseStrength activeGame clickedCountryId
+                currentPlayerIdInt =
+                    case currentPlayerId of
+                        PlayerId playerId ->
+                            playerId
 
-                        attackStrength =
-                            landAttackStrength |> TroopCount.addTroopCounts waterAttackStrength
+                attackStrength =
+                    case Dict.get currentPlayerIdInt countryAttackers of
+                        Just attack ->
+                            attack
 
-                        remainingTroops =
-                            opponentTroopCount
-                                |> TroopCount.addTroopCounts defenseStrength
-                                |> TroopCount.subtractTroopCounts attackStrength
-                    in
-                    if TroopCount.canAttack attackStrength defenseStrength then
-                        if TroopCount.hasTroops remainingTroops then
-                            OpponentCountryLosesTroops remainingTroops
+                        Nothing ->
+                            TroopCount.noTroops
 
-                        else
-                            case isCountryIdCapitol opponentPlayerId clickedCountryId activeGame.players of
-                                Just isCapitol ->
-                                    if isCapitol then
-                                        OpponentEliminated
+                defenseStrength =
+                    getCountryDefenseStrength activeGame clickedCountryId
 
-                                    else
-                                        CurrentPlayerAcquiresOpponentCountry
+                remainingTroops =
+                    getTroopCountForCountry clickedCountryId activeGame.players
+                        |> Maybe.withDefault TroopCount.noTroops -- TODO
+                        |> TroopCount.addTroopCounts defenseStrength
+                        |> TroopCount.subtractTroopCounts attackStrength
+            in
+            if TroopCount.canAttack attackStrength defenseStrength then
+                if TroopCount.hasTroops remainingTroops then
+                    OpponentCountryLosesTroops remainingTroops
 
-                                Nothing ->
-                                    AttackResultError "Error checking if capitol"
+                else
+                    case isCountryIdCapitol opponentPlayerId clickedCountryId activeGame.players of
+                        Just isCapitol ->
+                            if isCapitol then
+                                OpponentEliminated
 
-                    else
-                        NotEnoughTroopsToAttack attackStrength defenseStrength
+                            else
+                                CurrentPlayerAcquiresOpponentCountry
 
-                Nothing ->
-                    AttackResultError "Opponent does not own country"
+                        Nothing ->
+                            AttackResultError "Error checking if capitol"
+
+            else
+                NotEnoughTroopsToAttack attackStrength defenseStrength
 
         Nothing ->
-            AttackResultError "No owner"
+            AttackResultError "Error finding owner"
+
+
+
+-- case findCountryOwner clickedCountryId activeGame.players of
+--     Just opponentPlayerId ->
+--         case getTroopCountForCountry clickedCountryId activeGame.players of
+--             Just opponentTroopCount ->
+--                 let
+--                     landAttackStrength =
+--                         getLandAttackStrength clickedCountryId (getCurrentPlayer activeGame) activeGame
+--                     waterAttackStrength =
+--                         getWaterAttackStrength (getCurrentPlayer activeGame) clickedCountryId activeGame
+--                     defenseStrength =
+--                         getCountryDefenseStrength activeGame clickedCountryId
+--                     attackStrength =
+--                         landAttackStrength |> TroopCount.addTroopCounts waterAttackStrength
+--                     remainingTroops =
+--                         opponentTroopCount
+--                             |> TroopCount.addTroopCounts defenseStrength
+--                             |> TroopCount.subtractTroopCounts attackStrength
+--                 in
+--                 if TroopCount.canAttack attackStrength defenseStrength then
+--                     if TroopCount.hasTroops remainingTroops then
+--                         OpponentCountryLosesTroops remainingTroops
+--                     else
+--                         case isCountryIdCapitol opponentPlayerId clickedCountryId activeGame.players of
+--                             Just isCapitol ->
+--                                 if isCapitol then
+--                                     OpponentEliminated
+--                                 else
+--                                     CurrentPlayerAcquiresOpponentCountry
+--                             Nothing ->
+--                                 AttackResultError "Error checking if capitol"
+--                 else
+--                     NotEnoughTroopsToAttack attackStrength defenseStrength
+--             Nothing ->
+--                 AttackResultError "Opponent does not own country"
+--     Nothing ->
+--         AttackResultError "No owner"
 
 
 attemptSelectTroopMovementFromCountry : GameMap.CountryId -> PlayerId -> ActiveGame -> ActiveGame
