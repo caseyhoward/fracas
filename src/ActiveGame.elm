@@ -15,7 +15,7 @@ module ActiveGame exposing
     , getCountryDefenseStrength
     , getCountryHasPort
     , getCurrentPlayer
-    , getDefaultColor
+    , getDefaultColor,getSelectedCountryForTroopMovement
     , getPlayer
     , getPlayerColorFromPlayerTurn
     , getPlayerCountryAndTroopCounts
@@ -136,6 +136,12 @@ type alias CountryAttackersForPlayer =
     , neighboringThroughWaterAttackers : Dict.Dict String TroopCount.TroopCount
     }
 
+getSelectedCountryForTroopMovement : ActiveGame -> Maybe GameMap.CountryId
+getSelectedCountryForTroopMovement activeGame =
+    case activeGame.currentPlayerTurn of
+        PlayerTurn (TroopMovementFromSelected selectedCountryId _) _ ->
+            Just selectedCountryId
+        _ -> Nothing
 
 
 -- Settings
@@ -947,7 +953,8 @@ attackResult clickedCountryId activeGame =
 
                 remainingTroops =
                     getTroopCountForCountry clickedCountryId activeGame.players
-                        |> Maybe.withDefault TroopCount.noTroops -- TODO
+                        |> Maybe.withDefault TroopCount.noTroops
+                        -- TODO
                         |> TroopCount.addTroopCounts defenseStrength
                         |> TroopCount.subtractTroopCounts attackStrength
             in

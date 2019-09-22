@@ -922,8 +922,25 @@ renderArea activeGame polygonPoints color capitolStatus countryInfoStatus countr
                         (renderedDot |> Collage.shift coordinates) :: result
                     )
                     []
+
+        countryOutlineForTroopMovement =
+            case ActiveGame.getSelectedCountryForTroopMovement activeGame of
+                Just selectedCountryId ->
+                    if selectedCountryId == countryId then
+                        [ polygon
+                            |> Collage.outlined
+                                (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                                    (Collage.uniform Color.black)
+                                )
+                        ]
+
+                    else
+                        []
+
+                Nothing ->
+                    []
     in
-    Collage.group (drawnDots ++ [ polygonBorder, polygonFill ])
+    Collage.group (drawnDots ++ countryOutlineForTroopMovement ++ [ polygonBorder, polygonFill ])
 
 
 
