@@ -2,8 +2,9 @@ module ActiveGame exposing
     ( ActiveGame
     , CapitolStatus(..)
     , CountryBorderHelperOutlineStatus(..)
-    , CountryToRender
-    , CountryToRenderStatus(..)
+    ,  CountryToRender
+       -- , CountryToRenderStatus
+
     , Player
     , PlayerId(..)
     , PlayerTurn
@@ -21,6 +22,7 @@ module ActiveGame exposing
     , getDefaultColor
     , getPlayer
     , getPlayerColorFromPlayerTurn
+    -- ,updateShowAvailableMoves
     , getPlayerCountryAndTroopCounts
     , getPlayerTurnStageFromPlayerTurn
     , getSelectedCountryForTroopMovement
@@ -61,19 +63,8 @@ type alias ActiveGame =
     , error : Maybe String
     , numberOfPlayers : Int
     , countryBorderHelperOutlines : CountryBorderHelperOutlineStatus
+    , showAvailableMoves : Bool
     }
-
-
-type CountryToRenderStatus
-    = CanPlaceCapitol
-    | CanMoveTroopsFrom
-    | CanMoveTroopsTo
-    | SelectedForCountryInfo
-    | AttacksSelectedCountry
-    | DefendsSelectedCountry
-    | CanBeAttacked
-    | CanBuildPort
-    | NoCountryToRenderStatus
 
 
 type alias CountryToRender =
@@ -86,8 +77,6 @@ type alias CountryToRender =
     , canBeClicked : Bool
     , isBeingMovedFrom : Bool
     , portSegments : Maybe (Set.Set ( ( Float, Float ), ( Float, Float ) ))
-
-    -- , status : CountryToRenderStatus
     }
 
 
@@ -135,8 +124,6 @@ getCountriesToRender activeGame =
                                     , canBeClicked = getCountryCanBeClicked activeGame (GameMap.CountryId countryId)
                                     , isBeingMovedFrom = getIsBeingMovedFrom activeGame (GameMap.CountryId countryId)
                                     , portSegments = getPortSegments (GameMap.CountryId countryId) country activeGame.players
-
-                                    -- , status = getCountryToRenderStatus activeGame.currentPlayerTurn (GameMap.CountryId countryId) country activeGame.players
                                     }
                                 )
 
@@ -151,8 +138,6 @@ getCountriesToRender activeGame =
                             , canBeClicked = getCountryCanBeClicked activeGame (GameMap.CountryId countryId)
                             , isBeingMovedFrom = False
                             , portSegments = Nothing
-
-                            -- , status = getCountryToRenderStatus activeGame.currentPlayerTurn (GameMap.CountryId countryId) country activeGame.players
                             }
             )
         |> Dict.values
@@ -215,7 +200,7 @@ getCountryCanBeClicked activeGame countryId =
                 AttackAnnexOrPort ->
                     let
                         canAttack =
-                            case Debug.log "canAttack" (attackResult countryId activeGame) of
+                            case attackResult countryId activeGame of
                                 NotEnoughTroopsToAttack _ _ ->
                                     False
 
@@ -226,7 +211,7 @@ getCountryCanBeClicked activeGame countryId =
                                     True
 
                         canAnnex =
-                            canAnnexCountry activeGame.map currentPlayerId activeGame.players countryId |> Debug.log "Can annex"
+                            canAnnexCountry activeGame.map currentPlayerId activeGame.players countryId
 
                         canBuildPort =
                             False
@@ -808,9 +793,15 @@ start map numberOfPlayers neutralTroopCounts =
     , error = Nothing
     , numberOfPlayers = numberOfPlayers
     , neutralCountryTroops = neutralTroopCounts
+                            , showAvailableMoves = False
     , countryBorderHelperOutlines = CountryBorderHelperOutlineInactive
     }
 
+-- updateShowAvailableMoves : Bool -> ActiveGame -> ActiveGame
+-- updateShowAvailableMoves isChecked activeGame =
+--     {activeGame | showAvailableMoves = isChecked}
+
+-- showAvailableMoves : ActiveGame =
 
 
 -- Not exposed

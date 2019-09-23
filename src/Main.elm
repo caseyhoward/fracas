@@ -99,6 +99,7 @@ type Msg
     | CancelMovingTroops
     | NumberOfPlayersKeyPressed Int
     | ShowCountryBorderHelper
+    | ShowAvailableMovesCheckboxToggled Bool
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -146,6 +147,9 @@ update msg model =
                 MouseUp ->
                     ( model, Cmd.none )
 
+                ShowAvailableMovesCheckboxToggled _ ->
+                    ( model, Cmd.none )
+
         GeneratingRandomTroopCounts configurationOptions map ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
@@ -172,6 +176,9 @@ update msg model =
 
                 CountryMouseOut mouseOutCountryId ->
                     ( PlayingGame (ActiveGame.handleCountryMouseOut mouseOutCountryId attributes), Cmd.none )
+
+                ShowAvailableMovesCheckboxToggled isChecked ->
+                    ( PlayingGame { attributes | showAvailableMoves = isChecked }, Cmd.none )
 
                 MouseUp ->
                     ( PlayingGame (ActiveGame.stopShowingCountryHelperOutlines attributes), Cmd.none )
@@ -355,6 +362,18 @@ viewInfoPanel activeGame =
         , viewPlayerCountryAndTroopCounts activeGame
         , viewConfigureTroopCountIfNecessary activeGame
         , viewCountryInfo activeGame
+        , Element.row
+            [ Element.alignBottom ]
+            [ Element.Input.checkbox
+                []
+                { label =
+                    Element.Input.labelRight [ Element.Font.size 12 ]
+                        (Element.text "Show available moves")
+                , icon = Element.Input.defaultCheckbox
+                , checked = activeGame.showAvailableMoves
+                , onChange = ShowAvailableMovesCheckboxToggled
+                }
+            ]
         ]
 
 
@@ -726,9 +745,13 @@ getGameBoardHtml activeGame =
                         |> Collage.group
 
                 countryHighlights =
-                    countriesToRender
-                        |> List.map countryHighlight
-                        |> Collage.group
+                    if activeGame.showAvailableMoves then
+                        countriesToRender
+                            |> List.map countryHighlight
+                            |> Collage.group
+
+                    else
+                        Collage.group []
 
                 portCollages =
                     countriesToRender
@@ -769,7 +792,7 @@ getGameBoardHtml activeGame =
                     ]
 
         Nothing ->
-            Debug.todo ""
+            Html.div [] [ Html.text "Kaboom" ]
 
 
 countryHighlight : ActiveGame.CountryToRender -> Collage.Collage Msg
@@ -877,7 +900,7 @@ getCountryCollage countryToRender =
         border =
             countryPolygon
                 |> Collage.outlined
-                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 24.0)
+                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 12.0)
                         (Collage.uniform countryBorderColor)
                     )
     in
@@ -937,11 +960,7 @@ getCountryInfoPolygonBorder activeGame countryToRender =
                     )
 
         NoInfo ->
-            Collage.polygon countryToRender.polygonPoints
-                |> Collage.outlined
-                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 24.0)
-                        (Collage.uniform countryBorderColor)
-                    )
+            Collage.group []
 
 
 type CountryInfoStatus
