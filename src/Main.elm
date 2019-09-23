@@ -318,7 +318,7 @@ viewPlayingGame activeGame =
                     [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
-                    (renderGameBoard activeGame |> Element.html)
+                    (getGameBoardHtml activeGame |> Element.html)
                 , Element.column
                     [ Element.width Element.fill
                     , Element.Border.width 1
@@ -604,10 +604,6 @@ defaultTextInputAttributes =
 defaultLabelAttributes : List (Element.Attribute msg)
 defaultLabelAttributes =
     [ Element.Font.size 12
-
-    -- , Element.moveUp 7
-    -- , Element.moveRight 5
-    -- , Element.paddingEach { left = 5, top = 0, right = 5, bottom = 0 }
     ]
 
 
@@ -669,44 +665,18 @@ colorToElementColor color =
 
 
 
--- Rendering
+-- Rendering (new)
 
 
-renderGameBoard : ActiveGame.ActiveGame -> Html.Html Msg
-renderGameBoard activeGame =
+getWaterCollage : GameMap.GameMap -> Collage.Collage Msg
+getWaterCollage gameMap =
     let
-        countryCollages : List (Collage.Collage Msg)
-        countryCollages =
-            activeGame.map.countries
-                |> GameMap.getCountryIds
-                |> List.sortBy
-                    (\countryId ->
-                        case activeGame.countryBorderHelperOutlines of
-                            ActiveGame.CountryBorderHelperOutlineActive countryToShowInfoForId ->
-                                if countryToShowInfoForId == countryId then
-                                    0
-
-                                else if ActiveGame.isCountryDefending activeGame countryToShowInfoForId countryId then
-                                    1
-
-                                else if ActiveGame.isCountryAttacking activeGame countryToShowInfoForId countryId then
-                                    1
-
-                                else
-                                    100
-
-                            _ ->
-                                100
-                    )
-                |> List.map
-                    (\countryId -> renderCountry countryId activeGame)
-
         background =
             Collage.polygon
                 [ ( 0, 0 )
-                , ( 0, activeGame.map.dimensions |> Tuple.second )
-                , ( activeGame.map.dimensions |> Tuple.first, activeGame.map.dimensions |> Tuple.second )
-                , ( activeGame.map.dimensions |> Tuple.first, 0 )
+                , ( 0, gameMap.dimensions |> Tuple.second )
+                , ( gameMap.dimensions |> Tuple.first, gameMap.dimensions |> Tuple.second )
+                , ( gameMap.dimensions |> Tuple.first, 0 )
                 ]
 
         backgroundWater =
@@ -716,34 +686,262 @@ renderGameBoard activeGame =
         backgroundBorder =
             background
                 |> Collage.outlined (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 8.0) (Collage.uniform Color.black))
-
-        gameBoardCollage =
-            Collage.group (countryCollages ++ [ backgroundBorder, backgroundWater ])
-
-        gameBoardHeight =
-            Collage.Layout.height gameBoardCollage
-
-        gameBoardWidth =
-            Collage.Layout.width gameBoardCollage
     in
-    gameBoardCollage
-        |> Collage.Render.svgExplicit
-            [ Html.Attributes.style "width" "100%"
-            , Html.Attributes.style "max-height" "100%"
-            , Html.Attributes.style "top" "0"
-            , Html.Attributes.style "left" "0"
-            , Html.Attributes.attribute "width" "0"
-            , Html.Attributes.attribute
-                "viewBox"
-                ((0 * gameBoardWidth |> String.fromFloat)
-                    ++ " "
-                    ++ (-1 * gameBoardHeight |> String.fromFloat)
-                    ++ " "
-                    ++ (1 * gameBoardWidth |> String.fromFloat)
-                    ++ " "
-                    ++ (1 * gameBoardHeight |> String.fromFloat)
-                )
-            ]
+    Collage.group [ backgroundBorder, backgroundWater ]
+
+
+getGameBoardHtml : ActiveGame.ActiveGame -> Html.Html Msg
+getGameBoardHtml activeGame =
+    case ActiveGame.getCountriesToRender activeGame of
+        Just countriesToRender ->
+            let
+                waterCollage : Collage.Collage Msg
+                waterCollage =
+                    getWaterCollage activeGame.map
+
+                countriesCollage =
+                    countriesToRender
+                        |> List.map getCountryCollage
+                        |> Collage.group
+
+                troopCountsCollage =
+                    countriesToRender
+                        |> List.map getTroopCountCollage
+                        |> Collage.group
+
+                gameBoardHeight =
+                    Collage.Layout.height waterCollage
+
+                gameBoardWidth =
+                    Collage.Layout.width waterCollage
+
+                countryEventHandlers =
+                    countriesToRender
+                        |> List.map getEventHandlersForCountry
+                        |> Collage.group
+
+                capitolDots =
+                    countriesToRender
+                        |> List.map renderCapitolDots
+                        |> Collage.group
+
+                countryHighlights =
+                    countriesToRender
+                        |> List.map countryHighlight
+                        |> Collage.group
+
+                portCollages =
+                    countriesToRender
+                        |> List.map getPortCollage
+                        |> Collage.group
+
+                countryInfoHighlights =
+                    countriesToRender
+                        |> List.map (getCountryInfoPolygonBorder activeGame)
+                        |> Collage.group
+            in
+            Collage.group
+                [ countryEventHandlers
+                , countryInfoHighlights
+                , countryHighlights
+                , troopCountsCollage
+                , capitolDots
+                , portCollages
+                , countriesCollage
+                , waterCollage
+                ]
+                |> Collage.Render.svgExplicit
+                    [ Html.Attributes.style "width" "100%"
+                    , Html.Attributes.style "max-height" "100%"
+                    , Html.Attributes.style "top" "0"
+                    , Html.Attributes.style "left" "0"
+                    , Html.Attributes.attribute "width" "0"
+                    , Html.Attributes.attribute
+                        "viewBox"
+                        ((0 * gameBoardWidth |> String.fromFloat)
+                            ++ " "
+                            ++ (-1 * gameBoardHeight |> String.fromFloat)
+                            ++ " "
+                            ++ (1 * gameBoardWidth |> String.fromFloat)
+                            ++ " "
+                            ++ (1 * gameBoardHeight |> String.fromFloat)
+                        )
+                    ]
+
+        Nothing ->
+            Debug.todo ""
+
+
+countryHighlight : ActiveGame.CountryToRender -> Collage.Collage Msg
+countryHighlight countryToRender =
+    let
+        maybeCountryCanBeClickedHighlight =
+            if countryToRender.canBeClicked then
+                Just (countryHighlightCollage 0.99 countryCanBeClickedColor countryToRender)
+
+            else if countryToRender.isBeingMovedFrom then
+                Just ([ getGrayedOutCountryCollage countryToRender, countryHighlightCollage 1.0 countryCanBeClickedColor countryToRender ] |> Collage.group)
+
+            else
+                Just (getGrayedOutCountryCollage countryToRender)
+    in
+    [ maybeCountryCanBeClickedHighlight ]
+        |> List.foldl
+            (\maybeHighlight result ->
+                maybeHighlight |> Maybe.map (\highlight -> highlight :: result) |> Maybe.withDefault result
+            )
+            []
+        |> Collage.group
+
+
+getEventHandlersForCountry : ActiveGame.CountryToRender -> Collage.Collage Msg
+getEventHandlersForCountry countryToRender =
+    countryToRender.polygonPoints
+        |> Collage.polygon
+        |> Collage.filled (Color.rgba 0 0 0 0 |> Collage.uniform)
+        |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryToRender.id)
+        |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryToRender.id)
+        |> Collage.Events.onMouseLeave (\_ -> CountryMouseOut countryToRender.id)
+
+
+getPortCollage : ActiveGame.CountryToRender -> Collage.Collage Msg
+getPortCollage countryToRender =
+    (case countryToRender.portSegments of
+        Just portSegments ->
+            [ renderPort portSegments ]
+
+        Nothing ->
+            []
+    )
+        |> Collage.group
+
+
+countryHighlightCollage : Float -> Color.Color -> ActiveGame.CountryToRender -> Collage.Collage Msg
+countryHighlightCollage scale color countryToRender =
+    let
+        ( centerX, centerY ) =
+            countryToRender.center
+
+        updatedPoints =
+            countryToRender.polygonPoints
+                |> List.map
+                    (\( x, y ) ->
+                        ( (x - centerX) * scale + centerX, (y - centerY) * scale + centerY )
+                    )
+    in
+    updatedPoints
+        |> Collage.polygon
+        |> Collage.outlined
+            (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                (Collage.uniform countryCanBeClickedColor)
+            )
+
+
+countryCanBeClickedColor : Color.Color
+countryCanBeClickedColor =
+    Color.white
+
+
+getGrayedOutCountryCollage : ActiveGame.CountryToRender -> Collage.Collage Msg
+getGrayedOutCountryCollage countryToRender =
+    countryToRender.polygonPoints
+        |> Collage.polygon
+        |> Collage.filled (Color.rgba 0 0 0 0.5 |> Collage.uniform)
+
+
+getTroopCountCollage : ActiveGame.CountryToRender -> Collage.Collage Msg
+getTroopCountCollage countryToRender =
+    if TroopCount.hasTroops countryToRender.troopCount then
+        countryToRender.troopCount
+            |> TroopCount.toString
+            |> Collage.Text.fromString
+            |> Collage.Text.color Color.black
+            |> Collage.Text.size (toFloat ActiveGame.pixelsPerMapSquare * 0.8 |> ceiling)
+            |> Collage.rendered
+            |> Collage.shift countryToRender.center
+
+    else
+        Collage.group []
+
+
+getCountryCollage : ActiveGame.CountryToRender -> Collage.Collage Msg
+getCountryCollage countryToRender =
+    let
+        countryPolygon =
+            Collage.polygon countryToRender.polygonPoints
+
+        fill =
+            countryPolygon
+                |> Collage.filled (Collage.uniform countryToRender.color)
+
+        border =
+            countryPolygon
+                |> Collage.outlined
+                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 24.0)
+                        (Collage.uniform countryBorderColor)
+                    )
+    in
+    Collage.group [ border, fill ]
+
+
+renderCapitolDots : ActiveGame.CountryToRender -> Collage.Collage Msg
+renderCapitolDots countryToRender =
+    let
+        ( capitolDot, capitolDotsCoords ) =
+            case countryToRender.capitolDots of
+                Just capitolDots ->
+                    ( [ Collage.square (toFloat ActiveGame.pixelsPerMapSquare / 10.0)
+                            |> Collage.filled (Collage.uniform Color.black)
+                      ]
+                    , capitolDots
+                    )
+
+                Nothing ->
+                    ( [], Set.empty )
+
+        renderedDot =
+            capitolDot
+                |> Collage.group
+    in
+    capitolDotsCoords
+        |> Set.foldl
+            (\coordinates result ->
+                (renderedDot |> Collage.shift coordinates) :: result
+            )
+            []
+        |> Collage.group
+
+
+getCountryInfoPolygonBorder : ActiveGame.ActiveGame -> ActiveGame.CountryToRender -> Collage.Collage Msg
+getCountryInfoPolygonBorder activeGame countryToRender =
+    case getCountryInfoStatus activeGame countryToRender.id of
+        CountryInfoSelectedCountry ->
+            Collage.polygon countryToRender.polygonPoints
+                |> Collage.outlined
+                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                        (Collage.uniform Color.white)
+                    )
+
+        CountryInfoDefending ->
+            Collage.polygon countryToRender.polygonPoints
+                |> Collage.outlined
+                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                        (Collage.uniform Color.green)
+                    )
+
+        CountryInfoAttacking ->
+            Collage.polygon countryToRender.polygonPoints
+                |> Collage.outlined
+                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                        (Collage.uniform Color.red)
+                    )
+
+        NoInfo ->
+            Collage.polygon countryToRender.polygonPoints
+                |> Collage.outlined
+                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 24.0)
+                        (Collage.uniform countryBorderColor)
+                    )
 
 
 type CountryInfoStatus
@@ -773,57 +971,6 @@ getCountryInfoStatus activeGame countryId =
             NoInfo
 
 
-renderCountry : GameMap.CountryId -> ActiveGame.ActiveGame -> Collage.Collage Msg
-renderCountry countryId activeGame =
-    case ( ActiveGame.findCountryOwner countryId activeGame.players, GameMap.getCountry countryId activeGame.map.countries ) of
-        ( Just countryOwnerId, Just country ) ->
-            case
-                ( ActiveGame.getPlayer countryOwnerId activeGame.players
-                , ActiveGame.getTroopCountForCountry countryId activeGame.players
-                , ActiveGame.getCountryHasPort countryId activeGame.players
-                )
-            of
-                ( Just player, Just troopCount, Just hasPort ) ->
-                    Collage.group
-                        ((if hasPort then
-                            [ renderPort country.waterEdges ]
-
-                          else
-                            []
-                         )
-                            ++ [ renderTroopCount country.center troopCount
-                               , renderArea activeGame country.polygon player.color player.capitolStatus (getCountryInfoStatus activeGame countryId) countryId
-                               ]
-                        )
-                        |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
-                        |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
-                        |> Collage.Events.onMouseLeave (\_ -> CountryMouseOut countryId)
-
-                _ ->
-                    Collage.Text.fromString "Error rendering country 1" |> Collage.rendered
-
-        ( Nothing, Just country ) ->
-            case ActiveGame.getTroopCount countryId activeGame.neutralCountryTroops of
-                Just troopCount ->
-                    Collage.group
-                        [ renderTroopCount country.center troopCount
-                        , renderArea activeGame country.polygon Color.gray ActiveGame.NoCapitol (getCountryInfoStatus activeGame countryId) countryId
-                        ]
-                        |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
-                        |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
-                        |> Collage.Events.onMouseLeave (\_ -> CountryMouseOut countryId)
-
-                _ ->
-                    Collage.group
-                        [ renderArea activeGame country.polygon Color.gray ActiveGame.NoCapitol (getCountryInfoStatus activeGame countryId) countryId ]
-                        |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryId)
-                        |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryId)
-                        |> Collage.Events.onMouseLeave (\_ -> CountryMouseOut countryId)
-
-        _ ->
-            Collage.Text.fromString "Error rendering country 4" |> Collage.rendered
-
-
 renderPort : Set.Set GameMap.BorderSegment -> Collage.Collage msg
 renderPort waterEdges =
     waterEdges
@@ -838,109 +985,6 @@ renderPort waterEdges =
                         )
             )
         |> Collage.group
-
-
-renderTroopCount : ( Int, Int ) -> TroopCount.TroopCount -> Collage.Collage msg
-renderTroopCount ( medianX, medianY ) troopCount =
-    if TroopCount.hasTroops troopCount then
-        troopCount
-            |> TroopCount.toString
-            |> Collage.Text.fromString
-            |> Collage.Text.color Color.black
-            |> Collage.Text.size (toFloat ActiveGame.pixelsPerMapSquare * 0.8 |> ceiling)
-            |> Collage.rendered
-            |> Collage.shift ( (toFloat medianX + 0.5) * toFloat ActiveGame.pixelsPerMapSquare, (toFloat medianY + 0.5) * toFloat ActiveGame.pixelsPerMapSquare )
-
-    else
-        Collage.group []
-
-
-renderArea : ActiveGame.ActiveGame -> List ( Float, Float ) -> Color.Color -> ActiveGame.CapitolStatus -> CountryInfoStatus -> GameMap.CountryId -> Collage.Collage msg
-renderArea activeGame polygonPoints color capitolStatus countryInfoStatus countryId =
-    let
-        ( capitolDot, capitolDotsCoords ) =
-            case capitolStatus of
-                ActiveGame.Capitol capitolId coords ->
-                    if countryId == capitolId then
-                        ( [ Collage.square (toFloat ActiveGame.pixelsPerMapSquare / 10.0)
-                                |> Collage.filled (Collage.uniform Color.black)
-                          ]
-                        , coords
-                        )
-
-                    else
-                        ( [], Set.empty )
-
-                ActiveGame.NoCapitol ->
-                    ( [], Set.empty )
-
-        renderedDot =
-            capitolDot
-                |> Collage.group
-
-        polygon =
-            Collage.polygon polygonPoints
-
-        polygonBorder =
-            case countryInfoStatus of
-                CountryInfoSelectedCountry ->
-                    polygon
-                        |> Collage.outlined
-                            (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
-                                (Collage.uniform Color.white)
-                            )
-
-                CountryInfoDefending ->
-                    polygon
-                        |> Collage.outlined
-                            (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
-                                (Collage.uniform Color.green)
-                            )
-
-                CountryInfoAttacking ->
-                    polygon
-                        |> Collage.outlined
-                            (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
-                                (Collage.uniform Color.red)
-                            )
-
-                NoInfo ->
-                    polygon
-                        |> Collage.outlined
-                            (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 24.0)
-                                (Collage.uniform countryBorderColor)
-                            )
-
-        polygonFill =
-            polygon
-                |> Collage.filled (Collage.uniform color)
-
-        drawnDots =
-            capitolDotsCoords
-                |> Set.foldl
-                    (\coordinates result ->
-                        (renderedDot |> Collage.shift coordinates) :: result
-                    )
-                    []
-
-        countryOutlineForTroopMovement =
-            case ActiveGame.getSelectedCountryForTroopMovement activeGame of
-                Just selectedCountryId ->
-                    if selectedCountryId == countryId then
-                        [ polygon
-                            |> Collage.outlined
-                                (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
-                                    (Collage.uniform Color.black)
-                                )
-                        ]
-
-                    else
-                        []
-
-                Nothing ->
-                    []
-    in
-    Collage.group (drawnDots ++ countryOutlineForTroopMovement ++ [ polygonBorder, polygonFill ])
 
 
 
