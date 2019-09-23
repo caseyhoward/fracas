@@ -43,7 +43,8 @@ maximumNeutralCountryTroops =
 
 countryBorderColor : Color.Color
 countryBorderColor =
-    Color.black
+    -- Color.black
+    Color.rgb255 100 100 100
 
 
 countryOutlineDelayMilliseconds : Float
@@ -326,6 +327,8 @@ viewPlayingGame activeGame =
                     , Element.height Element.fill
                     ]
                     (getGameBoardHtml activeGame |> Element.html)
+
+                -- (getGameBoardHtml1 activeGame |> Element.html)
                 , Element.column
                     [ Element.width Element.fill
                     , Element.Border.width 1
@@ -709,6 +712,38 @@ getWaterCollage gameMap =
     Collage.group [ backgroundBorder, backgroundWater ]
 
 
+getGameBoardHtml1 : ActiveGame.ActiveGame -> Html.Html Msg
+getGameBoardHtml1 activeGame =
+    let
+        testPolygon =
+            Collage.polygon [ ( -100, -100 ), ( -100, 100 ), ( 100, 100 ), ( 100, -100 ) ]
+
+        filled =
+            testPolygon |> Collage.filled (Collage.uniform Color.green)
+
+        border =
+            testPolygon
+                |> Collage.outlined
+                    (Collage.solid 1
+                        (Collage.uniform countryBorderColor)
+                    )
+    in
+    Collage.group
+        [ filled
+        , border
+        ]
+        |> Collage.Render.svgExplicit
+            [ Html.Attributes.style "width" "100%"
+            , Html.Attributes.style "max-height" "100%"
+            , Html.Attributes.style "top" "0"
+            , Html.Attributes.style "left" "0"
+            , Html.Attributes.attribute "width" "0"
+            , Html.Attributes.attribute
+                "viewBox"
+                "-110 -110 220 220"
+            ]
+
+
 getGameBoardHtml : ActiveGame.ActiveGame -> Html.Html Msg
 getGameBoardHtml activeGame =
     case ActiveGame.getCountriesToRender activeGame of
@@ -900,11 +935,11 @@ getCountryCollage countryToRender =
         border =
             countryPolygon
                 |> Collage.outlined
-                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 12.0)
+                    (Collage.solid 30.0
                         (Collage.uniform countryBorderColor)
                     )
     in
-    Collage.group [ border, fill ]
+    Collage.group [ fill, border ]
 
 
 renderCapitolDots : ActiveGame.CountryToRender -> Collage.Collage Msg
