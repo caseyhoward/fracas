@@ -60,7 +60,8 @@ type alias ActiveGame =
     , numberOfPlayers : Int
     , countryBorderHelperOutlines : CountryBorderHelperOutlineStatus
     , showAvailableMoves : Bool
-    , windowSize : Maybe { width : Int, height : Int }
+    , windowSize : Maybe { width : Int, 
+    height : Int }
     }
 
 
@@ -133,7 +134,6 @@ getCountryAttackers activeGame countryId =
                         ( playerId
                         , neighborCountryId
                         , getTroopCountForCountry neighborCountryId activeGame.players |> Maybe.withDefault TroopCount.noTroops
-                          -- TODO
                         )
                     )
 
@@ -361,9 +361,9 @@ cancelMovingTroops activeGame =
             { activeGame | currentPlayerTurn = PlayerTurn TroopMovement playerId }
 
 
-canCurrentPlayerPass : ActiveGame -> Bool
-canCurrentPlayerPass activeGame =
-    case activeGame.currentPlayerTurn of
+canCurrentPlayerPass : PlayerTurn -> Bool
+canCurrentPlayerPass currentPlayerTurn =
+    case currentPlayerTurn of
         PlayerTurn playerTurnStage _ ->
             case playerTurnStage of
                 TroopMovement ->
@@ -388,9 +388,9 @@ canCurrentPlayerCancelTroopMovement activeGame =
                     False
 
 
-getCurrentPlayer : ActiveGame -> PlayerId
-getCurrentPlayer activeGame =
-    case activeGame.currentPlayerTurn of
+getCurrentPlayer : PlayerTurn -> PlayerId
+getCurrentPlayer currentPlayerTurn =
+    case currentPlayerTurn of
         PlayerTurn _ playerId ->
             playerId
 
@@ -585,6 +585,7 @@ findCountryOwnerAndTroopCount (GameMap.CountryId countryId) players =
             )
             Nothing
 
+
 getCountryHasPort : GameMap.CountryId -> Dict.Dict Int Player -> Maybe Bool
 getCountryHasPort (GameMap.CountryId countryId) players =
     findCountryOwner (GameMap.CountryId countryId) players
@@ -607,9 +608,11 @@ getDefaultColor (PlayerId playerId) =
             Color.black
 
 
-getPlayerCountryAndTroopCounts : ActiveGame -> List { playerId : PlayerId, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
-getPlayerCountryAndTroopCounts activeGame =
-    activeGame.players
+getPlayerCountryAndTroopCounts :
+    { players : Dict.Dict Int Player, currentPlayerTurn : PlayerTurn }
+    -> List { playerId : PlayerId, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
+getPlayerCountryAndTroopCounts { players, currentPlayerTurn } =
+    players
         |> Dict.map
             (\playerId player ->
                 case player.capitolStatus of
@@ -624,11 +627,10 @@ getPlayerCountryAndTroopCounts activeGame =
                         { playerId = PlayerId playerId
                         , countryCount = Dict.size player.countryTroopCounts
                         , troopCount = getTotalTroopCountForPlayer player
-                        , isAlive = False || isCapitolPlacementTurn activeGame
+                        , isAlive = False || isCapitolPlacementTurn currentPlayerTurn
                         }
             )
         |> Dict.values
-
 
 
 getTotalTroopCountForPlayer : Player -> TroopCount.TroopCount
@@ -738,14 +740,15 @@ handleCountryMouseOut mouseOutCountryId activeGame =
             activeGame
 
 
-isCapitolPlacementTurn : ActiveGame -> Bool
-isCapitolPlacementTurn activeGame =
-    case activeGame.currentPlayerTurn of
+isCapitolPlacementTurn : PlayerTurn -> Bool
+isCapitolPlacementTurn currentPlayerTurn =
+    case currentPlayerTurn of
         PlayerTurn CapitolPlacement _ ->
             True
 
         _ ->
             False
+
 
 isCountryIdCapitol : PlayerId -> GameMap.CountryId -> Dict.Dict Int Player -> Maybe Bool
 isCountryIdCapitol playerId countryId players =
@@ -840,13 +843,12 @@ playerTurnToString players (PlayerTurn playerTurnStage playerId) =
             -- TODO
             ""
 
+
 setWindowSize : Int -> Int -> ActiveGame -> ActiveGame
 setWindowSize width height activeGame =
     { activeGame
         | windowSize = Just { width = width, height = height }
     }
-
-
 
 
 start : GameMap.GameMap -> Int -> Dict.Dict String TroopCount.TroopCount -> ActiveGame
@@ -875,14 +877,16 @@ start map numberOfPlayers neutralTroopCounts =
     , windowSize = Nothing
     }
 
-troopsToMove : ActiveGame -> Maybe String
-troopsToMove activeGame =
-    case activeGame.currentPlayerTurn of
+
+troopsToMove : PlayerTurn -> Maybe String
+troopsToMove currentPlayerTurn =
+    case currentPlayerTurn of
         PlayerTurn (TroopMovementFromSelected _ troops) _ ->
             Just troops
 
         _ ->
             Nothing
+
 
 updateNumberOfTroopsToMove : String -> ActiveGame -> ActiveGame
 updateNumberOfTroopsToMove numberOfTroopsToMoveString activeGame =
@@ -895,6 +899,7 @@ updateNumberOfTroopsToMove numberOfTroopsToMoveString activeGame =
 
         _ ->
             activeGame
+
 
 
 ------- LOCAL
@@ -969,10 +974,10 @@ attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString a
         OccupiedByCurrentPlayer playerCountryToTroopCount ->
             case String.toInt numberOfTroopsToMoveString of
                 Just numberOfTroopsToMove ->
-                    if isCountryReachableFromOtherCountry fromCountryId clickedCountryId (getCurrentPlayer activeGame) activeGame.map.countries activeGame.players then
+                    if isCountryReachableFromOtherCountry fromCountryId clickedCountryId (getCurrentPlayer activeGame.currentPlayerTurn) activeGame.map.countries activeGame.players then
                         let
                             fromCountryTroopCount =
-                                case getPlayer (getCurrentPlayer activeGame) activeGame.players of
+                                case getPlayer (getCurrentPlayer activeGame.currentPlayerTurn) activeGame.players of
                                     Just currentPlayer1 ->
                                         case getTroopCount fromCountryId currentPlayer1.countryTroopCounts of
                                             Just troopCount ->
@@ -989,11 +994,11 @@ attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString a
 
                             updatedGame =
                                 activeGame
-                                    |> updatePlayerTroopCountForCountry (getCurrentPlayer activeGame) fromCountryId (TroopCount.subtractTroopCounts allowedNumberOfTroopsToMove fromCountryTroopCount)
-                                    |> updatePlayerTroopCountForCountry (getCurrentPlayer activeGame) clickedCountryId (TroopCount.addTroopCounts playerCountryToTroopCount allowedNumberOfTroopsToMove)
+                                    |> updatePlayerTroopCountForCountry (getCurrentPlayer activeGame.currentPlayerTurn) fromCountryId (TroopCount.subtractTroopCounts allowedNumberOfTroopsToMove fromCountryTroopCount)
+                                    |> updatePlayerTroopCountForCountry (getCurrentPlayer activeGame.currentPlayerTurn) clickedCountryId (TroopCount.addTroopCounts playerCountryToTroopCount allowedNumberOfTroopsToMove)
                         in
                         { updatedGame
-                            | currentPlayerTurn = PlayerTurn TroopPlacement (getCurrentPlayer activeGame |> nextPlayerCheckForDeadPlayers activeGame.players)
+                            | currentPlayerTurn = PlayerTurn TroopPlacement (getCurrentPlayer activeGame.currentPlayerTurn |> nextPlayerCheckForDeadPlayers activeGame.players)
                             , error = Nothing
                         }
 
@@ -1104,7 +1109,7 @@ attackResult clickedCountryId activeGame =
                     getAttackStrengthPerPlayer activeGame clickedCountryId
 
                 currentPlayerId =
-                    getCurrentPlayer activeGame
+                    getCurrentPlayer activeGame.currentPlayerTurn
 
                 currentPlayerIdInt =
                     case currentPlayerId of
@@ -1258,7 +1263,6 @@ filterCountriesOwnedBy players playerId countryIds =
         countryIds
 
 
-
 buildPort : PlayerId -> GameMap.CountryId -> ActiveGame -> ActiveGame
 buildPort playerId countryId activeGame =
     -- We already had to check that the player owned this country before so no need to do that here
@@ -1335,6 +1339,7 @@ destroyTroops : GameMap.CountryId -> Dict.Dict String TroopCount.TroopCount -> D
 destroyTroops (GameMap.CountryId countryId) neutralTroopCounts =
     Dict.remove countryId neutralTroopCounts
 
+
 filterCountriesWithPort : Dict.Dict Int Player -> List GameMap.CountryId -> List GameMap.CountryId
 filterCountriesWithPort players countries =
     countries
@@ -1400,8 +1405,8 @@ getCountryCanBeClicked activeGame countryId =
                             False
 
                 TroopMovementFromSelected fromCountryId _ ->
-                    if isCountryReachableFromOtherCountry fromCountryId countryId (getCurrentPlayer activeGame) activeGame.map.countries activeGame.players then
-                        case getPlayer (getCurrentPlayer activeGame) activeGame.players of
+                    if isCountryReachableFromOtherCountry fromCountryId countryId (getCurrentPlayer activeGame.currentPlayerTurn) activeGame.map.countries activeGame.players then
+                        case getPlayer (getCurrentPlayer activeGame.currentPlayerTurn) activeGame.players of
                             Just currentPlayer ->
                                 case getTroopCount countryId currentPlayer.countryTroopCounts of
                                     Just _ ->
@@ -1420,10 +1425,9 @@ getCountryCanBeClicked activeGame countryId =
                     False
 
 
-
 getCountryStatus : GameMap.CountryId -> ActiveGame -> CountryStatus
 getCountryStatus countryId activeGame =
-    case getPlayer (getCurrentPlayer activeGame) activeGame.players of
+    case getPlayer (getCurrentPlayer activeGame.currentPlayerTurn) activeGame.players of
         Just currentPlayer ->
             case getTroopCount countryId currentPlayer.countryTroopCounts of
                 Just troopCount ->
@@ -1542,7 +1546,6 @@ playerHasMoreThanOneCountry players playerId =
         |> Maybe.withDefault False
 
 
-
 playerTurnToPlayerId : PlayerTurn -> PlayerId
 playerTurnToPlayerId (PlayerTurn _ playerId) =
     playerId
@@ -1574,13 +1577,12 @@ takeCountryFromOpponent : GameMap.CountryId -> ActiveGame -> ActiveGame
 takeCountryFromOpponent countryId activeGame =
     activeGame
         |> removePlayerCountry countryId
-        |> updatePlayerTroopCountForCountry (getCurrentPlayer activeGame) countryId TroopCount.noTroops
+        |> updatePlayerTroopCountForCountry (getCurrentPlayer activeGame.currentPlayerTurn) countryId TroopCount.noTroops
 
 
 troopsPerCountryPerTurn : Int
 troopsPerCountryPerTurn =
     1
-
 
 
 updateForSuccessfulAttack : ActiveGame -> ActiveGame

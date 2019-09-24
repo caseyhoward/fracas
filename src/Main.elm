@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 -- import Maps.Big
+-- import Maps.UnitedStates
 
 import ActiveGame
 import Browser
@@ -25,7 +26,6 @@ import Html.Attributes
 import Html.Events
 import Json.Decode as Json
 import Maps.Big
--- import Maps.UnitedStates
 import Random
 import Random.Dict
 import Random.List
@@ -369,7 +369,7 @@ viewPlayingGameMobile activeGame =
                         Nothing ->
                             []
                      )
-                        ++ [ viewPlayerTurnStatus 10 activeGame.currentPlayerTurn activeGame.players ]
+                        ++ [ viewPlayerTurnStatus 38 10 activeGame.currentPlayerTurn activeGame.players ]
                     )
                 , Element.el
                     [ Element.width Element.fill
@@ -401,7 +401,7 @@ viewPlayingGameDesktop activeGame =
                 , Element.column
                     [ Element.width Element.fill
                     , Element.Border.width 1
-                    , Element.Border.color teal
+                    , Element.Border.color black
                     , Element.Border.solid
                     ]
                     ((case activeGame.error of
@@ -411,7 +411,7 @@ viewPlayingGameDesktop activeGame =
                         Nothing ->
                             []
                      )
-                        ++ [ viewPlayerTurnStatus 20 activeGame.currentPlayerTurn activeGame.players ]
+                        ++ [ viewPlayerTurnStatus 55 20 activeGame.currentPlayerTurn activeGame.players ]
                     )
                 ]
             ]
@@ -430,11 +430,11 @@ viewInfoPanelPhone activeGame =
         , Element.Border.color black
         , Element.Border.solid
         ]
-        [ viewPassButtonIfNecessary activeGame
-        , viewPlayerCountryAndTroopCountsMobile activeGame
-        , viewConfigureTroopCountIfNecessary activeGame
+        [ viewPassButtonIfNecessary activeGame.currentPlayerTurn
+        , viewPlayerCountryAndTroopCountsMobile activeGame.currentPlayerTurn activeGame.players
+        , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn
         , viewCountryInfo activeGame
-        , viewShowAvailableMoves activeGame
+        , viewShowAvailableMoves activeGame.showAvailableMoves
         ]
 
 
@@ -450,16 +450,16 @@ viewInfoPanelDesktop activeGame =
         , Element.Border.color black
         , Element.Border.solid
         ]
-        [ viewPassButtonIfNecessary activeGame
-        , viewPlayerCountryAndTroopCounts activeGame
-        , viewConfigureTroopCountIfNecessary activeGame
+        [ viewPassButtonIfNecessary activeGame.currentPlayerTurn
+        , viewPlayerCountryAndTroopCounts activeGame.currentPlayerTurn activeGame.players
+        , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn
         , viewCountryInfo activeGame
-        , viewShowAvailableMoves activeGame
+        , viewShowAvailableMoves activeGame.showAvailableMoves
         ]
 
 
-viewShowAvailableMoves : ActiveGame.ActiveGame -> Element.Element Msg
-viewShowAvailableMoves activeGame =
+viewShowAvailableMoves : Bool -> Element.Element Msg
+viewShowAvailableMoves showAvailableMoves =
     Element.row
         [ Element.alignBottom ]
         [ Element.Input.checkbox
@@ -468,19 +468,19 @@ viewShowAvailableMoves activeGame =
                 Element.Input.labelRight [ Element.Font.size 12 ]
                     (Element.text "Show available moves")
             , icon = Element.Input.defaultCheckbox
-            , checked = activeGame.showAvailableMoves
+            , checked = showAvailableMoves
             , onChange = ShowAvailableMovesCheckboxToggled
             }
         ]
 
 
-viewPassButtonIfNecessary : ActiveGame.ActiveGame -> Element.Element Msg
-viewPassButtonIfNecessary activeGame =
+viewPassButtonIfNecessary : ActiveGame.PlayerTurn -> Element.Element Msg
+viewPassButtonIfNecessary currentPlayerTurn =
     Element.el
         [ Element.width Element.fill
         , Element.height (Element.px 50)
         ]
-        (if ActiveGame.canCurrentPlayerPass activeGame then
+        (if ActiveGame.canCurrentPlayerPass currentPlayerTurn then
             Element.Input.button
                 (defaultButtonAttributes
                     ++ [ Element.width (Element.px 120)
@@ -501,25 +501,25 @@ playerAndTroopCountBorderColor =
     Color.darkGray |> colorToElementColor
 
 
-viewPlayerCountryAndTroopCounts : ActiveGame.ActiveGame -> Element.Element Msg
-viewPlayerCountryAndTroopCounts activeGame =
+viewPlayerCountryAndTroopCounts : ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
+viewPlayerCountryAndTroopCounts currentPlayerTurn players =
     Element.column
         [ Element.spacing 10
         , Element.width Element.fill
         ]
-        (ActiveGame.getPlayerCountryAndTroopCounts activeGame
-            |> List.map (viewPlayerTroopCount (ActiveGame.getCurrentPlayer activeGame) activeGame.players)
+        (ActiveGame.getPlayerCountryAndTroopCounts { currentPlayerTurn = currentPlayerTurn, players = players }
+            |> List.map (viewPlayerTroopCount (ActiveGame.getCurrentPlayer currentPlayerTurn) players)
         )
 
 
-viewPlayerCountryAndTroopCountsMobile : ActiveGame.ActiveGame -> Element.Element Msg
-viewPlayerCountryAndTroopCountsMobile activeGame =
+viewPlayerCountryAndTroopCountsMobile : ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
+viewPlayerCountryAndTroopCountsMobile currentPlayerTurn players =
     Element.wrappedRow
         [ Element.spacing 10
         , Element.width Element.fill
         ]
-        (ActiveGame.getPlayerCountryAndTroopCounts activeGame
-            |> List.map (viewPlayerTroopCount (ActiveGame.getCurrentPlayer activeGame) activeGame.players)
+        (ActiveGame.getPlayerCountryAndTroopCounts { currentPlayerTurn = currentPlayerTurn, players = players }
+            |> List.map (viewPlayerTroopCount (ActiveGame.getCurrentPlayer currentPlayerTurn) players)
         )
 
 
@@ -734,12 +734,12 @@ defaultLabelAttributes =
     ]
 
 
-viewConfigureTroopCountIfNecessary : ActiveGame.ActiveGame -> Element.Element Msg
-viewConfigureTroopCountIfNecessary activeGame =
+viewConfigureTroopCountIfNecessary : ActiveGame.PlayerTurn -> Element.Element Msg
+viewConfigureTroopCountIfNecessary currentPlayerTurn =
     Element.el
         [ Element.width Element.fill
         ]
-        (case activeGame |> ActiveGame.troopsToMove of
+        (case currentPlayerTurn |> ActiveGame.troopsToMove of
             Just numberOfTroopsToMove ->
                 Element.column
                     [ Element.width Element.fill
@@ -769,10 +769,11 @@ viewConfigureTroopCountIfNecessary activeGame =
         )
 
 
-viewPlayerTurnStatus : Int -> ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
-viewPlayerTurnStatus fontSize playerTurn players =
+viewPlayerTurnStatus : Int -> Int -> ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
+viewPlayerTurnStatus height fontSize playerTurn players =
     Element.el
         [ Element.width Element.fill
+        , Element.height (Element.px height)
         , Element.Background.color (ActiveGame.getPlayerColorFromPlayerTurn players playerTurn |> colorToElementColor)
         , Element.padding 5
         ]
