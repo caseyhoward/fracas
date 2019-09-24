@@ -229,6 +229,7 @@ getCountryAttackers activeGame countryId =
             Dict.empty
 
 
+
 getCountriesToRender : ActiveGame -> Maybe (List CountryToRender)
 getCountriesToRender activeGame =
     activeGame.map.countries
