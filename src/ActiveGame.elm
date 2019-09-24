@@ -33,7 +33,6 @@ module ActiveGame exposing
     , isCountryIdCapitol
     , makeCountryHelperOutlinesActive
     , pass
-    , pixelsPerMapSquare
     , playerIdToString
     , playerTurnToString
     , setWindowSize
@@ -49,6 +48,11 @@ import Dict
 import GameMap
 import Set
 import TroopCount
+import ViewHelpers
+
+
+
+-- TODO
 
 
 type alias ActiveGame =
@@ -229,7 +233,6 @@ getCountryAttackers activeGame countryId =
             Dict.empty
 
 
-
 getCountriesToRender : ActiveGame -> Maybe (List CountryToRender)
 getCountriesToRender activeGame =
     activeGame.map.countries
@@ -243,7 +246,7 @@ getCountriesToRender activeGame =
                         \_ ->
                             case country.center of
                                 ( medianX, medianY ) ->
-                                    ( (toFloat medianX + 0.5) * toFloat pixelsPerMapSquare, (toFloat medianY + 0.5) * toFloat pixelsPerMapSquare )
+                                    ( (toFloat medianX + 0.5) * toFloat ViewHelpers.pixelsPerMapSquare, (toFloat medianY + 0.5) * toFloat ViewHelpers.pixelsPerMapSquare )
                 in
                 case countryOwnerAndTroopCount of
                     Just ( countryOwnerId, troopCount ) ->
@@ -561,11 +564,6 @@ getSelectedCountryForTroopMovement activeGame =
 
         _ ->
             Nothing
-
-
-pixelsPerMapSquare : Int
-pixelsPerMapSquare =
-    100
 
 
 findCountryOwner : GameMap.CountryId -> Dict.Dict Int Player -> Maybe PlayerId
@@ -1038,7 +1036,7 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
                                     { currentPlayer
                                         | countryTroopCounts =
                                             updateTroopCount clickedCountryId neutralTroopCount currentPlayer.countryTroopCounts
-                                        , capitolStatus = Capitol clickedCountryId (GameMap.capitolDotsCoordinates clickedCountry.coordinates pixelsPerMapSquare)
+                                        , capitolStatus = Capitol clickedCountryId (GameMap.capitolDotsCoordinates clickedCountry.coordinates ViewHelpers.pixelsPerMapSquare)
                                     }
 
                                 updatedPlayers =

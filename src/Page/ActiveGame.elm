@@ -1,4 +1,4 @@
-module Page.ActiveGame exposing (Model, Msg, subscriptions, update, view)
+module Page.ActiveGame exposing (Model, Msg, subscriptions, toWindowSize, update, view)
 
 import ActiveGame
 import Collage
@@ -103,7 +103,7 @@ view activeGame =
 
             Nothing ->
                 viewPlayingGameDesktop activeGame
-    , title = ""
+    , title = "Fracas"
     }
 
 
@@ -556,7 +556,7 @@ getWaterCollage gameMap =
 
         backgroundBorder =
             background
-                |> Collage.outlined (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 8.0) (Collage.uniform Color.black))
+                |> Collage.outlined (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 8.0) (Collage.uniform Color.black))
     in
     Collage.group [ backgroundBorder, backgroundWater ]
 
@@ -720,7 +720,7 @@ countryHighlightCollage scale countryToRender =
     updatedPoints
         |> Collage.polygon
         |> Collage.outlined
-            (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+            (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 6.0)
                 (Collage.uniform countryCanBeClickedColor)
             )
 
@@ -778,7 +778,7 @@ renderCapitolDots countryToRender =
         ( capitolDot, capitolDotsCoords ) =
             case countryToRender.capitolDots of
                 Just capitolDots ->
-                    ( [ Collage.square (toFloat ActiveGame.pixelsPerMapSquare / 10.0)
+                    ( [ Collage.square (toFloat ViewHelpers.pixelsPerMapSquare / 10.0)
                             |> Collage.filled (Collage.uniform Color.black)
                       ]
                     , capitolDots
@@ -806,21 +806,21 @@ getCountryInfoPolygonBorder activeGame countryToRender =
         CountryInfoSelectedCountry ->
             Collage.polygon countryToRender.polygonPoints
                 |> Collage.outlined
-                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                    (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 6.0)
                         (Collage.uniform Color.white)
                     )
 
         CountryInfoDefending ->
             Collage.polygon countryToRender.polygonPoints
                 |> Collage.outlined
-                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                    (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 6.0)
                         (Collage.uniform Color.green)
                     )
 
         CountryInfoAttacking ->
             Collage.polygon countryToRender.polygonPoints
                 |> Collage.outlined
-                    (Collage.solid (toFloat ActiveGame.pixelsPerMapSquare / 6.0)
+                    (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 6.0)
                         (Collage.uniform Color.red)
                     )
 
@@ -864,7 +864,7 @@ renderPort waterEdges =
                 Collage.segment point1 point2
                     |> Collage.traced
                         (Collage.broken [ ( 3, 10 ) ]
-                            ((ActiveGame.pixelsPerMapSquare |> toFloat) / 2.0)
+                            ((ViewHelpers.pixelsPerMapSquare |> toFloat) / 2.0)
                             (Collage.uniform Color.gray)
                         )
             )
@@ -887,3 +887,8 @@ subscriptions model =
 
     else
         Sub.none
+
+
+toWindowSize : Model -> Maybe { width : Int, height : Int }
+toWindowSize model =
+    model.windowSize

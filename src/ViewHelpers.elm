@@ -1,4 +1,4 @@
-module ViewHelpers exposing (centerText, colorToElementColor, defaultButtonAttributes)
+module ViewHelpers exposing (centerText, colorToElementColor, defaultButtonAttributes, pixelsPerMapSquare)
 
 import Color
 import Element
@@ -29,3 +29,8 @@ defaultButtonAttributes =
     , Element.width Element.fill
     , Element.Font.variant Element.Font.smallCaps
     ]
+
+
+pixelsPerMapSquare : Int
+pixelsPerMapSquare =
+    100
