@@ -772,7 +772,7 @@ playerIdToString (PlayerId playerId) =
 setWindowSize : Int -> Int -> ActiveGame -> ActiveGame
 setWindowSize width height activeGame =
     { activeGame
-        | windowSize = Just { width = width, height = height}
+        | windowSize = Just { width = width, height = height }
     }
 
 
@@ -801,14 +801,6 @@ start map numberOfPlayers neutralTroopCounts =
     , countryBorderHelperOutlines = CountryBorderHelperOutlineInactive
     , windowSize = Nothing
     }
-
-
-
--- updateShowAvailableMoves : Bool -> ActiveGame -> ActiveGame
--- updateShowAvailableMoves isChecked activeGame =
---     {activeGame | showAvailableMoves = isChecked}
--- showAvailableMoves : ActiveGame =
--- Not exposed
 
 
 addPortForPlayer : GameMap.CountryId -> Player -> Player

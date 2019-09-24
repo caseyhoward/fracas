@@ -24,8 +24,8 @@ import Html
 import Html.Attributes
 import Html.Events
 import Json.Decode as Json
-import Maps.MobileFriendlier
-import Maps.UnitedStates
+import Maps.Big
+-- import Maps.UnitedStates
 import Random
 import Random.Dict
 import Random.List
@@ -46,7 +46,6 @@ maximumNeutralCountryTroops =
 
 countryBorderColor : Color.Color
 countryBorderColor =
-    -- Color.black
     Color.rgb255 100 100 100
 
 
@@ -243,7 +242,7 @@ startGame : ConfigurationAttributes -> ( Model, Cmd Msg )
 startGame configurationOptions =
     let
         map =
-            GameMap.parse Maps.UnitedStates.map ActiveGame.pixelsPerMapSquare
+            GameMap.parse Maps.Big.map ActiveGame.pixelsPerMapSquare
     in
     ( GeneratingRandomTroopCounts configurationOptions map
     , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
