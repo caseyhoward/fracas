@@ -4,6 +4,8 @@ module Main exposing (main)
 
 import ActiveGame
 import Browser
+import Browser.Dom
+import Browser.Events
 import Collage
 import Collage.Events
 import Collage.Layout
@@ -28,6 +30,7 @@ import Random
 import Random.Dict
 import Random.List
 import Set
+import Task
 import Time
 import TroopCount
 
@@ -101,6 +104,7 @@ type Msg
     | NumberOfPlayersKeyPressed Int
     | ShowCountryBorderHelper
     | ShowAvailableMovesCheckboxToggled Bool
+    | WindowResized Int Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -151,6 +155,9 @@ update msg model =
                 ShowAvailableMovesCheckboxToggled _ ->
                     ( model, Cmd.none )
 
+                WindowResized _ _ ->
+                    ( model, Cmd.none )
+
         GeneratingRandomTroopCounts configurationOptions map ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
@@ -160,7 +167,18 @@ update msg model =
                                 |> String.toInt
                                 |> Maybe.withDefault 6
                     in
-                    ( ActiveGame.start map numberOfPlayers neutralCountryTroopCounts |> PlayingGame, Cmd.none )
+                    ( ActiveGame.start map numberOfPlayers neutralCountryTroopCounts |> PlayingGame
+                    , Task.attempt
+                        (\viewportResult ->
+                            case viewportResult of
+                                Ok viewport ->
+                                    WindowResized (round viewport.viewport.width) (round viewport.viewport.height)
+
+                                Err _ ->
+                                    WindowResized 0 0
+                        )
+                        Browser.Dom.getViewport
+                    )
 
                 _ ->
                     ( model, Cmd.none )
@@ -207,6 +225,9 @@ update msg model =
 
                 ShowCountryBorderHelper ->
                     ( PlayingGame (ActiveGame.makeCountryHelperOutlinesActive attributes), Cmd.none )
+
+                WindowResized width height ->
+                    ( PlayingGame (ActiveGame.setWindowSize width height attributes), Cmd.none )
 
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)
@@ -313,10 +334,61 @@ centerText text =
 
 viewPlayingGame : ActiveGame.ActiveGame -> Html.Html Msg
 viewPlayingGame activeGame =
+    case activeGame.windowSize of
+        Just windowSize ->
+            case Element.classifyDevice windowSize |> .class of
+                Element.Phone ->
+                    viewPlayingGameMobile activeGame
+
+                _ ->
+                    viewPlayingGameDesktop activeGame
+
+        Nothing ->
+            viewPlayingGameDesktop activeGame
+
+
+viewPlayingGameMobile : ActiveGame.ActiveGame -> Html.Html Msg
+viewPlayingGameMobile activeGame =
+    Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
+        (Element.column
+            [ Element.centerX, Element.width Element.fill ]
+            [ Element.column
+                [ Element.centerX
+                , Element.width Element.fill
+                , Element.alignTop
+                ]
+                [ Element.column
+                    [ Element.width Element.fill
+                    , Element.Border.width 1
+                    , Element.Border.color black
+                    , Element.Border.solid
+                    ]
+                    ((case activeGame.error of
+                        Just error ->
+                            [ Element.paragraph [] [ Element.text error ] ]
+
+                        Nothing ->
+                            []
+                     )
+                        ++ [ viewPlayerTurnStatus 10 activeGame.currentPlayerTurn activeGame.players ]
+                    )
+                , Element.el
+                    [ Element.width Element.fill
+                    , Element.height Element.fill
+                    ]
+                    (getGameBoardHtml activeGame |> Element.html)
+                , viewInfoPanelPhone activeGame
+                ]
+            ]
+        )
+
+
+viewPlayingGameDesktop : ActiveGame.ActiveGame -> Html.Html Msg
+viewPlayingGameDesktop activeGame =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.row
             [ Element.centerX, Element.width Element.fill ]
-            [ viewInfoPanel activeGame
+            [ viewInfoPanelDesktop activeGame
             , Element.column
                 [ Element.centerX
                 , Element.width Element.fill
@@ -327,8 +399,6 @@ viewPlayingGame activeGame =
                     , Element.height Element.fill
                     ]
                     (getGameBoardHtml activeGame |> Element.html)
-
-                -- (getGameBoardHtml1 activeGame |> Element.html)
                 , Element.column
                     [ Element.width Element.fill
                     , Element.Border.width 1
@@ -342,15 +412,35 @@ viewPlayingGame activeGame =
                         Nothing ->
                             []
                      )
-                        ++ [ viewPlayerTurnStatus activeGame.currentPlayerTurn activeGame.players ]
+                        ++ [ viewPlayerTurnStatus 20 activeGame.currentPlayerTurn activeGame.players ]
                     )
                 ]
             ]
         )
 
 
-viewInfoPanel : ActiveGame.ActiveGame -> Element.Element Msg
-viewInfoPanel activeGame =
+viewInfoPanelPhone : ActiveGame.ActiveGame -> Element.Element Msg
+viewInfoPanelPhone activeGame =
+    Element.column
+        [ Element.width Element.fill
+        , Element.height Element.fill
+        , Element.padding 20
+        , Element.spacing 20
+        , Element.alignTop
+        , Element.Border.width 1
+        , Element.Border.color black
+        , Element.Border.solid
+        ]
+        [ viewPassButtonIfNecessary activeGame
+        , viewPlayerCountryAndTroopCountsMobile activeGame
+        , viewConfigureTroopCountIfNecessary activeGame
+        , viewCountryInfo activeGame
+        , viewShowAvailableMoves activeGame
+        ]
+
+
+viewInfoPanelDesktop : ActiveGame.ActiveGame -> Element.Element Msg
+viewInfoPanelDesktop activeGame =
     Element.column
         [ Element.width (Element.px 200)
         , Element.height Element.fill
@@ -358,25 +448,30 @@ viewInfoPanel activeGame =
         , Element.spacing 20
         , Element.alignTop
         , Element.Border.width 1
-        , Element.Border.color teal
+        , Element.Border.color black
         , Element.Border.solid
         ]
         [ viewPassButtonIfNecessary activeGame
         , viewPlayerCountryAndTroopCounts activeGame
         , viewConfigureTroopCountIfNecessary activeGame
         , viewCountryInfo activeGame
-        , Element.row
-            [ Element.alignBottom ]
-            [ Element.Input.checkbox
-                []
-                { label =
-                    Element.Input.labelRight [ Element.Font.size 12 ]
-                        (Element.text "Show available moves")
-                , icon = Element.Input.defaultCheckbox
-                , checked = activeGame.showAvailableMoves
-                , onChange = ShowAvailableMovesCheckboxToggled
-                }
-            ]
+        , viewShowAvailableMoves activeGame
+        ]
+
+
+viewShowAvailableMoves : ActiveGame.ActiveGame -> Element.Element Msg
+viewShowAvailableMoves activeGame =
+    Element.row
+        [ Element.alignBottom ]
+        [ Element.Input.checkbox
+            []
+            { label =
+                Element.Input.labelRight [ Element.Font.size 12 ]
+                    (Element.text "Show available moves")
+            , icon = Element.Input.defaultCheckbox
+            , checked = activeGame.showAvailableMoves
+            , onChange = ShowAvailableMovesCheckboxToggled
+            }
         ]
 
 
@@ -410,6 +505,17 @@ playerAndTroopCountBorderColor =
 viewPlayerCountryAndTroopCounts : ActiveGame.ActiveGame -> Element.Element Msg
 viewPlayerCountryAndTroopCounts activeGame =
     Element.column
+        [ Element.spacing 10
+        , Element.width Element.fill
+        ]
+        (ActiveGame.getPlayerCountryAndTroopCounts activeGame
+            |> List.map (viewPlayerTroopCount (ActiveGame.getCurrentPlayer activeGame) activeGame.players)
+        )
+
+
+viewPlayerCountryAndTroopCountsMobile : ActiveGame.ActiveGame -> Element.Element Msg
+viewPlayerCountryAndTroopCountsMobile activeGame =
+    Element.wrappedRow
         [ Element.spacing 10
         , Element.width Element.fill
         ]
@@ -664,8 +770,8 @@ viewConfigureTroopCountIfNecessary activeGame =
         )
 
 
-viewPlayerTurnStatus : ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
-viewPlayerTurnStatus playerTurn players =
+viewPlayerTurnStatus : Int -> ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
+viewPlayerTurnStatus fontSize playerTurn players =
     Element.el
         [ Element.width Element.fill
         , Element.Background.color (ActiveGame.getPlayerColorFromPlayerTurn players playerTurn |> colorToElementColor)
@@ -673,7 +779,7 @@ viewPlayerTurnStatus playerTurn players =
         ]
         (Element.el
             [ Element.width Element.fill ]
-            (Element.paragraph []
+            (Element.paragraph [ Element.Font.size fontSize ]
                 [ Element.text
                     (ActiveGame.playerTurnToString players playerTurn)
                 ]
@@ -684,10 +790,6 @@ viewPlayerTurnStatus playerTurn players =
 colorToElementColor : Color.Color -> Element.Color
 colorToElementColor color =
     color |> Color.toRgba |> Element.fromRgb
-
-
-
--- Rendering (new)
 
 
 getWaterCollage : GameMap.GameMap -> Collage.Collage Msg
@@ -712,38 +814,6 @@ getWaterCollage gameMap =
     Collage.group [ backgroundBorder, backgroundWater ]
 
 
-getGameBoardHtml1 : ActiveGame.ActiveGame -> Html.Html Msg
-getGameBoardHtml1 activeGame =
-    let
-        testPolygon =
-            Collage.polygon [ ( -100, -100 ), ( -100, 100 ), ( 100, 100 ), ( 100, -100 ) ]
-
-        filled =
-            testPolygon |> Collage.filled (Collage.uniform Color.green)
-
-        border =
-            testPolygon
-                |> Collage.outlined
-                    (Collage.solid 1
-                        (Collage.uniform countryBorderColor)
-                    )
-    in
-    Collage.group
-        [ filled
-        , border
-        ]
-        |> Collage.Render.svgExplicit
-            [ Html.Attributes.style "width" "100%"
-            , Html.Attributes.style "max-height" "100%"
-            , Html.Attributes.style "top" "0"
-            , Html.Attributes.style "left" "0"
-            , Html.Attributes.attribute "width" "0"
-            , Html.Attributes.attribute
-                "viewBox"
-                "-110 -110 220 220"
-            ]
-
-
 getGameBoardHtml : ActiveGame.ActiveGame -> Html.Html Msg
 getGameBoardHtml activeGame =
     case ActiveGame.getCountriesToRender activeGame of
@@ -758,9 +828,22 @@ getGameBoardHtml activeGame =
                         |> List.map getCountryCollage
                         |> Collage.group
 
+                troopCountFontSize =
+                    case activeGame.windowSize of
+                        Just windowSize ->
+                            case Element.classifyDevice windowSize |> .class of
+                                Element.Phone ->
+                                    200
+
+                                _ ->
+                                    100
+
+                        Nothing ->
+                            100
+
                 troopCountsCollage =
                     countriesToRender
-                        |> List.map getTroopCountCollage
+                        |> List.map (getTroopCountCollage troopCountFontSize)
                         |> Collage.group
 
                 gameBoardHeight =
@@ -835,10 +918,10 @@ countryHighlight countryToRender =
     let
         maybeCountryCanBeClickedHighlight =
             if countryToRender.canBeClicked then
-                Just (countryHighlightCollage 0.99 countryCanBeClickedColor countryToRender)
+                Just (countryHighlightCollage 0.99 countryToRender)
 
             else if countryToRender.isBeingMovedFrom then
-                Just ([ getGrayedOutCountryCollage countryToRender, countryHighlightCollage 1.0 countryCanBeClickedColor countryToRender ] |> Collage.group)
+                Just ([ getGrayedOutCountryCollage countryToRender, countryHighlightCollage 1.0 countryToRender ] |> Collage.group)
 
             else
                 Just (getGrayedOutCountryCollage countryToRender)
@@ -874,8 +957,8 @@ getPortCollage countryToRender =
         |> Collage.group
 
 
-countryHighlightCollage : Float -> Color.Color -> ActiveGame.CountryToRender -> Collage.Collage Msg
-countryHighlightCollage scale color countryToRender =
+countryHighlightCollage : Float -> ActiveGame.CountryToRender -> Collage.Collage Msg
+countryHighlightCollage scale countryToRender =
     let
         ( centerX, centerY ) =
             countryToRender.center
@@ -907,14 +990,14 @@ getGrayedOutCountryCollage countryToRender =
         |> Collage.filled (Color.rgba 0 0 0 0.5 |> Collage.uniform)
 
 
-getTroopCountCollage : ActiveGame.CountryToRender -> Collage.Collage Msg
-getTroopCountCollage countryToRender =
+getTroopCountCollage : Int -> ActiveGame.CountryToRender -> Collage.Collage Msg
+getTroopCountCollage fontSize countryToRender =
     if TroopCount.hasTroops countryToRender.troopCount then
         countryToRender.troopCount
             |> TroopCount.toString
             |> Collage.Text.fromString
             |> Collage.Text.color Color.black
-            |> Collage.Text.size (toFloat ActiveGame.pixelsPerMapSquare * 0.8 |> ceiling)
+            |> Collage.Text.size fontSize
             |> Collage.rendered
             |> Collage.shift countryToRender.center
 
@@ -1049,11 +1132,15 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
         PlayingGame activeGame ->
-            if ActiveGame.waitingToShowCountryHelperOutlines activeGame then
-                Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
+            let
+                subscription =
+                    if ActiveGame.waitingToShowCountryHelperOutlines activeGame then
+                        Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
 
-            else
-                Sub.none
+                    else
+                        Sub.none
+            in
+            Sub.batch [ subscription, Browser.Events.onResize (\x y -> WindowResized x y) ]
 
         _ ->
             Sub.none

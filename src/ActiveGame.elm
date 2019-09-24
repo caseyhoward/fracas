@@ -2,9 +2,7 @@ module ActiveGame exposing
     ( ActiveGame
     , CapitolStatus(..)
     , CountryBorderHelperOutlineStatus(..)
-    ,  CountryToRender
-       -- , CountryToRenderStatus
-
+    , CountryToRender
     , Player
     , PlayerId(..)
     , PlayerTurn
@@ -22,7 +20,6 @@ module ActiveGame exposing
     , getDefaultColor
     , getPlayer
     , getPlayerColorFromPlayerTurn
-    -- ,updateShowAvailableMoves
     , getPlayerCountryAndTroopCounts
     , getPlayerTurnStageFromPlayerTurn
     , getSelectedCountryForTroopMovement
@@ -39,11 +36,10 @@ module ActiveGame exposing
     , pixelsPerMapSquare
     , playerIdToString
     , playerTurnToString
+    , setWindowSize
     , start
     , stopShowingCountryHelperOutlines
-    ,  troopsToMove
-       -- , updateCountryToShowInfoFor
-
+    , troopsToMove
     , updateNumberOfTroopsToMove
     , waitingToShowCountryHelperOutlines
     )
@@ -64,6 +60,7 @@ type alias ActiveGame =
     , numberOfPlayers : Int
     , countryBorderHelperOutlines : CountryBorderHelperOutlineStatus
     , showAvailableMoves : Bool
+    , windowSize : Maybe { width : Int, height : Int }
     }
 
 
@@ -772,6 +769,13 @@ playerIdToString (PlayerId playerId) =
     String.fromInt playerId
 
 
+setWindowSize : Int -> Int -> ActiveGame -> ActiveGame
+setWindowSize width height activeGame =
+    { activeGame
+        | windowSize = Just { width = width, height = height}
+    }
+
+
 start : GameMap.GameMap -> Int -> Dict.Dict String TroopCount.TroopCount -> ActiveGame
 start map numberOfPlayers neutralTroopCounts =
     { map = map
@@ -793,17 +797,17 @@ start map numberOfPlayers neutralTroopCounts =
     , error = Nothing
     , numberOfPlayers = numberOfPlayers
     , neutralCountryTroops = neutralTroopCounts
-                            , showAvailableMoves = False
+    , showAvailableMoves = False
     , countryBorderHelperOutlines = CountryBorderHelperOutlineInactive
+    , windowSize = Nothing
     }
+
+
 
 -- updateShowAvailableMoves : Bool -> ActiveGame -> ActiveGame
 -- updateShowAvailableMoves isChecked activeGame =
 --     {activeGame | showAvailableMoves = isChecked}
-
 -- showAvailableMoves : ActiveGame =
-
-
 -- Not exposed
 
 
