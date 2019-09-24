@@ -7,6 +7,7 @@ import ActiveGame
 import Browser
 import Browser.Dom
 import Browser.Events
+import Browser.Navigation
 import Collage
 import Collage.Events
 import Collage.Layout
@@ -33,6 +34,7 @@ import Set
 import Task
 import Time
 import TroopCount
+import Url
 
 
 
@@ -68,18 +70,20 @@ type alias ConfigurationAttributes =
     { numberOfPlayers : String }
 
 
-main : Program () Model Msg
+main : Program {} Model Msg
 main =
-    Browser.element
+    Browser.application
         { view = view
-        , init = \_ -> init
+        , init = init
         , update = update
         , subscriptions = subscriptions
+        , onUrlRequest = \_ -> Noop
+        , onUrlChange = \_ -> Noop
         }
 
 
-init : ( Model, Cmd Msg )
-init =
+init : {} -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+init _ url key =
     ( ConfiguringGame { numberOfPlayers = "2" }
     , Cmd.none
     )
@@ -104,6 +108,7 @@ type Msg
     | ShowCountryBorderHelper
     | ShowAvailableMovesCheckboxToggled Bool
     | WindowResized Int Int
+    | Noop
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -155,6 +160,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 WindowResized _ _ ->
+                    ( model, Cmd.none )
+
+                Noop ->
                     ( model, Cmd.none )
 
         GeneratingRandomTroopCounts configurationOptions map ->
@@ -228,6 +236,9 @@ update msg model =
                 WindowResized width height ->
                     ( PlayingGame (ActiveGame.setWindowSize width height attributes), Cmd.none )
 
+                Noop ->
+                    ( model, Cmd.none )
+
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)
 randomTroopPlacementsGenerator countryIds =
@@ -253,17 +264,22 @@ startGame configurationOptions =
 ---- VIEW ----
 
 
-view : Model -> Html.Html Msg
+view : Model -> Browser.Document Msg
 view model =
-    case model of
-        ConfiguringGame configuringGameSettings ->
-            viewGameConfiguration configuringGameSettings
+    { title = "Fracas"
+    , body =
+        [ case model of
+            ConfiguringGame configuringGameSettings ->
+                viewGameConfiguration configuringGameSettings
 
-        GeneratingRandomTroopCounts _ _ ->
-            Element.layout [] Element.none
+            GeneratingRandomTroopCounts _ _ ->
+                Element.layout [] Element.none
 
-        PlayingGame activeGame ->
-            viewPlayingGame activeGame
+            PlayingGame activeGame ->
+                -- viewPage GotActivePageMsg (ActivePage.view activeGame)
+                viewPlayingGame activeGame
+        ]
+    }
 
 
 

@@ -60,8 +60,11 @@ type alias ActiveGame =
     , numberOfPlayers : Int
     , countryBorderHelperOutlines : CountryBorderHelperOutlineStatus
     , showAvailableMoves : Bool
-    , windowSize : Maybe { width : Int, 
-    height : Int }
+    , windowSize :
+        Maybe
+            { width : Int
+            , height : Int
+            }
     }
 
 
@@ -1130,7 +1133,6 @@ attackResult clickedCountryId activeGame =
                 remainingTroops =
                     getTroopCountForCountry clickedCountryId activeGame.players
                         |> Maybe.withDefault TroopCount.noTroops
-                        -- TODO
                         |> TroopCount.addTroopCounts defenseStrength
                         |> TroopCount.subtractTroopCounts attackStrength
             in
