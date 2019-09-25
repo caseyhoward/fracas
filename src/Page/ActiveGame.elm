@@ -38,6 +38,7 @@ import ViewHelpers
 type alias Model =
     { activeGame : ActiveGame.ActiveGame
     , session : Session.Session
+    , error : Maybe String
     }
 
 
@@ -46,6 +47,7 @@ init session =
     case Session.gameSettings session of
         Just { numberOfPlayers, gameMap, neutralCountryTroopCounts } ->
             ( { activeGame = ActiveGame.start gameMap numberOfPlayers neutralCountryTroopCounts
+              , error = Nothing
               , session = session
               }
             , Cmd.none
@@ -59,11 +61,11 @@ init session =
                     , map = GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare
                     , players = Dict.empty
                     , neutralCountryTroops = Dict.empty
-                    , error = Nothing
                     , numberOfPlayers = 0
                     , countryBorderHelperOutlines = ActiveGame.CountryBorderHelperOutlineActive (GameMap.CountryId "")
                     , showAvailableMoves = False
                     }
+              , error = Nothing
               }
             , Route.replaceUrl (Session.navKey session) Route.ConfiguringGame
             )
@@ -95,7 +97,7 @@ update msg model =
     in
     case msg of
         CountryMouseUp clickedCountryId ->
-            ( { model | activeGame = ActiveGame.handleCountryMouseUpFromPlayer clickedCountryId activeGame }
+            ( updateModelWithActiveGameResult (ActiveGame.handleCountryMouseUpFromPlayer clickedCountryId activeGame) model
             , Cmd.none
             )
 
@@ -112,7 +114,7 @@ update msg model =
             ( { model | activeGame = ActiveGame.stopShowingCountryHelperOutlines activeGame }, Cmd.none )
 
         Pass ->
-            ( { model | activeGame = ActiveGame.pass activeGame }, Cmd.none )
+            ( updateModelWithActiveGameResult (ActiveGame.pass activeGame) model, Cmd.none )
 
         UpdateNumberOfTroopsToMove numberOfTroopsToMoveString ->
             ( { model | activeGame = ActiveGame.updateNumberOfTroopsToMove numberOfTroopsToMoveString activeGame }, Cmd.none )
@@ -125,6 +127,16 @@ update msg model =
 
         WindowResized width height ->
             ( { model | session = model.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
+
+
+updateModelWithActiveGameResult : Result ActiveGame.Error ActiveGame.ActiveGame -> Model -> Model
+updateModelWithActiveGameResult result model =
+    case result of
+        Ok activeGame ->
+            { model | activeGame = activeGame, error = Nothing }
+
+        Err error ->
+            { model | error = Just (ActiveGame.errorToString error) }
 
 
 
@@ -142,13 +154,13 @@ view model =
                 in
                 case Element.classifyDevice windowSize |> .class of
                     Element.Phone ->
-                        viewPlayingGameMobile model.activeGame device
+                        viewPlayingGameMobile model.activeGame model.error device
 
                     _ ->
-                        viewPlayingGameDesktop model.activeGame device
+                        viewPlayingGameDesktop model.activeGame model.error device
 
             Nothing ->
-                viewPlayingGameDesktop model.activeGame (Element.classifyDevice { width = 1920, height = 1080 })
+                viewPlayingGameDesktop model.activeGame model.error (Element.classifyDevice { width = 1920, height = 1080 })
     , title = "Fracas"
     }
 
@@ -158,8 +170,8 @@ countryBorderColor =
     Color.rgb255 100 100 100
 
 
-viewPlayingGameMobile : ActiveGame.ActiveGame -> Element.Device -> Html.Html Msg
-viewPlayingGameMobile activeGame device =
+viewPlayingGameMobile : ActiveGame.ActiveGame -> Maybe String -> Element.Device -> Html.Html Msg
+viewPlayingGameMobile activeGame maybeError device =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.column
             [ Element.centerX, Element.width Element.fill ]
@@ -174,7 +186,7 @@ viewPlayingGameMobile activeGame device =
                     , Element.Border.color black
                     , Element.Border.solid
                     ]
-                    ((case activeGame.error of
+                    ((case maybeError of
                         Just error ->
                             [ Element.paragraph [] [ Element.text error ] ]
 
@@ -194,8 +206,8 @@ viewPlayingGameMobile activeGame device =
         )
 
 
-viewPlayingGameDesktop : ActiveGame.ActiveGame -> Element.Device -> Html.Html Msg
-viewPlayingGameDesktop activeGame device =
+viewPlayingGameDesktop : ActiveGame.ActiveGame -> Maybe String -> Element.Device -> Html.Html Msg
+viewPlayingGameDesktop activeGame maybeError device =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.row
             [ Element.centerX, Element.width Element.fill ]
@@ -216,7 +228,7 @@ viewPlayingGameDesktop activeGame device =
                     , Element.Border.color black
                     , Element.Border.solid
                     ]
-                    ((case activeGame.error of
+                    ((case maybeError of
                         Just error ->
                             [ Element.paragraph [] [ Element.text error ] ]
 
