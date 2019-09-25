@@ -19,7 +19,7 @@ module ActiveGame exposing
     , getCountryAttackers
     , getCountryDefenders
     , getCountryDefenseStrength
-    , getCountryHasPort
+    , getCountryHasPort, Players
     , getCurrentPlayer
     , getDefaultColor
     , getPlayer
@@ -402,11 +402,11 @@ getCurrentPlayer currentPlayerTurn =
             playerId
 
 
-isCountryDefending : ActiveGame -> GameMap.CountryId -> GameMap.CountryId -> Bool
-isCountryDefending activeGame countryToDefend (GameMap.CountryId countryThatMightDefend) =
+isCountryDefending : GameMap.GameMap -> Players -> GameMap.CountryId -> GameMap.CountryId -> Bool
+isCountryDefending gameMap players countryToDefend (GameMap.CountryId countryThatMightDefend) =
     let
         countryDefense =
-            getCountryDefenders activeGame.players activeGame.map countryToDefend
+            getCountryDefenders players gameMap countryToDefend
 
         defendingCountries =
             Dict.keys countryDefense.neighboringCountryDefense ++ Dict.keys countryDefense.neighboringThroughWaterDefense
@@ -414,11 +414,11 @@ isCountryDefending activeGame countryToDefend (GameMap.CountryId countryThatMigh
     defendingCountries |> Set.fromList |> Set.member countryThatMightDefend
 
 
-isCountryAttacking : ActiveGame -> GameMap.CountryId -> GameMap.CountryId -> Bool
-isCountryAttacking activeGame countryToDefend (GameMap.CountryId countryThatMightDefend) =
+isCountryAttacking : GameMap.GameMap -> Players -> GameMap.CountryId -> GameMap.CountryId -> Bool
+isCountryAttacking gameMap players countryToDefend (GameMap.CountryId countryThatMightDefend) =
     let
         countryAttackers =
-            getCountryAttackers activeGame.map activeGame.players countryToDefend
+            getCountryAttackers gameMap players countryToDefend
 
         attackingCountries : List String
         attackingCountries =

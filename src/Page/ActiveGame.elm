@@ -674,7 +674,7 @@ getGameBoardHtml activeGame showAvailableMoves device =
 
                 countryInfoHighlights =
                     countriesToRender
-                        |> List.map (getCountryInfoPolygonBorder activeGame)
+                        |> List.map (getCountryInfoPolygonBorder activeGame.map activeGame.players activeGame.countryBorderHelperOutlines)
                         |> Collage.group
             in
             Collage.group
@@ -849,9 +849,9 @@ renderCapitolDots countryToRender =
         |> Collage.group
 
 
-getCountryInfoPolygonBorder : ActiveGame.ActiveGame -> ActiveGame.CountryToRender -> Collage.Collage Msg
-getCountryInfoPolygonBorder activeGame countryToRender =
-    case getCountryInfoStatus activeGame countryToRender.id of
+getCountryInfoPolygonBorder : GameMap.GameMap -> ActiveGame.Players -> ActiveGame.CountryBorderHelperOutlineStatus -> ActiveGame.CountryToRender -> Collage.Collage Msg
+getCountryInfoPolygonBorder gameMap players countryBorderHelperOutlines countryToRender =
+    case getCountryInfoStatus gameMap players countryBorderHelperOutlines countryToRender.id of
         CountryInfoSelectedCountry ->
             Collage.polygon countryToRender.polygonPoints
                 |> Collage.outlined
@@ -884,17 +884,17 @@ type CountryInfoStatus
     | NoInfo
 
 
-getCountryInfoStatus : ActiveGame.ActiveGame -> GameMap.CountryId -> CountryInfoStatus
-getCountryInfoStatus activeGame countryId =
-    case activeGame.countryBorderHelperOutlines of
+getCountryInfoStatus : GameMap.GameMap -> ActiveGame.Players -> ActiveGame.CountryBorderHelperOutlineStatus -> GameMap.CountryId -> CountryInfoStatus
+getCountryInfoStatus gameMap players countryBorderHelperOutlines countryId =
+    case countryBorderHelperOutlines of
         ActiveGame.CountryBorderHelperOutlineActive countryToShowInfoForId ->
             if countryToShowInfoForId == countryId then
                 CountryInfoSelectedCountry
 
-            else if ActiveGame.isCountryDefending activeGame countryToShowInfoForId countryId then
+            else if ActiveGame.isCountryDefending gameMap players countryToShowInfoForId countryId then
                 CountryInfoDefending
 
-            else if ActiveGame.isCountryAttacking activeGame countryToShowInfoForId countryId then
+            else if ActiveGame.isCountryAttacking gameMap players countryToShowInfoForId countryId then
                 CountryInfoAttacking
 
             else
