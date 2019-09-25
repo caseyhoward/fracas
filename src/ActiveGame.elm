@@ -4,6 +4,7 @@ module ActiveGame exposing
     , CountryBorderHelperOutlineStatus(..)
     , CountryToRender
     , Error
+    , Id(..)
     , Player
     , PlayerId(..)
     , PlayerTurn(..)
@@ -31,6 +32,7 @@ module ActiveGame exposing
     , handleCountryMouseDown
     , handleCountryMouseOut
     , handleCountryMouseUpFromPlayer
+    , idToString
     , isCountryAttacking
     , isCountryDefending
     , isCountryIdCapitol
@@ -42,6 +44,7 @@ module ActiveGame exposing
     , stopShowingCountryHelperOutlines
     , troopsToMove
     , updateNumberOfTroopsToMove
+    , urlParser
     , waitingToShowCountryHelperOutlines
     )
 
@@ -50,7 +53,20 @@ import Dict
 import GameMap
 import Set
 import TroopCount
+import Url.Parser
 import ViewHelpers
+
+
+urlParser : Url.Parser.Parser (Id -> a) a
+urlParser =
+    Url.Parser.custom "GAMEID" (\str -> Just (Id str))
+
+
+idToString : Id -> String
+idToString (Id id) =
+    id
+
+
 
 
 type alias ActiveGame =
@@ -87,6 +103,10 @@ type alias Countries =
 
 type Error
     = Error String
+
+
+type Id
+    = Id String
 
 
 errorToString : Error -> String
@@ -782,29 +802,35 @@ playerTurnToString players (PlayerTurn playerTurnStage playerId) =
             ""
 
 
-start : GameMap.GameMap -> Int -> Dict.Dict String TroopCount.TroopCount -> ActiveGame
-start map numberOfPlayers neutralTroopCounts =
-    { map = map
-    , players =
-        List.range 1 numberOfPlayers
-            |> List.map
-                (\playerId ->
-                    ( playerId
-                    , { countryTroopCounts = Dict.empty
-                      , name = "Player " ++ String.fromInt playerId
-                      , capitolStatus = NoCapitol
-                      , color = getDefaultColor (PlayerId playerId)
-                      , ports = Set.empty
-                      }
-                    )
-                )
-            |> Dict.fromList
-    , currentPlayerTurn = PlayerTurn CapitolPlacement (PlayerId 1)
-    , numberOfPlayers = numberOfPlayers
-    , neutralCountryTroops = neutralTroopCounts
-    , showAvailableMoves = False
-    , countryBorderHelperOutlines = CountryBorderHelperOutlineInactive
-    }
+start : Dict.Dict String GameMap.GameMap -> GameMap.Id -> Int -> Dict.Dict String TroopCount.TroopCount -> Result Error ActiveGame
+start gameMaps gameMapId numberOfPlayers neutralTroopCounts =
+    case GameMap.get gameMapId gameMaps of
+        Ok gameMap ->
+            Ok
+                { map = gameMap
+                , players =
+                    List.range 1 numberOfPlayers
+                        |> List.map
+                            (\playerId ->
+                                ( playerId
+                                , { countryTroopCounts = Dict.empty
+                                  , name = "Player " ++ String.fromInt playerId
+                                  , capitolStatus = NoCapitol
+                                  , color = getDefaultColor (PlayerId playerId)
+                                  , ports = Set.empty
+                                  }
+                                )
+                            )
+                        |> Dict.fromList
+                , currentPlayerTurn = PlayerTurn CapitolPlacement (PlayerId 1)
+                , numberOfPlayers = numberOfPlayers
+                , neutralCountryTroops = neutralTroopCounts
+                , showAvailableMoves = False
+                , countryBorderHelperOutlines = CountryBorderHelperOutlineInactive
+                }
+
+        Err error ->
+            "Error starting game" |> Error |> Err
 
 
 troopsToMove : PlayerTurn -> Maybe String

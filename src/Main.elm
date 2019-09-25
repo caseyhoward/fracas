@@ -107,8 +107,8 @@ changeRouteTo maybeRoute model =
             Page.GameConfiguration.init session
                 |> updateWith GameConfiguration GotGameConfigurationMsg
 
-        Just Route.ActiveGame ->
-            Page.ActiveGame.init session
+        Just (Route.ActiveGame activeGameId) ->
+            Page.ActiveGame.init session activeGameId
                 |> updateWith ActiveGame GotActiveGameMsg
 
         Nothing ->

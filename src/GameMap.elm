@@ -3,7 +3,9 @@ module GameMap exposing
     , Country
     , CountryId(..)
     , GameMap
+    , Id(..)
     , capitolDotsCoordinates
+    , get
     , getCountriesThatCanReachCountryThroughWater
     , getCountry
     , getCountryIds
@@ -17,7 +19,8 @@ import Set
 
 
 type alias GameMap =
-    { countries : Dict.Dict String Country
+    { id : Id
+    , countries : Dict.Dict String Country
     , bodiesOfWater : Dict.Dict String (Set.Set String)
     , dimensions : ( Float, Float )
     }
@@ -25,6 +28,10 @@ type alias GameMap =
 
 type CountryId
     = CountryId String
+
+
+type Id
+    = Id String
 
 
 type alias Country =
@@ -49,6 +56,10 @@ type alias BorderSegment =
     ( ( Float, Float ), ( Float, Float ) )
 
 
+type Error
+    = Error String
+
+
 capitolDotsCoordinates : Area -> Int -> Set.Set ( Float, Float )
 capitolDotsCoordinates area scale =
     area
@@ -56,6 +67,16 @@ capitolDotsCoordinates area scale =
             (\( x, y ) ->
                 ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
             )
+
+
+get : Id -> Dict.Dict String GameMap -> Result Error GameMap
+get (Id id) gameMaps =
+    case Dict.get id gameMaps of
+        Just gameMap ->
+            Ok gameMap
+
+        Nothing ->
+            Error "Game map not found" |> Err
 
 
 getCountriesThatCanReachCountryThroughWater : GameMap -> CountryId -> List CountryId
@@ -182,6 +203,7 @@ parse text scale =
         ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * scale |> toFloat
         , (gameMapWithoutPolygons.dimensions |> Tuple.second) * scale |> toFloat
         )
+    , id = Id "1"
     }
 
 

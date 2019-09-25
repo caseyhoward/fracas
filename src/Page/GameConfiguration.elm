@@ -1,5 +1,6 @@
 module Page.GameConfiguration exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
+import ActiveGame
 import Browser.Dom
 import Browser.Events
 import Color
@@ -11,7 +12,6 @@ import Element.Input
 import GameMap
 import Html
 import Html.Events
-import Http
 import Json.Decode
 import Maps.Big
 import Random
@@ -26,6 +26,7 @@ import ViewHelpers
 
 type alias GameConfiguration =
     { numberOfPlayers : String
+    , gameMapId : String
     }
 
 
@@ -36,7 +37,7 @@ type Model
 
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    ( ConfiguringGame { numberOfPlayers = "2" } session, Cmd.none )
+    ( ConfiguringGame { numberOfPlayers = "2", gameMapId = "1" } session, Cmd.none )
         |> Tuple.mapSecond
             (\_ ->
                 Task.attempt
@@ -62,7 +63,6 @@ type Msg
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | NumberOfPlayersKeyPressed Int
     | WindowResized Int Int
-    | GotBooks (Result Http.Error (List String))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -74,11 +74,11 @@ update msg model =
                     ( ConfiguringGame { gameConfiguration | numberOfPlayers = numberOfPlayers } session, Cmd.none )
 
                 StartGameClicked ->
-                    startGame session gameConfiguration
+                    startGame session model gameConfiguration
 
                 NumberOfPlayersKeyPressed key ->
                     if key == 13 then
-                        startGame session gameConfiguration
+                        startGame session model gameConfiguration
 
                     else
                         ( model, Cmd.none )
@@ -89,9 +89,6 @@ update msg model =
                 WindowResized width height ->
                     ( ConfiguringGame gameConfiguration { session | windowSize = Just { width = width, height = height } }, Cmd.none )
 
-                GotBooks _ ->
-                    ( model, Cmd.none )
-
         GeneratingRandomTroopCounts gameConfiguration session ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
@@ -101,20 +98,16 @@ update msg model =
                                 |> String.toInt
                                 |> Maybe.withDefault 6
                     in
-                    ( GeneratingRandomTroopCounts
-                        gameConfiguration
-                        { session
-                            | configuration =
-                                Just { numberOfPlayers = numberOfPlayers }
-                            , neutralCountryTroopCounts = Just neutralCountryTroopCounts
-                        }
-                      -- , Route.replaceUrl (Session.navKey session) Route.ActiveGame
-                    , Http.post
-                        { url = "https://api.fraces.caseyhoward.net/games"
-                        , body = Http.emptyBody
-                        , expect = Http.expectJson GotBooks (Json.Decode.list Json.Decode.string)
-                        }
-                    )
+                    case ActiveGame.start session.gameMaps (GameMap.Id "1") numberOfPlayers neutralCountryTroopCounts of
+                        Ok activeGame ->
+                            ( GeneratingRandomTroopCounts
+                                gameConfiguration
+                                (session |> Session.addActiveGame (ActiveGame.Id "123") activeGame)
+                            , Route.replaceUrl (Session.navKey session) (Route.ActiveGame (ActiveGame.Id "123"))
+                            )
+
+                        Err error ->
+                            Debug.todo ""
 
                 NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
@@ -128,28 +121,26 @@ update msg model =
                 WindowResized width height ->
                     ( GeneratingRandomTroopCounts gameConfiguration (Session.updateWindowSize { width = width, height = height } session), Cmd.none )
 
-                GotBooks _ ->
-                    ( model, Cmd.none )
-
 
 maximumNeutralCountryTroops : Int
 maximumNeutralCountryTroops =
     10
 
 
-startGame : Session.Session -> GameConfiguration -> ( Model, Cmd Msg )
-startGame session gameConfiguration =
-    let
-        map =
-            GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare
+startGame : Session.Session -> Model -> GameConfiguration -> ( Model, Cmd Msg )
+startGame session model gameConfiguration =
+    case Dict.get gameConfiguration.gameMapId session.gameMaps of
+        Just gameMap ->
+            ( GeneratingRandomTroopCounts gameConfiguration session
+            , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys gameMap.countries))
+            )
 
-        updatedSession =
-            session
-                |> Session.updateGameMap map
-    in
-    ( GeneratingRandomTroopCounts gameConfiguration updatedSession
-    , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
-    )
+        Nothing ->
+            Debug.todo ""
+
+
+
+-- ConfiguringGame { gameConfiguration | error = Just "Couldn't find game map" }
 
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)

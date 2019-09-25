@@ -1,5 +1,6 @@
 module Route exposing (Route(..), fromUrl, href, replaceUrl)
 
+import ActiveGame
 import Browser.Navigation as Nav
 import Html exposing (Attribute)
 import Html.Attributes as Attr
@@ -13,14 +14,14 @@ import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
 
 type Route
     = ConfiguringGame
-    | ActiveGame
+    | ActiveGame ActiveGame.Id
 
 
 parser : Parser (Route -> a) a
 parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
-        , Parser.map ActiveGame (s "play")
+        , Parser.map ActiveGame (s "games" </> ActiveGame.urlParser)
         ]
 
 
@@ -59,7 +60,7 @@ routeToString page =
                 ConfiguringGame ->
                     []
 
-                ActiveGame ->
-                    [ "play" ]
+                ActiveGame activeGameId ->
+                    [ "games", ActiveGame.idToString activeGameId ]
     in
     "/" ++ String.join "/" pieces

@@ -42,11 +42,11 @@ type alias Model =
     }
 
 
-init : Session.Session -> ( Model, Cmd Msg )
-init session =
-    case Session.gameSettings session of
-        Just { numberOfPlayers, gameMap, neutralCountryTroopCounts } ->
-            ( { activeGame = ActiveGame.start gameMap numberOfPlayers neutralCountryTroopCounts
+init : Session.Session -> ActiveGame.Id -> ( Model, Cmd Msg )
+init session (ActiveGame.Id activeGameId) =
+    case Dict.get activeGameId session.activeGames of
+        Just activeGame ->
+            ( { activeGame = activeGame
               , error = Nothing
               , session = session
               }
