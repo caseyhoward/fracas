@@ -9,7 +9,7 @@ module ActiveGame exposing
     , PlayerId(..)
     , PlayerTurn(..)
     , PlayerTurnStage(..)
-    , canCurrentPlayerCancelTroopMovement
+    , Players
     , canCurrentPlayerPass
     , cancelMovingTroops
     , errorToString
@@ -19,7 +19,7 @@ module ActiveGame exposing
     , getCountryAttackers
     , getCountryDefenders
     , getCountryDefenseStrength
-    , getCountryHasPort, Players
+    , getCountryHasPort
     , getCurrentPlayer
     , getDefaultColor
     , getPlayer
@@ -73,8 +73,6 @@ type alias ActiveGame =
     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
     , numberOfPlayers : Int
     , countryBorderHelperOutlines : CountryBorderHelperOutlineStatus
-
-    -- , showAvailableMoves : Bool
     }
 
 
@@ -377,18 +375,6 @@ canCurrentPlayerPass currentPlayerTurn =
                     True
 
                 AttackAnnexOrPort ->
-                    True
-
-                _ ->
-                    False
-
-
-canCurrentPlayerCancelTroopMovement : ActiveGame -> Bool
-canCurrentPlayerCancelTroopMovement activeGame =
-    case activeGame.currentPlayerTurn of
-        PlayerTurn playerTurnStage _ ->
-            case playerTurnStage of
-                TroopMovementFromSelected _ _ ->
                     True
 
                 _ ->
@@ -895,7 +881,7 @@ addPortForPlayer (GameMap.CountryId countryId) player =
 
 attackAnnexOrPort : GameMap.CountryId -> PlayerId -> ActiveGame -> Result Error ActiveGame
 attackAnnexOrPort clickedCountryId currentPlayerId activeGame =
-    case getCountryStatus clickedCountryId activeGame of
+    case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
         OccupiedByCurrentPlayer _ ->
             attemptToBuildPort currentPlayerId clickedCountryId activeGame
 
@@ -908,7 +894,7 @@ attackAnnexOrPort clickedCountryId currentPlayerId activeGame =
 
 attemptTroopMovement : GameMap.CountryId -> GameMap.CountryId -> String -> ActiveGame -> Result Error ActiveGame
 attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString activeGame =
-    case getCountryStatus clickedCountryId activeGame of
+    case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
         OccupiedByCurrentPlayer playerCountryToTroopCount ->
             case String.toInt numberOfTroopsToMoveString of
                 Just numberOfTroopsToMove ->
@@ -957,7 +943,7 @@ attemptToPlaceCapitol : GameMap.CountryId -> PlayerId -> ActiveGame -> Result Er
 attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
     case GameMap.getCountry clickedCountryId activeGame.map.countries of
         Just clickedCountry ->
-            case getCountryStatus clickedCountryId activeGame of
+            case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
                 OccupiedByCurrentPlayer _ ->
                     "Error: Somehow you are placing a second capitol" |> Error |> Err
 
@@ -1011,7 +997,7 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
 
 attemptTroopPlacement : GameMap.CountryId -> PlayerId -> TroopCount.TroopCount -> ActiveGame -> Result Error ActiveGame
 attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace activeGame =
-    case getCountryStatus clickedCountryId activeGame of
+    case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
         OccupiedByCurrentPlayer clickedCountryTroopCount ->
             let
                 updatedGameResult =
@@ -1102,7 +1088,7 @@ attackResult clickedCountryId gameMap players currentPlayerTurn =
 
 attemptSelectTroopMovementFromCountry : GameMap.CountryId -> PlayerId -> ActiveGame -> Result Error ActiveGame
 attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame =
-    case getCountryStatus clickedCountryId activeGame of
+    case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
         OccupiedByCurrentPlayer troopCount ->
             if TroopCount.hasTroops troopCount then
                 Ok
@@ -1376,9 +1362,9 @@ getCountryCanBeClicked currentPlayerTurn players gameMap countryId =
                     False
 
 
-getCountryStatus : GameMap.CountryId -> ActiveGame -> CountryStatus
-getCountryStatus countryId activeGame =
-    case getPlayer (getCurrentPlayer activeGame.currentPlayerTurn) activeGame.players of
+getCountryStatus : GameMap.CountryId -> Players -> PlayerTurn -> CountryStatus
+getCountryStatus countryId players currentPlayerTurn =
+    case getPlayer (getCurrentPlayer currentPlayerTurn) players of
         Just currentPlayer ->
             case getTroopCount countryId currentPlayer.countryTroopCounts of
                 Just troopCount ->
@@ -1386,7 +1372,7 @@ getCountryStatus countryId activeGame =
 
                 Nothing ->
                     case
-                        activeGame.players
+                        players
                             |> Dict.foldl
                                 (\playerId player result ->
                                     case result of
