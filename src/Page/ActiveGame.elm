@@ -37,6 +37,7 @@ import ViewHelpers
 
 type alias Model =
     { activeGame : ActiveGame.ActiveGame
+    , showAvailableMoves : Bool
     , session : Session.Session
     , error : Maybe String
     }
@@ -49,6 +50,7 @@ init session (ActiveGame.Id activeGameId) =
             ( { activeGame = activeGame
               , error = Nothing
               , session = session
+              , showAvailableMoves = False
               }
             , Cmd.none
             )
@@ -63,9 +65,9 @@ init session (ActiveGame.Id activeGameId) =
                     , neutralCountryTroops = Dict.empty
                     , numberOfPlayers = 0
                     , countryBorderHelperOutlines = ActiveGame.CountryBorderHelperOutlineActive (GameMap.CountryId "")
-                    , showAvailableMoves = False
                     }
               , error = Nothing
+              , showAvailableMoves = False
               }
             , Route.replaceUrl (Session.navKey session) Route.ConfiguringGame
             )
@@ -108,7 +110,7 @@ update msg model =
             ( { model | activeGame = ActiveGame.handleCountryMouseOut mouseOutCountryId activeGame }, Cmd.none )
 
         ShowAvailableMovesCheckboxToggled isChecked ->
-            ( { model | activeGame = { activeGame | showAvailableMoves = isChecked } }, Cmd.none )
+            ( { model | showAvailableMoves = isChecked }, Cmd.none )
 
         MouseUp ->
             ( { model | activeGame = ActiveGame.stopShowingCountryHelperOutlines activeGame }, Cmd.none )
@@ -154,13 +156,13 @@ view model =
                 in
                 case Element.classifyDevice windowSize |> .class of
                     Element.Phone ->
-                        viewPlayingGameMobile model.activeGame model.error device
+                        viewPlayingGameMobile model.activeGame model.showAvailableMoves model.error device
 
                     _ ->
-                        viewPlayingGameDesktop model.activeGame model.error device
+                        viewPlayingGameDesktop model.activeGame model.showAvailableMoves model.error device
 
             Nothing ->
-                viewPlayingGameDesktop model.activeGame model.error (Element.classifyDevice { width = 1920, height = 1080 })
+                viewPlayingGameDesktop model.activeGame model.showAvailableMoves model.error (Element.classifyDevice { width = 1920, height = 1080 })
     , title = "Fracas"
     }
 
@@ -170,8 +172,8 @@ countryBorderColor =
     Color.rgb255 100 100 100
 
 
-viewPlayingGameMobile : ActiveGame.ActiveGame -> Maybe String -> Element.Device -> Html.Html Msg
-viewPlayingGameMobile activeGame maybeError device =
+viewPlayingGameMobile : ActiveGame.ActiveGame -> Bool -> Maybe String -> Element.Device -> Html.Html Msg
+viewPlayingGameMobile activeGame showAvailableMoves maybeError device =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.column
             [ Element.centerX, Element.width Element.fill ]
@@ -199,19 +201,19 @@ viewPlayingGameMobile activeGame maybeError device =
                     [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
-                    (getGameBoardHtml activeGame device |> Element.html)
-                , viewInfoPanelPhone activeGame
+                    (getGameBoardHtml activeGame showAvailableMoves device |> Element.html)
+                , viewInfoPanelPhone activeGame showAvailableMoves
                 ]
             ]
         )
 
 
-viewPlayingGameDesktop : ActiveGame.ActiveGame -> Maybe String -> Element.Device -> Html.Html Msg
-viewPlayingGameDesktop activeGame maybeError device =
+viewPlayingGameDesktop : ActiveGame.ActiveGame -> Bool -> Maybe String -> Element.Device -> Html.Html Msg
+viewPlayingGameDesktop activeGame showAvailableMoves maybeError device =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.row
             [ Element.centerX, Element.width Element.fill ]
-            [ viewInfoPanelDesktop activeGame
+            [ viewInfoPanelDesktop activeGame showAvailableMoves
             , Element.column
                 [ Element.centerX
                 , Element.width Element.fill
@@ -221,7 +223,7 @@ viewPlayingGameDesktop activeGame maybeError device =
                     [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
-                    (getGameBoardHtml activeGame device |> Element.html)
+                    (getGameBoardHtml activeGame showAvailableMoves device |> Element.html)
                 , Element.column
                     [ Element.width Element.fill
                     , Element.Border.width 1
@@ -242,8 +244,8 @@ viewPlayingGameDesktop activeGame maybeError device =
         )
 
 
-viewInfoPanelPhone : ActiveGame.ActiveGame -> Element.Element Msg
-viewInfoPanelPhone activeGame =
+viewInfoPanelPhone : ActiveGame.ActiveGame -> Bool -> Element.Element Msg
+viewInfoPanelPhone activeGame showAvailableMoves =
     Element.column
         [ Element.width Element.fill
         , Element.height Element.fill
@@ -258,12 +260,12 @@ viewInfoPanelPhone activeGame =
         , viewPlayerCountryAndTroopCountsMobile activeGame.currentPlayerTurn activeGame.players
         , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn
         , viewCountryInfo activeGame
-        , viewShowAvailableMoves activeGame.showAvailableMoves
+        , viewShowAvailableMoves showAvailableMoves
         ]
 
 
-viewInfoPanelDesktop : ActiveGame.ActiveGame -> Element.Element Msg
-viewInfoPanelDesktop activeGame =
+viewInfoPanelDesktop : ActiveGame.ActiveGame -> Bool -> Element.Element Msg
+viewInfoPanelDesktop activeGame showAvailableMoves =
     Element.column
         [ Element.width (Element.px 200)
         , Element.height Element.fill
@@ -278,7 +280,7 @@ viewInfoPanelDesktop activeGame =
         , viewPlayerCountryAndTroopCounts activeGame.currentPlayerTurn activeGame.players
         , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn
         , viewCountryInfo activeGame
-        , viewShowAvailableMoves activeGame.showAvailableMoves
+        , viewShowAvailableMoves showAvailableMoves
         ]
 
 
@@ -614,8 +616,8 @@ getWaterCollage gameMap =
     Collage.group [ backgroundBorder, backgroundWater ]
 
 
-getGameBoardHtml : ActiveGame.ActiveGame -> Element.Device -> Html.Html Msg
-getGameBoardHtml activeGame device =
+getGameBoardHtml : ActiveGame.ActiveGame -> Bool -> Element.Device -> Html.Html Msg
+getGameBoardHtml activeGame showAvailableMoves device =
     case ActiveGame.getCountriesToRender activeGame of
         Just countriesToRender ->
             let
@@ -658,7 +660,7 @@ getGameBoardHtml activeGame device =
                         |> Collage.group
 
                 countryHighlights =
-                    if activeGame.showAvailableMoves then
+                    if showAvailableMoves then
                         countriesToRender
                             |> List.map countryHighlight
                             |> Collage.group

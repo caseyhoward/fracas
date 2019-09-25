@@ -67,8 +67,6 @@ idToString (Id id) =
     id
 
 
-
-
 type alias ActiveGame =
     { currentPlayerTurn : PlayerTurn
     , map : GameMap.GameMap
@@ -76,7 +74,7 @@ type alias ActiveGame =
     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
     , numberOfPlayers : Int
     , countryBorderHelperOutlines : CountryBorderHelperOutlineStatus
-    , showAvailableMoves : Bool
+    -- , showAvailableMoves : Bool
     }
 
 
@@ -825,7 +823,6 @@ start gameMaps gameMapId numberOfPlayers neutralTroopCounts =
                 , currentPlayerTurn = PlayerTurn CapitolPlacement (PlayerId 1)
                 , numberOfPlayers = numberOfPlayers
                 , neutralCountryTroops = neutralTroopCounts
-                , showAvailableMoves = False
                 , countryBorderHelperOutlines = CountryBorderHelperOutlineInactive
                 }
 
