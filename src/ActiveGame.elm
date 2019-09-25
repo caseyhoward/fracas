@@ -26,7 +26,6 @@ module ActiveGame exposing
     , getPlayerColorFromPlayerTurn
     , getPlayerCountryAndTroopCounts
     , getPlayerTurnStageFromPlayerTurn
-    , getSelectedCountryForTroopMovement
     , getTroopCount
     , getTroopCountForCountry
     , handleCountryMouseDown
@@ -74,6 +73,7 @@ type alias ActiveGame =
     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
     , numberOfPlayers : Int
     , countryBorderHelperOutlines : CountryBorderHelperOutlineStatus
+
     -- , showAvailableMoves : Bool
     }
 
@@ -297,7 +297,7 @@ getCountriesToRender activeGame =
                                             NoCapitol ->
                                                 Nothing
                                     , canBeClicked = getCountryCanBeClicked activeGame (GameMap.CountryId countryId)
-                                    , isBeingMovedFrom = getIsBeingMovedFrom activeGame (GameMap.CountryId countryId)
+                                    , isBeingMovedFrom = getIsBeingMovedFrom activeGame.currentPlayerTurn (GameMap.CountryId countryId)
                                     , portSegments = getPortSegments (GameMap.CountryId countryId) country activeGame.players
                                     }
                                 )
@@ -522,16 +522,6 @@ getCountryDefenseStrength activeGame countryId =
     countryDefense.countryDefense
         |> TroopCount.addTroopCounts neighborDefense
         |> TroopCount.addTroopCounts waterDefense
-
-
-getSelectedCountryForTroopMovement : ActiveGame -> Maybe GameMap.CountryId
-getSelectedCountryForTroopMovement activeGame =
-    case activeGame.currentPlayerTurn of
-        PlayerTurn (TroopMovementFromSelected selectedCountryId _) _ ->
-            Just selectedCountryId
-
-        _ ->
-            Nothing
 
 
 findCountryOwner : GameMap.CountryId -> Players -> Maybe PlayerId
@@ -1459,9 +1449,9 @@ getDefenseThroughWater activeGame countryId =
             Dict.empty
 
 
-getIsBeingMovedFrom : ActiveGame -> GameMap.CountryId -> Bool
-getIsBeingMovedFrom activeGame countryId =
-    case activeGame.currentPlayerTurn of
+getIsBeingMovedFrom : PlayerTurn -> GameMap.CountryId -> Bool
+getIsBeingMovedFrom currentPlayerTurn countryId =
+    case currentPlayerTurn of
         PlayerTurn (TroopMovementFromSelected fromCountryId _) _ ->
             fromCountryId == countryId
 
