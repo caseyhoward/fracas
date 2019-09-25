@@ -1,4 +1,4 @@
-module Session exposing (Configuration, Session, WindowSize, configuration, gameSettings, init, navKey, updateWindowSize)
+module Session exposing (Configuration, Session, WindowSize, configuration, gameSettings, init, navKey, updateGameMap, updateWindowSize)
 
 import Browser.Navigation
 import Dict
@@ -14,7 +14,6 @@ type alias WindowSize =
 
 type alias Configuration =
     { numberOfPlayers : Int
-    , gameMap : GameMap.GameMap
     }
 
 
@@ -23,6 +22,7 @@ type alias Session =
     , configuration : Maybe Configuration
     , neutralCountryTroopCounts : Maybe (Dict.Dict String TroopCount.TroopCount)
     , navKey : Browser.Navigation.Key
+    , gameMap : Maybe GameMap.GameMap
     }
 
 
@@ -31,6 +31,7 @@ init key =
     { windowSize = Nothing
     , configuration = Nothing
     , neutralCountryTroopCounts = Nothing
+    , gameMap = Nothing
     , navKey = key
     }
 
@@ -50,21 +51,20 @@ updateWindowSize windowSize session =
     { session | windowSize = Just windowSize }
 
 
+updateGameMap : GameMap.GameMap -> Session -> Session
+updateGameMap gameMap session =
+    { session | gameMap = Just gameMap }
+
+
 gameSettings : Session -> Maybe { numberOfPlayers : Int, gameMap : GameMap.GameMap, neutralCountryTroopCounts : Dict.Dict String TroopCount.TroopCount }
 gameSettings session =
-    case ( session.configuration, session.neutralCountryTroopCounts ) of
-        ( Just config, Just neutralCountryTroopCounts ) ->
+    case ( session.configuration, session.neutralCountryTroopCounts, session.gameMap ) of
+        ( Just config, Just neutralCountryTroopCounts, Just gameMap ) ->
             Just
                 { numberOfPlayers = config.numberOfPlayers
-                , gameMap = config.gameMap
+                , gameMap = gameMap
                 , neutralCountryTroopCounts = neutralCountryTroopCounts
                 }
 
         _ ->
             Nothing
-
-
-
--- updateConfiguration : Configuration -> Session -> Session
--- updateConfiguration config session =
---     { session | configuration = Just config }

@@ -1,5 +1,6 @@
-module Page.GameConfiguration exposing (Model, Msg, init, toSession, update, view)
+module Page.GameConfiguration exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
+import Browser.Events
 import Color
 import Dict
 import Element
@@ -80,8 +81,11 @@ update msg model =
                                 |> String.toInt
                                 |> Maybe.withDefault 6
                     in
-                    -- ( ActiveGame (ActiveGame.start map numberOfPlayers neutralCountryTroopCounts)
-                    ( model, Route.replaceUrl (Session.navKey session) Route.ActiveGame )
+                    ( GeneratingRandomTroopCounts
+                        gameConfiguration
+                        { session | configuration = Just { numberOfPlayers = numberOfPlayers }, neutralCountryTroopCounts = Just neutralCountryTroopCounts }
+                    , Route.replaceUrl (Session.navKey session) Route.ActiveGame
+                    )
 
                 NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
@@ -101,24 +105,17 @@ maximumNeutralCountryTroops =
     10
 
 
-
--- type alias Configuration =
---     { numberOfPlayers : Int
---     , gameMap : GameMap.GameMap
---     , neutralCountryTroopCounts : Dict.Dict String TroopCount.TroopCount
---     }
-
-
 startGame : Session.Session -> GameConfiguration -> ( Model, Cmd Msg )
 startGame session gameConfiguration =
     let
         map =
             GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare
 
-        -- updatedSession =
-        --     Session.updateConfiguration
+        updatedSession =
+            session
+                |> Session.updateGameMap map
     in
-    ( GeneratingRandomTroopCounts gameConfiguration session
+    ( GeneratingRandomTroopCounts gameConfiguration updatedSession
     , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
     )
 
@@ -209,3 +206,12 @@ toSession model =
 
         GeneratingRandomTroopCounts _ session ->
             session
+
+
+
+---- SUBSCRIPTIONS ----
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Browser.Events.onResize (\x y -> WindowResized x y)

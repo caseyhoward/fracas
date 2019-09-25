@@ -1,11 +1,6 @@
 module Main exposing (main)
 
--- import Maps.Big
--- import Maps.UnitedStates
-
 import Browser
-import Browser.Dom
-import Browser.Events
 import Browser.Navigation
 import Html
 import Page
@@ -13,7 +8,6 @@ import Page.ActiveGame
 import Page.GameConfiguration
 import Route
 import Session
-import Task
 import Url
 
 
@@ -34,8 +28,8 @@ main =
         , init = init
         , update = update
         , subscriptions = subscriptions
-        , onUrlRequest = \_ -> Noop
-        , onUrlChange = \_ -> Noop
+        , onUrlChange = ChangedUrl
+        , onUrlRequest = ClickedLink
         }
 
 
@@ -66,8 +60,9 @@ init _ url key =
 
 
 type Msg
-    = WindowResized Int Int
-    | Noop
+    = ChangedRoute (Maybe Route.Route)
+    | ChangedUrl Url.Url
+    | ClickedLink Browser.UrlRequest
     | GotActiveGameMsg Page.ActiveGame.Msg
     | GotGameConfigurationMsg Page.GameConfiguration.Msg
 
@@ -75,21 +70,37 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case ( msg, model ) of
+        ( ClickedLink urlRequest, _ ) ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Browser.Navigation.pushUrl (Session.navKey (toSession model)) (Url.toString url) )
+
+                Browser.External href ->
+                    ( model
+                    , Browser.Navigation.load href
+                    )
+
+        ( ChangedUrl url, _ ) ->
+            changeRouteTo (Route.fromUrl url) model
+
+        ( ChangedRoute route, _ ) ->
+            changeRouteTo route model
+
         ( GotActiveGameMsg subMsg, ActiveGame activeGame ) ->
             Page.ActiveGame.update subMsg activeGame
-                |> updateWith ActiveGame GotActiveGameMsg model
+                |> updateWith ActiveGame GotActiveGameMsg
 
         ( GotGameConfigurationMsg subMsg, GameConfiguration gameConfiguration ) ->
             Page.GameConfiguration.update subMsg gameConfiguration
-                |> updateWith GameConfiguration GotGameConfigurationMsg model
+                |> updateWith GameConfiguration GotGameConfigurationMsg
 
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
             ( model, Cmd.none )
 
 
-updateWith : (subModel -> Model) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
-updateWith toModel toMsg model ( subModel, subCmd ) =
+updateWith : (subModel -> Model) -> (subMsg -> Msg) -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
+updateWith toModel toMsg ( subModel, subCmd ) =
     ( toModel subModel
     , Cmd.map toMsg subCmd
     )
@@ -104,11 +115,11 @@ changeRouteTo maybeRoute model =
     case maybeRoute of
         Just Route.ConfiguringGame ->
             Page.GameConfiguration.init session
-                |> updateWith GameConfiguration GotGameConfigurationMsg model
+                |> updateWith GameConfiguration GotGameConfigurationMsg
 
         Just Route.ActiveGame ->
             Page.ActiveGame.init session
-                |> updateWith ActiveGame GotActiveGameMsg model
+                |> updateWith ActiveGame GotActiveGameMsg
 
         Nothing ->
             -- ( NotFound windowSize, Cmd.none )
@@ -157,8 +168,19 @@ view model =
 
 
 ---- SUBSCRIPTIONS ----
+-- subscriptions : Model -> Sub Msg
+-- subscriptions _ =
+--     Browser.Events.onResize (\x y -> WindowResized x y)
 
 
 subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Browser.Events.onResize (\x y -> WindowResized x y)
+subscriptions model =
+    case model of
+        GameConfiguration gameConfiguration ->
+            Sub.map GotGameConfigurationMsg (Page.GameConfiguration.subscriptions gameConfiguration)
+
+        ActiveGame activeGame ->
+            Sub.map GotActiveGameMsg (Page.ActiveGame.subscriptions activeGame)
+
+        Redirect _ ->
+            Sub.none

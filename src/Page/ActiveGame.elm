@@ -52,7 +52,7 @@ type alias Model =
 
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    case Session.gameSettings session of
+    case Session.gameSettings session |> Debug.log "settings" of
         Just { numberOfPlayers, gameMap, neutralCountryTroopCounts } ->
             ( { activeGame = ActiveGame.start gameMap numberOfPlayers neutralCountryTroopCounts, session = session }
             , Cmd.none
