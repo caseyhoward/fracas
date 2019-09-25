@@ -74,7 +74,6 @@ init session (ActiveGame.Id activeGameId) =
 
 
 
--- ( { model | error = "Game not configured" }, Cmd.none )
 ---- UPDATE ----
 
 
@@ -409,7 +408,7 @@ viewCountryInfo activeGame =
                                     [ Element.el [] (Element.text "Defense")
                                     , Element.el
                                         [ Element.alignRight ]
-                                        (ActiveGame.getCountryDefenseStrength activeGame countryToShowInfoForId |> TroopCount.toString |> Element.text)
+                                        (ActiveGame.getCountryDefenseStrength activeGame.map activeGame.players countryToShowInfoForId |> TroopCount.toString |> Element.text)
                                     ]
                                 , Element.column
                                     [ Element.width Element.fill
@@ -618,7 +617,7 @@ getWaterCollage gameMap =
 
 getGameBoardHtml : ActiveGame.ActiveGame -> Bool -> Element.Device -> Html.Html Msg
 getGameBoardHtml activeGame showAvailableMoves device =
-    case ActiveGame.getCountriesToRender activeGame of
+    case ActiveGame.getCountriesToRender activeGame.map activeGame.players activeGame.currentPlayerTurn activeGame.neutralCountryTroops of
         Just countriesToRender ->
             let
                 waterCollage : Collage.Collage Msg
@@ -932,7 +931,7 @@ countryOutlineDelayMilliseconds =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    [ if ActiveGame.waitingToShowCountryHelperOutlines model.activeGame then
+    [ if ActiveGame.waitingToShowCountryHelperOutlines model.activeGame.countryBorderHelperOutlines then
         Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
 
       else
