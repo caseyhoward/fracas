@@ -11,6 +11,7 @@ import Element.Input
 import GameMap
 import Html
 import Html.Events
+import Http
 import Json.Decode
 import Maps.Big
 import Random
@@ -61,6 +62,7 @@ type Msg
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | NumberOfPlayersKeyPressed Int
     | WindowResized Int Int
+    | GotBooks (Result Http.Error (List String))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -87,6 +89,9 @@ update msg model =
                 WindowResized width height ->
                     ( ConfiguringGame gameConfiguration { session | windowSize = Just { width = width, height = height } }, Cmd.none )
 
+                GotBooks _ ->
+                    ( model, Cmd.none )
+
         GeneratingRandomTroopCounts gameConfiguration session ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
@@ -98,8 +103,17 @@ update msg model =
                     in
                     ( GeneratingRandomTroopCounts
                         gameConfiguration
-                        { session | configuration = Just { numberOfPlayers = numberOfPlayers }, neutralCountryTroopCounts = Just neutralCountryTroopCounts }
-                    , Route.replaceUrl (Session.navKey session) Route.ActiveGame
+                        { session
+                            | configuration =
+                                Just { numberOfPlayers = numberOfPlayers }
+                            , neutralCountryTroopCounts = Just neutralCountryTroopCounts
+                        }
+                      -- , Route.replaceUrl (Session.navKey session) Route.ActiveGame
+                    , Http.post
+                        { url = "https://api.fraces.caseyhoward.net/games"
+                        , body = Http.emptyBody
+                        , expect = Http.expectJson GotBooks (Json.Decode.list Json.Decode.string)
+                        }
                     )
 
                 NumberOfPlayersChanged _ ->
@@ -113,6 +127,9 @@ update msg model =
 
                 WindowResized width height ->
                     ( GeneratingRandomTroopCounts gameConfiguration (Session.updateWindowSize { width = width, height = height } session), Cmd.none )
+
+                GotBooks _ ->
+                    ( model, Cmd.none )
 
 
 maximumNeutralCountryTroops : Int

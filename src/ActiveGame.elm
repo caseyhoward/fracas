@@ -81,6 +81,10 @@ type alias Players =
     Dict.Dict Int Player
 
 
+type alias Countries =
+    Dict.Dict String GameMap.Country
+
+
 type Error
     = Error String
 
@@ -90,9 +94,9 @@ errorToString (Error error) =
     error
 
 
-getAttackStrengthPerPlayer : ActiveGame -> GameMap.CountryId -> Dict.Dict Int TroopCount.TroopCount
-getAttackStrengthPerPlayer activeGame countryId =
-    getCountryAttackers activeGame.map activeGame.players countryId
+getAttackStrengthPerPlayer : GameMap.GameMap -> Players -> GameMap.CountryId -> Dict.Dict Int TroopCount.TroopCount
+getAttackStrengthPerPlayer gameMap players countryId =
+    getCountryAttackers gameMap players countryId
         |> Dict.map
             (\_ attacker ->
                 let
@@ -1037,7 +1041,7 @@ attackResult clickedCountryId activeGame =
         Just opponentPlayerId ->
             let
                 countryAttackers =
-                    getAttackStrengthPerPlayer activeGame clickedCountryId
+                    getAttackStrengthPerPlayer activeGame.map activeGame.players clickedCountryId
 
                 currentPlayerId =
                     getCurrentPlayer activeGame.currentPlayerTurn

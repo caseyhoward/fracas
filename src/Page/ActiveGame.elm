@@ -421,7 +421,7 @@ viewCountryInfo activeGame =
                                     [ Element.el
                                         [ Element.width Element.fill ]
                                         (Element.text "Opponent attack")
-                                    , ActiveGame.getAttackStrengthPerPlayer activeGame countryToShowInfoForId
+                                    , ActiveGame.getAttackStrengthPerPlayer activeGame.map activeGame.players countryToShowInfoForId
                                         |> attackerInfo playerId activeGame
                                     ]
                                 ]
