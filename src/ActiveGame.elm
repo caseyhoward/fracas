@@ -5,7 +5,8 @@ module ActiveGame exposing
     , CountryToRender
     , Player
     , PlayerId(..)
-    , PlayerTurn
+    , PlayerTurn(..)
+    , PlayerTurnStage(..)
     , canCurrentPlayerCancelTroopMovement
     , canCurrentPlayerPass
     , cancelMovingTroops

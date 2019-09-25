@@ -1,5 +1,6 @@
 module Page.GameConfiguration exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
+import Browser.Dom
 import Browser.Events
 import Color
 import Dict
@@ -17,6 +18,7 @@ import Random.Dict
 import Random.List
 import Route
 import Session
+import Task
 import TroopCount
 import ViewHelpers
 
@@ -34,6 +36,19 @@ type Model
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
     ( ConfiguringGame { numberOfPlayers = "2" } session, Cmd.none )
+        |> Tuple.mapSecond
+            (\_ ->
+                Task.attempt
+                    (\viewportResult ->
+                        case viewportResult of
+                            Ok viewport ->
+                                WindowResized (round viewport.viewport.width) (round viewport.viewport.height)
+
+                            Err _ ->
+                                WindowResized 0 0
+                    )
+                    Browser.Dom.getViewport
+            )
 
 
 

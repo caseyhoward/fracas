@@ -9,6 +9,7 @@ module Page.ActiveGame exposing
     )
 
 import ActiveGame
+import Browser.Events
 import Collage
 import Collage.Events
 import Collage.Layout
@@ -25,6 +26,8 @@ import Element.Input
 import GameMap
 import Html
 import Html.Attributes
+import Maps.Big
+import Route
 import Session
 import Set
 import Time
@@ -38,28 +41,32 @@ type alias Model =
     }
 
 
-
--- { currentPlayerTurn : ActiveGame.PlayerTurn
--- , map : GameMap.GameMap
--- , players : Dict.Dict Int ActiveGame.Player
--- , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
--- , error : Maybe String
--- , numberOfPlayers : Int
--- , countryBorderHelperOutlines : ActiveGame.CountryBorderHelperOutlineStatus
--- , showAvailableMoves : Bool
--- }
-
-
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    case Session.gameSettings session |> Debug.log "settings" of
+    case Session.gameSettings session of
         Just { numberOfPlayers, gameMap, neutralCountryTroopCounts } ->
-            ( { activeGame = ActiveGame.start gameMap numberOfPlayers neutralCountryTroopCounts, session = session }
+            ( { activeGame = ActiveGame.start gameMap numberOfPlayers neutralCountryTroopCounts
+              , session = session
+              }
             , Cmd.none
             )
 
         Nothing ->
-            Debug.todo ""
+            -- TODO: This is a hack for when someone refreshes to redirect back
+            ( { session = session
+              , activeGame =
+                    { currentPlayerTurn = ActiveGame.PlayerTurn ActiveGame.CapitolPlacement (ActiveGame.PlayerId 1)
+                    , map = GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare
+                    , players = Dict.empty
+                    , neutralCountryTroops = Dict.empty
+                    , error = Nothing
+                    , numberOfPlayers = 0
+                    , countryBorderHelperOutlines = ActiveGame.CountryBorderHelperOutlineActive (GameMap.CountryId "")
+                    , showAvailableMoves = False
+                    }
+              }
+            , Route.replaceUrl (Session.navKey session) Route.ConfiguringGame
+            )
 
 
 
@@ -77,6 +84,7 @@ type Msg
     | CancelMovingTroops
     | ShowCountryBorderHelper
     | ShowAvailableMovesCheckboxToggled Bool
+    | WindowResized Int Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -114,6 +122,9 @@ update msg model =
 
         ShowCountryBorderHelper ->
             ( { model | activeGame = ActiveGame.makeCountryHelperOutlinesActive activeGame }, Cmd.none )
+
+        WindowResized width height ->
+            ( { model | session = model.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
 
 
 
@@ -912,11 +923,14 @@ countryOutlineDelayMilliseconds =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if ActiveGame.waitingToShowCountryHelperOutlines model.activeGame then
+    [ if ActiveGame.waitingToShowCountryHelperOutlines model.activeGame then
         Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
 
-    else
+      else
         Sub.none
+    , Browser.Events.onResize (\x y -> WindowResized x y)
+    ]
+        |> Sub.batch
 
 
 toSession : Model -> Session.Session

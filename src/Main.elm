@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Browser
+import Browser.Events
 import Browser.Navigation
 import Html
 import Page
@@ -40,22 +41,6 @@ init _ url key =
 
 
 
--- Page.GameConfiguration.init
---     |> Tuple.mapBoth
---         (\model ->
---             GameConfiguration model
---         )
---         (\_ ->
---             Task.attempt
---                 (\viewportResult ->
---                     case viewportResult of
---                         Ok viewport ->
---                             WindowResized (round viewport.viewport.width) (round viewport.viewport.height)
---                         Err _ ->
---                             WindowResized 0 0
---                 )
---                 Browser.Dom.getViewport
---         )
 ---- UPDATE ----
 
 
@@ -65,6 +50,7 @@ type Msg
     | ClickedLink Browser.UrlRequest
     | GotActiveGameMsg Page.ActiveGame.Msg
     | GotGameConfigurationMsg Page.GameConfiguration.Msg
+    | WindowResized Int Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -93,6 +79,10 @@ update msg model =
         ( GotGameConfigurationMsg subMsg, GameConfiguration gameConfiguration ) ->
             Page.GameConfiguration.update subMsg gameConfiguration
                 |> updateWith GameConfiguration GotGameConfigurationMsg
+
+        ( WindowResized width height, _ ) ->
+            -- TODO: Update the model
+            ( model, Cmd.none )
 
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
@@ -168,9 +158,6 @@ view model =
 
 
 ---- SUBSCRIPTIONS ----
--- subscriptions : Model -> Sub Msg
--- subscriptions _ =
---     Browser.Events.onResize (\x y -> WindowResized x y)
 
 
 subscriptions : Model -> Sub Msg
@@ -183,4 +170,4 @@ subscriptions model =
             Sub.map GotActiveGameMsg (Page.ActiveGame.subscriptions activeGame)
 
         Redirect _ ->
-            Sub.none
+            Browser.Events.onResize (\x y -> WindowResized x y)
