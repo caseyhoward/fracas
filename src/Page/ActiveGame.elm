@@ -1,4 +1,12 @@
-module Page.ActiveGame exposing (Model, Msg, subscriptions, toWindowSize, update, view)
+module Page.ActiveGame exposing
+    ( Model
+    , Msg
+    , init
+    , subscriptions
+    , toSession
+    , update
+    , view
+    )
 
 import ActiveGame
 import Collage
@@ -17,6 +25,7 @@ import Element.Input
 import GameMap
 import Html
 import Html.Attributes
+import Session
 import Set
 import Time
 import TroopCount
@@ -24,20 +33,38 @@ import ViewHelpers
 
 
 type alias Model =
-    { currentPlayerTurn : ActiveGame.PlayerTurn
-    , map : GameMap.GameMap
-    , players : Dict.Dict Int ActiveGame.Player
-    , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
-    , error : Maybe String
-    , numberOfPlayers : Int
-    , countryBorderHelperOutlines : ActiveGame.CountryBorderHelperOutlineStatus
-    , showAvailableMoves : Bool
-    , windowSize :
-        Maybe
-            { width : Int
-            , height : Int
-            }
+    { activeGame : ActiveGame.ActiveGame
+    , session : Session.Session
     }
+
+
+
+-- { currentPlayerTurn : ActiveGame.PlayerTurn
+-- , map : GameMap.GameMap
+-- , players : Dict.Dict Int ActiveGame.Player
+-- , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
+-- , error : Maybe String
+-- , numberOfPlayers : Int
+-- , countryBorderHelperOutlines : ActiveGame.CountryBorderHelperOutlineStatus
+-- , showAvailableMoves : Bool
+-- }
+
+
+init : Session.Session -> ( Model, Cmd Msg )
+init session =
+    case Session.gameSettings session of
+        Just { numberOfPlayers, gameMap, neutralCountryTroopCounts } ->
+            ( { activeGame = ActiveGame.start gameMap numberOfPlayers neutralCountryTroopCounts, session = session }
+            , Cmd.none
+            )
+
+        Nothing ->
+            Debug.todo ""
+
+
+
+-- ( { model | error = "Game not configured" }, Cmd.none )
+---- UPDATE ----
 
 
 type Msg
@@ -54,55 +81,63 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        activeGame =
+            model.activeGame
+    in
     case msg of
         CountryMouseUp clickedCountryId ->
-            ( ActiveGame.handleCountryMouseUpFromPlayer clickedCountryId model
+            ( { model | activeGame = ActiveGame.handleCountryMouseUpFromPlayer clickedCountryId activeGame }
             , Cmd.none
             )
 
         CountryMouseDown clickedCountryId ->
-            ( ActiveGame.handleCountryMouseDown clickedCountryId model, Cmd.none )
+            ( { model | activeGame = ActiveGame.handleCountryMouseDown clickedCountryId activeGame }, Cmd.none )
 
         CountryMouseOut mouseOutCountryId ->
-            ( ActiveGame.handleCountryMouseOut mouseOutCountryId model, Cmd.none )
+            ( { model | activeGame = ActiveGame.handleCountryMouseOut mouseOutCountryId activeGame }, Cmd.none )
 
         ShowAvailableMovesCheckboxToggled isChecked ->
-            ( { model | showAvailableMoves = isChecked }, Cmd.none )
+            ( { model | activeGame = { activeGame | showAvailableMoves = isChecked } }, Cmd.none )
 
         MouseUp ->
-            ( ActiveGame.stopShowingCountryHelperOutlines model, Cmd.none )
+            ( { model | activeGame = ActiveGame.stopShowingCountryHelperOutlines activeGame }, Cmd.none )
 
         Pass ->
-            ( ActiveGame.pass model, Cmd.none )
+            ( { model | activeGame = ActiveGame.pass activeGame }, Cmd.none )
 
         UpdateNumberOfTroopsToMove numberOfTroopsToMoveString ->
-            ( model |> ActiveGame.updateNumberOfTroopsToMove numberOfTroopsToMoveString, Cmd.none )
+            ( { model | activeGame = ActiveGame.updateNumberOfTroopsToMove numberOfTroopsToMoveString activeGame }, Cmd.none )
 
         CancelMovingTroops ->
-            ( model |> ActiveGame.cancelMovingTroops, Cmd.none )
+            ( { model | activeGame = ActiveGame.cancelMovingTroops activeGame }, Cmd.none )
 
         ShowCountryBorderHelper ->
-            ( ActiveGame.makeCountryHelperOutlinesActive model, Cmd.none )
+            ( { model | activeGame = ActiveGame.makeCountryHelperOutlinesActive activeGame }, Cmd.none )
 
 
 
----- PlayingGame
+---- VIEW ----
 
 
-view : ActiveGame.ActiveGame -> { title : String, content : Html.Html Msg }
-view activeGame =
+view : Model -> { title : String, content : Html.Html Msg }
+view model =
     { content =
-        case activeGame.windowSize of
+        case model.session.windowSize of
             Just windowSize ->
+                let
+                    device =
+                        Element.classifyDevice windowSize
+                in
                 case Element.classifyDevice windowSize |> .class of
                     Element.Phone ->
-                        viewPlayingGameMobile activeGame
+                        viewPlayingGameMobile model.activeGame device
 
                     _ ->
-                        viewPlayingGameDesktop activeGame
+                        viewPlayingGameDesktop model.activeGame device
 
             Nothing ->
-                viewPlayingGameDesktop activeGame
+                viewPlayingGameDesktop model.activeGame (Element.classifyDevice { width = 1920, height = 1080 })
     , title = "Fracas"
     }
 
@@ -112,8 +147,8 @@ countryBorderColor =
     Color.rgb255 100 100 100
 
 
-viewPlayingGameMobile : ActiveGame.ActiveGame -> Html.Html Msg
-viewPlayingGameMobile activeGame =
+viewPlayingGameMobile : ActiveGame.ActiveGame -> Element.Device -> Html.Html Msg
+viewPlayingGameMobile activeGame device =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.column
             [ Element.centerX, Element.width Element.fill ]
@@ -141,15 +176,15 @@ viewPlayingGameMobile activeGame =
                     [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
-                    (getGameBoardHtml activeGame |> Element.html)
+                    (getGameBoardHtml activeGame device |> Element.html)
                 , viewInfoPanelPhone activeGame
                 ]
             ]
         )
 
 
-viewPlayingGameDesktop : ActiveGame.ActiveGame -> Html.Html Msg
-viewPlayingGameDesktop activeGame =
+viewPlayingGameDesktop : ActiveGame.ActiveGame -> Element.Device -> Html.Html Msg
+viewPlayingGameDesktop activeGame device =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.row
             [ Element.centerX, Element.width Element.fill ]
@@ -163,7 +198,7 @@ viewPlayingGameDesktop activeGame =
                     [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
-                    (getGameBoardHtml activeGame |> Element.html)
+                    (getGameBoardHtml activeGame device |> Element.html)
                 , Element.column
                     [ Element.width Element.fill
                     , Element.Border.width 1
@@ -561,8 +596,8 @@ getWaterCollage gameMap =
     Collage.group [ backgroundBorder, backgroundWater ]
 
 
-getGameBoardHtml : ActiveGame.ActiveGame -> Html.Html Msg
-getGameBoardHtml activeGame =
+getGameBoardHtml : ActiveGame.ActiveGame -> Element.Device -> Html.Html Msg
+getGameBoardHtml activeGame device =
     case ActiveGame.getCountriesToRender activeGame of
         Just countriesToRender ->
             let
@@ -576,16 +611,11 @@ getGameBoardHtml activeGame =
                         |> Collage.group
 
                 troopCountFontSize =
-                    case activeGame.windowSize of
-                        Just windowSize ->
-                            case Element.classifyDevice windowSize |> .class of
-                                Element.Phone ->
-                                    200
+                    case device.class of
+                        Element.Phone ->
+                            200
 
-                                _ ->
-                                    100
-
-                        Nothing ->
+                        _ ->
                             100
 
                 troopCountsCollage =
@@ -882,13 +912,13 @@ countryOutlineDelayMilliseconds =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    if ActiveGame.waitingToShowCountryHelperOutlines model then
+    if ActiveGame.waitingToShowCountryHelperOutlines model.activeGame then
         Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
 
     else
         Sub.none
 
 
-toWindowSize : Model -> Maybe { width : Int, height : Int }
-toWindowSize model =
-    model.windowSize
+toSession : Model -> Session.Session
+toSession model =
+    model.session

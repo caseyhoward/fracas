@@ -35,7 +35,6 @@ module ActiveGame exposing
     , pass
     , playerIdToString
     , playerTurnToString
-    , setWindowSize
     , start
     , stopShowingCountryHelperOutlines
     , troopsToMove
@@ -64,11 +63,6 @@ type alias ActiveGame =
     , numberOfPlayers : Int
     , countryBorderHelperOutlines : CountryBorderHelperOutlineStatus
     , showAvailableMoves : Bool
-    , windowSize :
-        Maybe
-            { width : Int
-            , height : Int
-            }
     }
 
 
@@ -846,11 +840,6 @@ playerTurnToString players (PlayerTurn playerTurnStage playerId) =
             ""
 
 
-setWindowSize : Int -> Int -> ActiveGame -> ActiveGame
-setWindowSize width height activeGame =
-    { activeGame
-        | windowSize = Just { width = width, height = height }
-    }
 
 
 start : GameMap.GameMap -> Int -> Dict.Dict String TroopCount.TroopCount -> ActiveGame
@@ -876,7 +865,6 @@ start map numberOfPlayers neutralTroopCounts =
     , neutralCountryTroops = neutralTroopCounts
     , showAvailableMoves = False
     , countryBorderHelperOutlines = CountryBorderHelperOutlineInactive
-    , windowSize = Nothing
     }
 
 

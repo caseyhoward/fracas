@@ -1,4 +1,4 @@
-module Page.GameConfiguration exposing (Model, Msg, init, update, view)
+module Page.GameConfiguration exposing (Model, Msg, init, toSession, update, view)
 
 import Color
 import Dict
@@ -14,28 +14,29 @@ import Maps.Big
 import Random
 import Random.Dict
 import Random.List
+import Route
+import Session
 import TroopCount
 import ViewHelpers
 
 
 type alias GameConfiguration =
     { numberOfPlayers : String
-    , windowSize :
-        Maybe
-            { width : Int
-            , height : Int
-            }
     }
 
 
 type Model
-    = ConfiguringGame GameConfiguration
-    | GeneratingRandomTroopCounts GameConfiguration GameMap.GameMap
+    = ConfiguringGame GameConfiguration Session.Session
+    | GeneratingRandomTroopCounts GameConfiguration Session.Session
 
 
-init : ( Model, Cmd Msg )
-init =
-    ( ConfiguringGame { numberOfPlayers = "2", windowSize = Nothing }, Cmd.none )
+init : Session.Session -> ( Model, Cmd Msg )
+init session =
+    ( ConfiguringGame { numberOfPlayers = "2" } session, Cmd.none )
+
+
+
+---- UPDATE ----
 
 
 type Msg
@@ -49,17 +50,17 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
-        ConfiguringGame gameConfiguration ->
+        ConfiguringGame gameConfiguration session ->
             case msg of
                 NumberOfPlayersChanged numberOfPlayers ->
-                    ( ConfiguringGame { gameConfiguration | numberOfPlayers = numberOfPlayers }, Cmd.none )
+                    ( ConfiguringGame { gameConfiguration | numberOfPlayers = numberOfPlayers } session, Cmd.none )
 
                 StartGameClicked ->
-                    startGame gameConfiguration
+                    startGame session gameConfiguration
 
                 NumberOfPlayersKeyPressed key ->
                     if key == 13 then
-                        startGame gameConfiguration
+                        startGame session gameConfiguration
 
                     else
                         ( model, Cmd.none )
@@ -68,9 +69,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 WindowResized width height ->
-                    ( ConfiguringGame { gameConfiguration | windowSize = Just { width = width, height = height } }, Cmd.none )
+                    ( ConfiguringGame gameConfiguration { session | windowSize = Just { width = width, height = height } }, Cmd.none )
 
-        GeneratingRandomTroopCounts gameConfiguration map ->
+        GeneratingRandomTroopCounts gameConfiguration session ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
                     let
@@ -80,9 +81,7 @@ update msg model =
                                 |> Maybe.withDefault 6
                     in
                     -- ( ActiveGame (ActiveGame.start map numberOfPlayers neutralCountryTroopCounts)
-                    ( Debug.todo ""
-                    , Cmd.none
-                    )
+                    ( model, Route.replaceUrl (Session.navKey session) Route.ActiveGame )
 
                 NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
@@ -94,7 +93,7 @@ update msg model =
                     ( model, Cmd.none )
 
                 WindowResized width height ->
-                    ( GeneratingRandomTroopCounts { gameConfiguration | windowSize = Just { width = width, height = height } } map, Cmd.none )
+                    ( GeneratingRandomTroopCounts gameConfiguration (Session.updateWindowSize { width = width, height = height } session), Cmd.none )
 
 
 maximumNeutralCountryTroops : Int
@@ -102,13 +101,24 @@ maximumNeutralCountryTroops =
     10
 
 
-startGame : GameConfiguration -> ( Model, Cmd Msg )
-startGame gameConfiguration =
+
+-- type alias Configuration =
+--     { numberOfPlayers : Int
+--     , gameMap : GameMap.GameMap
+--     , neutralCountryTroopCounts : Dict.Dict String TroopCount.TroopCount
+--     }
+
+
+startGame : Session.Session -> GameConfiguration -> ( Model, Cmd Msg )
+startGame session gameConfiguration =
     let
         map =
             GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare
+
+        -- updatedSession =
+        --     Session.updateConfiguration
     in
-    ( GeneratingRandomTroopCounts gameConfiguration map
+    ( GeneratingRandomTroopCounts gameConfiguration session
     , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
     )
 
@@ -129,7 +139,7 @@ randomTroopPlacementsGenerator countryIds =
 toGameConfiguration : Model -> GameConfiguration
 toGameConfiguration model =
     case model of
-        ConfiguringGame gameConfiguration ->
+        ConfiguringGame gameConfiguration _ ->
             gameConfiguration
 
         GeneratingRandomTroopCounts gameConfiguration _ ->
@@ -189,3 +199,13 @@ view model =
                 ]
             )
     }
+
+
+toSession : Model -> Session.Session
+toSession model =
+    case model of
+        ConfiguringGame _ session ->
+            session
+
+        GeneratingRandomTroopCounts _ session ->
+            session

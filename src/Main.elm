@@ -3,42 +3,18 @@ module Main exposing (main)
 -- import Maps.Big
 -- import Maps.UnitedStates
 
-import ActiveGame
 import Browser
 import Browser.Dom
 import Browser.Events
 import Browser.Navigation
-import Collage
-import Collage.Events
-import Collage.Layout
-import Collage.Render
-import Collage.Text
-import Color
-import Dict
-import Element
-import Element.Background
-import Element.Border
-import Element.Events
-import Element.Font
-import Element.Input
-import GameMap
 import Html
-import Html.Attributes
-import Html.Events
-import Json.Decode
-import Maps.Big
 import Page
 import Page.ActiveGame
 import Page.GameConfiguration
-import Random
-import Random.Dict
-import Random.List
-import Set
+import Route
+import Session
 import Task
-import Time
-import TroopCount
 import Url
-import ViewHelpers
 
 
 
@@ -48,6 +24,7 @@ import ViewHelpers
 type Model
     = GameConfiguration Page.GameConfiguration.Model
     | ActiveGame Page.ActiveGame.Model
+    | Redirect Session.Session
 
 
 main : Program {} Model Msg
@@ -64,26 +41,27 @@ main =
 
 init : {} -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
 init _ url key =
-    Page.GameConfiguration.init
-        |> Tuple.mapBoth
-            (\model ->
-                GameConfiguration model
-            )
-            (\_ ->
-                Task.attempt
-                    (\viewportResult ->
-                        case viewportResult of
-                            Ok viewport ->
-                                WindowResized (round viewport.viewport.width) (round viewport.viewport.height)
-
-                            Err _ ->
-                                WindowResized 0 0
-                    )
-                    Browser.Dom.getViewport
-            )
+    changeRouteTo (Route.fromUrl url)
+        (Redirect (Session.init key))
 
 
 
+-- Page.GameConfiguration.init
+--     |> Tuple.mapBoth
+--         (\model ->
+--             GameConfiguration model
+--         )
+--         (\_ ->
+--             Task.attempt
+--                 (\viewportResult ->
+--                     case viewportResult of
+--                         Ok viewport ->
+--                             WindowResized (round viewport.viewport.width) (round viewport.viewport.height)
+--                         Err _ ->
+--                             WindowResized 0 0
+--                 )
+--                 Browser.Dom.getViewport
+--         )
 ---- UPDATE ----
 
 
@@ -117,6 +95,39 @@ updateWith toModel toMsg model ( subModel, subCmd ) =
     )
 
 
+changeRouteTo : Maybe Route.Route -> Model -> ( Model, Cmd Msg )
+changeRouteTo maybeRoute model =
+    let
+        session =
+            toSession model
+    in
+    case maybeRoute of
+        Just Route.ConfiguringGame ->
+            Page.GameConfiguration.init session
+                |> updateWith GameConfiguration GotGameConfigurationMsg model
+
+        Just Route.ActiveGame ->
+            Page.ActiveGame.init session
+                |> updateWith ActiveGame GotActiveGameMsg model
+
+        Nothing ->
+            -- ( NotFound windowSize, Cmd.none )
+            ( model, Cmd.none )
+
+
+toSession : Model -> Session.Session
+toSession model =
+    case model of
+        GameConfiguration gameConfiguration ->
+            gameConfiguration |> Page.GameConfiguration.toSession
+
+        ActiveGame activeGame ->
+            activeGame |> Page.ActiveGame.toSession
+
+        Redirect session ->
+            session
+
+
 
 ---- VIEW ----
 
@@ -124,7 +135,6 @@ updateWith toModel toMsg model ( subModel, subCmd ) =
 view : Model -> Browser.Document Msg
 view model =
     let
-        -- viewPage : Page.Page -> (a -> Msg) -> { title : String, content : Html.Html Msg } -> Browser.Document Msg
         viewPage page toMsg config =
             let
                 { title, body } =
@@ -136,11 +146,13 @@ view model =
     in
     case model of
         GameConfiguration gameConfiguration ->
-            -- { title = "Fracas", body = [ viewGameConfiguration configuringGameSettings ] }
             viewPage Page.GameConfiguration GotGameConfigurationMsg (Page.GameConfiguration.view gameConfiguration)
 
         ActiveGame activeGame ->
             viewPage Page.ActiveGame GotActiveGameMsg (Page.ActiveGame.view activeGame)
+
+        Redirect session ->
+            { title = "...", body = [ Html.div [] [] ] }
 
 
 
