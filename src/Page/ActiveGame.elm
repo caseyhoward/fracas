@@ -515,11 +515,6 @@ playerAndTroopCountBorder currentPlayerId playerIdToDisplay =
         ]
 
 
-teal : Element.Color
-teal =
-    Element.rgb255 0 100 100
-
-
 black : Element.Color
 black =
     Element.rgb255 0 0 0
