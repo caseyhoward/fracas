@@ -4,6 +4,7 @@ import ActiveGame
 import Browser.Navigation as Nav
 import Html exposing (Attribute)
 import Html.Attributes as Attr
+import Map
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
 
@@ -15,6 +16,8 @@ import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
 type Route
     = ConfiguringGame
     | ActiveGame ActiveGame.Id
+    | EditMap Map.Id
+    | NewMap
 
 
 href : Route -> Attribute msg
@@ -41,6 +44,8 @@ parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
         , Parser.map ActiveGame (s "games" </> ActiveGame.urlParser)
+        , Parser.map NewMap (s "maps" </> s "new")
+        , Parser.map EditMap (s "maps" </> Map.urlParser)
         ]
 
 
@@ -54,5 +59,11 @@ routeToString page =
 
                 ActiveGame activeGameId ->
                     [ "games", ActiveGame.idToString activeGameId ]
+
+                EditMap mapId ->
+                    [ "maps", Map.idToString mapId ]
+
+                NewMap ->
+                    [ "maps", "new" ]
     in
     "/" ++ String.join "/" pieces

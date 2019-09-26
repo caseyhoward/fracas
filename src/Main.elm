@@ -8,6 +8,7 @@ import Page
 import Page.ActiveGame
 import Page.EditMap
 import Page.GameConfiguration
+import Page.NewMap
 import Route
 import Session
 import Url
@@ -21,6 +22,7 @@ type Model
     = GameConfiguration Page.GameConfiguration.Model
     | ActiveGame Page.ActiveGame.Model
     | EditMap Page.EditMap.Model
+    | NewMap Page.NewMap.Model
     | Redirect Session.Session
 
 
@@ -53,6 +55,7 @@ type Msg
     | GotActiveGameMsg Page.ActiveGame.Msg
     | GotGameConfigurationMsg Page.GameConfiguration.Msg
     | GotEditMapMsg Page.EditMap.Msg
+    | GotNewMapMsg Page.NewMap.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -77,6 +80,10 @@ update msg model =
         ( GotActiveGameMsg subMsg, ActiveGame activeGame ) ->
             Page.ActiveGame.update subMsg activeGame
                 |> updateWith ActiveGame GotActiveGameMsg
+
+        ( GotNewMapMsg subMsg, NewMap newMap ) ->
+            Page.NewMap.update subMsg newMap
+                |> updateWith NewMap GotNewMapMsg
 
         ( GotGameConfigurationMsg subMsg, GameConfiguration gameConfiguration ) ->
             Page.GameConfiguration.update subMsg gameConfiguration
@@ -109,6 +116,14 @@ changeRouteTo maybeRoute model =
             Page.ActiveGame.init session activeGameId
                 |> updateWith ActiveGame GotActiveGameMsg
 
+        Just (Route.EditMap mapId) ->
+            Page.EditMap.init session mapId
+                |> updateWith EditMap GotEditMapMsg
+
+        Just Route.NewMap ->
+            Page.NewMap.init session
+                |> updateWith NewMap GotNewMapMsg
+
         Nothing ->
             -- ( NotFound windowSize, Cmd.none )
             ( model, Cmd.none )
@@ -125,6 +140,9 @@ toSession model =
 
         EditMap editMap ->
             editMap |> Page.EditMap.toSession
+
+        NewMap newMap ->
+            newMap |> Page.NewMap.toSession
 
         Redirect session ->
             session
@@ -156,8 +174,11 @@ view model =
         EditMap editMap ->
             viewPage Page.EditMap GotEditMapMsg (Page.EditMap.view editMap)
 
+        NewMap newMap ->
+            viewPage Page.NewMap GotNewMapMsg (Page.NewMap.view newMap)
+
         Redirect _ ->
-            { title = "...", body = [ Html.div [] [] ] }
+            { title = "Redirecting", body = [ Html.div [] [] ] }
 
 
 
@@ -175,6 +196,9 @@ subscriptions model =
 
         EditMap editMap ->
             Sub.map GotEditMapMsg (Page.EditMap.subscriptions editMap)
+
+        NewMap newMap ->
+            Sub.map GotNewMapMsg (Page.NewMap.subscriptions newMap)
 
         Redirect _ ->
             Sub.none

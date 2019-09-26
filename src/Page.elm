@@ -8,6 +8,7 @@ type Page
     = ActiveGame
     | GameConfiguration
     | EditMap
+    | NewMap
 
 
 view : Page -> { title : String, content : Html.Html msg } -> Browser.Document msg

@@ -599,19 +599,6 @@ black =
     Element.rgb255 0 0 0
 
 
-defaultTextInputAttributes : List (Element.Attribute msg)
-defaultTextInputAttributes =
-    [ Element.Border.width 1
-    , Element.width Element.fill
-    , Element.height Element.fill
-    , Element.Font.size 16
-    , Element.Border.rounded 2
-    , Element.padding 15
-    , Element.Border.color (Element.rgb255 100 100 100)
-    , Element.Border.solid
-    ]
-
-
 defaultLabelAttributes : List (Element.Attribute msg)
 defaultLabelAttributes =
     [ Element.Font.size 12
@@ -630,7 +617,7 @@ viewConfigureTroopCountIfNecessary currentPlayerTurn =
                     , Element.padding 10
                     ]
                     [ Element.Input.text
-                        (defaultTextInputAttributes ++ [ Element.alignLeft ])
+                        (ViewHelpers.defaultTextInputAttributes ++ [ Element.alignLeft ])
                         { onChange = UpdateNumberOfTroopsToMove
                         , placeholder = Nothing
                         , label = Element.Input.labelAbove (defaultLabelAttributes ++ [ Element.alignLeft ]) (Element.text "Number of troops to move")

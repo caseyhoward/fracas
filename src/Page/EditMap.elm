@@ -1,6 +1,7 @@
 module Page.EditMap exposing
     ( Model
     , Msg
+    , init
     , subscriptions
     , toSession
     , view
@@ -8,11 +9,19 @@ module Page.EditMap exposing
 
 import Browser.Events
 import Html
+import Map
 import Session
 
 
 type alias Model =
     { session : Session.Session }
+
+
+init : Session.Session -> Map.Id -> ( Model, Cmd Msg )
+init session mapId =
+    ( { session = session }
+    , Cmd.none
+    )
 
 
 type Msg

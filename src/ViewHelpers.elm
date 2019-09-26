@@ -1,4 +1,4 @@
-module ViewHelpers exposing (centerText, colorToElementColor, defaultButtonAttributes, pixelsPerMapSquare)
+module ViewHelpers exposing (centerText, colorToElementColor, defaultButtonAttributes, defaultLabelAttributes, defaultTextInputAttributes, pixelsPerMapSquare)
 
 import Color
 import Element
@@ -28,6 +28,25 @@ defaultButtonAttributes =
     , Element.Border.shadow { offset = ( 2, 2 ), size = 1, blur = 1, color = Element.rgba 0 0 0 0.1 }
     , Element.width Element.fill
     , Element.Font.variant Element.Font.smallCaps
+    ]
+
+
+defaultLabelAttributes : List (Element.Attribute msg)
+defaultLabelAttributes =
+    [ Element.Font.size 12
+    ]
+
+
+defaultTextInputAttributes : List (Element.Attribute msg)
+defaultTextInputAttributes =
+    [ Element.Border.width 1
+    , Element.width Element.fill
+    , Element.height Element.fill
+    , Element.Font.size 16
+    , Element.Border.rounded 2
+    , Element.padding 15
+    , Element.Border.color (Element.rgb255 100 100 100)
+    , Element.Border.solid
     ]
 
 
