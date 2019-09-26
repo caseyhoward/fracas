@@ -40,7 +40,14 @@ type alias Model =
     , showAvailableMoves : Bool
     , session : Session.Session
     , error : Maybe String
+    , countryBorderHelperOutlineStatus : CountryBorderHelperOutlineStatus
     }
+
+
+type CountryBorderHelperOutlineStatus
+    = CountryBorderHelperOutlineWaitingForDelay GameMap.CountryId
+    | CountryBorderHelperOutlineInactive
+    | CountryBorderHelperOutlineActive GameMap.CountryId
 
 
 init : Session.Session -> ActiveGame.Id -> ( Model, Cmd Msg )
@@ -50,6 +57,7 @@ init session (ActiveGame.Id activeGameId) =
             ( { activeGame = activeGame
               , error = Nothing
               , session = session
+              , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
               , showAvailableMoves = False
               }
             , Cmd.none
@@ -64,8 +72,8 @@ init session (ActiveGame.Id activeGameId) =
                     , players = Dict.empty
                     , neutralCountryTroops = Dict.empty
                     , numberOfPlayers = 0
-                    , countryBorderHelperOutlines = ActiveGame.CountryBorderHelperOutlineActive (GameMap.CountryId "")
                     }
+              , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
               , error = Nothing
               , showAvailableMoves = False
               }
@@ -98,21 +106,21 @@ update msg model =
     in
     case msg of
         CountryMouseUp clickedCountryId ->
-            ( updateModelWithActiveGameResult (ActiveGame.handleCountryMouseUpFromPlayer clickedCountryId activeGame) model
+            ( handleCountryMouseUpFromPlayer clickedCountryId model
             , Cmd.none
             )
 
         CountryMouseDown clickedCountryId ->
-            ( { model | activeGame = ActiveGame.handleCountryMouseDown clickedCountryId activeGame }, Cmd.none )
+            ( handleCountryMouseDown clickedCountryId model, Cmd.none )
 
         CountryMouseOut mouseOutCountryId ->
-            ( { model | activeGame = ActiveGame.handleCountryMouseOut mouseOutCountryId activeGame }, Cmd.none )
+            ( handleCountryMouseOut mouseOutCountryId model, Cmd.none )
 
         ShowAvailableMovesCheckboxToggled isChecked ->
             ( { model | showAvailableMoves = isChecked }, Cmd.none )
 
         MouseUp ->
-            ( { model | activeGame = ActiveGame.stopShowingCountryHelperOutlines activeGame }, Cmd.none )
+            ( stopShowingCountryHelperOutlines model, Cmd.none )
 
         Pass ->
             ( updateModelWithActiveGameResult (ActiveGame.pass activeGame) model, Cmd.none )
@@ -124,7 +132,7 @@ update msg model =
             ( { model | activeGame = ActiveGame.cancelMovingTroops activeGame }, Cmd.none )
 
         ShowCountryBorderHelper ->
-            ( { model | activeGame = ActiveGame.makeCountryHelperOutlinesActive activeGame }, Cmd.none )
+            ( makeCountryHelperOutlinesActive model, Cmd.none )
 
         WindowResized width height ->
             ( { model | session = model.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
@@ -138,6 +146,61 @@ updateModelWithActiveGameResult result model =
 
         Err error ->
             { model | error = Just (ActiveGame.errorToString error) }
+
+
+handleCountryMouseUpFromPlayer : GameMap.CountryId -> Model -> Model
+handleCountryMouseUpFromPlayer clickedCountryId model =
+    let
+        updatedModel =
+            case model.countryBorderHelperOutlineStatus of
+                CountryBorderHelperOutlineActive _ ->
+                    model
+
+                CountryBorderHelperOutlineInactive ->
+                    model
+
+                CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
+                    if clickedCountryId == countryToShowInfoForId then
+                        case ActiveGame.countryClicked clickedCountryId model.activeGame of
+                            Ok updatedActiveGame ->
+                                { model | activeGame = updatedActiveGame }
+
+                            Err error ->
+                                { model | error = Just (ActiveGame.errorToString error) }
+
+                    else
+                        model
+    in
+    { updatedModel | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
+
+
+handleCountryMouseDown : GameMap.CountryId -> Model -> Model
+handleCountryMouseDown countryId activeGame =
+    { activeGame | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineWaitingForDelay countryId }
+
+
+handleCountryMouseOut : GameMap.CountryId -> Model -> Model
+handleCountryMouseOut mouseOutCountryId activeGame =
+    case activeGame.countryBorderHelperOutlineStatus of
+        CountryBorderHelperOutlineWaitingForDelay countryId ->
+            if countryId == mouseOutCountryId then
+                { activeGame | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
+
+            else
+                activeGame
+
+        _ ->
+            activeGame
+
+
+waitingToShowCountryHelperOutlines : CountryBorderHelperOutlineStatus -> Bool
+waitingToShowCountryHelperOutlines countryBorderHelperOutlineStatus =
+    case countryBorderHelperOutlineStatus of
+        CountryBorderHelperOutlineWaitingForDelay _ ->
+            True
+
+        _ ->
+            False
 
 
 
@@ -155,15 +218,30 @@ view model =
                 in
                 case Element.classifyDevice windowSize |> .class of
                     Element.Phone ->
-                        viewPlayingGameMobile model.activeGame model.showAvailableMoves model.error device
+                        viewPlayingGameMobile model.activeGame model.showAvailableMoves model.countryBorderHelperOutlineStatus model.error device
 
                     _ ->
-                        viewPlayingGameDesktop model.activeGame model.showAvailableMoves model.error device
+                        viewPlayingGameDesktop model.activeGame model.showAvailableMoves model.countryBorderHelperOutlineStatus model.error device
 
             Nothing ->
-                viewPlayingGameDesktop model.activeGame model.showAvailableMoves model.error (Element.classifyDevice { width = 1920, height = 1080 })
+                viewPlayingGameDesktop model.activeGame model.showAvailableMoves model.countryBorderHelperOutlineStatus model.error (Element.classifyDevice { width = 1920, height = 1080 })
     , title = "Fracas"
     }
+
+
+stopShowingCountryHelperOutlines : Model -> Model
+stopShowingCountryHelperOutlines activeGame =
+    { activeGame | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
+
+
+makeCountryHelperOutlinesActive : Model -> Model
+makeCountryHelperOutlinesActive model =
+    case model.countryBorderHelperOutlineStatus of
+        CountryBorderHelperOutlineWaitingForDelay countryId ->
+            { model | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineActive countryId }
+
+        _ ->
+            model
 
 
 countryBorderColor : Color.Color
@@ -171,8 +249,8 @@ countryBorderColor =
     Color.rgb255 100 100 100
 
 
-viewPlayingGameMobile : ActiveGame.ActiveGame -> Bool -> Maybe String -> Element.Device -> Html.Html Msg
-viewPlayingGameMobile activeGame showAvailableMoves maybeError device =
+viewPlayingGameMobile : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
+viewPlayingGameMobile activeGame showAvailableMoves countryBorderHelperOutlineStatus maybeError device =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.column
             [ Element.centerX, Element.width Element.fill ]
@@ -200,19 +278,19 @@ viewPlayingGameMobile activeGame showAvailableMoves maybeError device =
                     [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
-                    (getGameBoardHtml activeGame showAvailableMoves device |> Element.html)
-                , viewInfoPanelPhone activeGame showAvailableMoves
+                    (getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus device |> Element.html)
+                , viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatus
                 ]
             ]
         )
 
 
-viewPlayingGameDesktop : ActiveGame.ActiveGame -> Bool -> Maybe String -> Element.Device -> Html.Html Msg
-viewPlayingGameDesktop activeGame showAvailableMoves maybeError device =
+viewPlayingGameDesktop : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
+viewPlayingGameDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus maybeError device =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.row
             [ Element.centerX, Element.width Element.fill ]
-            [ viewInfoPanelDesktop activeGame showAvailableMoves
+            [ viewInfoPanelDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus
             , Element.column
                 [ Element.centerX
                 , Element.width Element.fill
@@ -222,7 +300,7 @@ viewPlayingGameDesktop activeGame showAvailableMoves maybeError device =
                     [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
-                    (getGameBoardHtml activeGame showAvailableMoves device |> Element.html)
+                    (getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus device |> Element.html)
                 , Element.column
                     [ Element.width Element.fill
                     , Element.Border.width 1
@@ -243,8 +321,8 @@ viewPlayingGameDesktop activeGame showAvailableMoves maybeError device =
         )
 
 
-viewInfoPanelPhone : ActiveGame.ActiveGame -> Bool -> Element.Element Msg
-viewInfoPanelPhone activeGame showAvailableMoves =
+viewInfoPanelPhone : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Element.Element Msg
+viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatus =
     Element.column
         [ Element.width Element.fill
         , Element.height Element.fill
@@ -258,13 +336,13 @@ viewInfoPanelPhone activeGame showAvailableMoves =
         [ viewPassButtonIfNecessary activeGame.currentPlayerTurn
         , viewPlayerCountryAndTroopCountsMobile activeGame.currentPlayerTurn activeGame.players
         , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn
-        , viewCountryInfo activeGame
+        , viewCountryInfo activeGame countryBorderHelperOutlineStatus
         , viewShowAvailableMoves showAvailableMoves
         ]
 
 
-viewInfoPanelDesktop : ActiveGame.ActiveGame -> Bool -> Element.Element Msg
-viewInfoPanelDesktop activeGame showAvailableMoves =
+viewInfoPanelDesktop : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Element.Element Msg
+viewInfoPanelDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus =
     Element.column
         [ Element.width (Element.px 200)
         , Element.height Element.fill
@@ -278,7 +356,7 @@ viewInfoPanelDesktop activeGame showAvailableMoves =
         [ viewPassButtonIfNecessary activeGame.currentPlayerTurn
         , viewPlayerCountryAndTroopCounts activeGame.currentPlayerTurn activeGame.players
         , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn
-        , viewCountryInfo activeGame
+        , viewCountryInfo activeGame countryBorderHelperOutlineStatus
         , viewShowAvailableMoves showAvailableMoves
         ]
 
@@ -380,10 +458,10 @@ attackerInfo countyOwnerPlayerId activeGame attackerStrengthPerPlayer =
         )
 
 
-viewCountryInfo : ActiveGame.ActiveGame -> Element.Element Msg
-viewCountryInfo activeGame =
-    case activeGame.countryBorderHelperOutlines of
-        ActiveGame.CountryBorderHelperOutlineActive countryToShowInfoForId ->
+viewCountryInfo : ActiveGame.ActiveGame -> CountryBorderHelperOutlineStatus -> Element.Element Msg
+viewCountryInfo activeGame countryBorderHelperOutlineStatus =
+    case countryBorderHelperOutlineStatus of
+        CountryBorderHelperOutlineActive countryToShowInfoForId ->
             case ActiveGame.findCountryOwner countryToShowInfoForId activeGame.players of
                 Just playerId ->
                     case ActiveGame.getPlayer playerId activeGame.players of
@@ -615,8 +693,8 @@ getWaterCollage gameMap =
     Collage.group [ backgroundBorder, backgroundWater ]
 
 
-getGameBoardHtml : ActiveGame.ActiveGame -> Bool -> Element.Device -> Html.Html Msg
-getGameBoardHtml activeGame showAvailableMoves device =
+getGameBoardHtml : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Element.Device -> Html.Html Msg
+getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus device =
     case ActiveGame.getCountriesToRender activeGame.map activeGame.players activeGame.currentPlayerTurn activeGame.neutralCountryTroops of
         Just countriesToRender ->
             let
@@ -674,7 +752,7 @@ getGameBoardHtml activeGame showAvailableMoves device =
 
                 countryInfoHighlights =
                     countriesToRender
-                        |> List.map (getCountryInfoPolygonBorder activeGame.map activeGame.players activeGame.countryBorderHelperOutlines)
+                        |> List.map (getCountryInfoPolygonBorder activeGame.map activeGame.players countryBorderHelperOutlineStatus)
                         |> Collage.group
             in
             Collage.group
@@ -849,9 +927,9 @@ renderCapitolDots countryToRender =
         |> Collage.group
 
 
-getCountryInfoPolygonBorder : GameMap.GameMap -> ActiveGame.Players -> ActiveGame.CountryBorderHelperOutlineStatus -> ActiveGame.CountryToRender -> Collage.Collage Msg
-getCountryInfoPolygonBorder gameMap players countryBorderHelperOutlines countryToRender =
-    case getCountryInfoStatus gameMap players countryBorderHelperOutlines countryToRender.id of
+getCountryInfoPolygonBorder : GameMap.GameMap -> ActiveGame.Players -> CountryBorderHelperOutlineStatus -> ActiveGame.CountryToRender -> Collage.Collage Msg
+getCountryInfoPolygonBorder gameMap players countryBorderHelperOutlineStatus countryToRender =
+    case getCountryInfoStatus gameMap players countryBorderHelperOutlineStatus countryToRender.id of
         CountryInfoSelectedCountry ->
             Collage.polygon countryToRender.polygonPoints
                 |> Collage.outlined
@@ -884,10 +962,10 @@ type CountryInfoStatus
     | NoInfo
 
 
-getCountryInfoStatus : GameMap.GameMap -> ActiveGame.Players -> ActiveGame.CountryBorderHelperOutlineStatus -> GameMap.CountryId -> CountryInfoStatus
-getCountryInfoStatus gameMap players countryBorderHelperOutlines countryId =
-    case countryBorderHelperOutlines of
-        ActiveGame.CountryBorderHelperOutlineActive countryToShowInfoForId ->
+getCountryInfoStatus : GameMap.GameMap -> ActiveGame.Players -> CountryBorderHelperOutlineStatus -> GameMap.CountryId -> CountryInfoStatus
+getCountryInfoStatus gameMap players countryBorderHelperOutlineStatus countryId =
+    case countryBorderHelperOutlineStatus of
+        CountryBorderHelperOutlineActive countryToShowInfoForId ->
             if countryToShowInfoForId == countryId then
                 CountryInfoSelectedCountry
 
@@ -931,7 +1009,7 @@ countryOutlineDelayMilliseconds =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    [ if ActiveGame.waitingToShowCountryHelperOutlines model.activeGame.countryBorderHelperOutlines then
+    [ if waitingToShowCountryHelperOutlines model.countryBorderHelperOutlineStatus then
         Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
 
       else

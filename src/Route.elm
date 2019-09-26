@@ -9,24 +9,12 @@ import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
 
 
 
--- ROUTING
+-- EXPOSED
 
 
 type Route
     = ConfiguringGame
     | ActiveGame ActiveGame.Id
-
-
-parser : Parser (Route -> a) a
-parser =
-    oneOf
-        [ Parser.map ConfiguringGame Parser.top
-        , Parser.map ActiveGame (s "games" </> ActiveGame.urlParser)
-        ]
-
-
-
--- PUBLIC HELPERS
 
 
 href : Route -> Attribute msg
@@ -41,15 +29,19 @@ replaceUrl key route =
 
 fromUrl : Url -> Maybe Route
 fromUrl url =
-    -- The RealWorld spec treats the fragment like a path.
-    -- This makes it *literally* the path, so we can proceed
-    -- with parsing as if it had been a normal path all along.
-    url
-        |> Parser.parse parser
+    url |> Parser.parse parser
 
 
 
 -- INTERNAL
+
+
+parser : Parser (Route -> a) a
+parser =
+    oneOf
+        [ Parser.map ConfiguringGame Parser.top
+        , Parser.map ActiveGame (s "games" </> ActiveGame.urlParser)
+        ]
 
 
 routeToString : Route -> String

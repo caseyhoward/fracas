@@ -50,7 +50,6 @@ type Msg
     | ClickedLink Browser.UrlRequest
     | GotActiveGameMsg Page.ActiveGame.Msg
     | GotGameConfigurationMsg Page.GameConfiguration.Msg
-    | WindowResized Int Int
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -79,10 +78,6 @@ update msg model =
         ( GotGameConfigurationMsg subMsg, GameConfiguration gameConfiguration ) ->
             Page.GameConfiguration.update subMsg gameConfiguration
                 |> updateWith GameConfiguration GotGameConfigurationMsg
-
-        ( WindowResized width height, _ ) ->
-            -- TODO: Update the model
-            ( model, Cmd.none )
 
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
@@ -152,7 +147,7 @@ view model =
         ActiveGame activeGame ->
             viewPage Page.ActiveGame GotActiveGameMsg (Page.ActiveGame.view activeGame)
 
-        Redirect session ->
+        Redirect _ ->
             { title = "...", body = [ Html.div [] [] ] }
 
 
@@ -170,4 +165,4 @@ subscriptions model =
             Sub.map GotActiveGameMsg (Page.ActiveGame.subscriptions activeGame)
 
         Redirect _ ->
-            Browser.Events.onResize (\x y -> WindowResized x y)
+            Sub.none

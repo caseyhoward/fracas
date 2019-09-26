@@ -5,6 +5,7 @@ module GameMap exposing
     , GameMap
     , Id(..)
     , capitolDotsCoordinates
+    , errorToString
     , get
     , getCountriesThatCanReachCountryThroughWater
     , getCountry
@@ -44,6 +45,7 @@ type alias Country =
     }
 
 
+
 type alias Area =
     Set.Set ( Int, Int )
 
@@ -67,6 +69,11 @@ capitolDotsCoordinates area scale =
             (\( x, y ) ->
                 ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
             )
+
+
+errorToString : Error -> String
+errorToString (Error error) =
+    error
 
 
 get : Id -> Dict.Dict String GameMap -> Result Error GameMap

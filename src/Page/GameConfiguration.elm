@@ -13,7 +13,6 @@ import GameMap
 import Html
 import Html.Events
 import Json.Decode
-import Maps.Big
 import Random
 import Random.Dict
 import Random.List
@@ -27,6 +26,7 @@ import ViewHelpers
 type alias GameConfiguration =
     { numberOfPlayers : String
     , gameMapId : String
+    , error : Maybe String
     }
 
 
@@ -37,7 +37,7 @@ type Model
 
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    ( ConfiguringGame { numberOfPlayers = "2", gameMapId = "1" } session, Cmd.none )
+    ( ConfiguringGame { numberOfPlayers = "2", gameMapId = "1", error = Nothing } session, Cmd.none )
         |> Tuple.mapSecond
             (\_ ->
                 Task.attempt
@@ -74,11 +74,11 @@ update msg model =
                     ( ConfiguringGame { gameConfiguration | numberOfPlayers = numberOfPlayers } session, Cmd.none )
 
                 StartGameClicked ->
-                    startGame session model gameConfiguration
+                    startGame session gameConfiguration
 
                 NumberOfPlayersKeyPressed key ->
                     if key == 13 then
-                        startGame session model gameConfiguration
+                        startGame session gameConfiguration
 
                     else
                         ( model, Cmd.none )
@@ -107,7 +107,7 @@ update msg model =
                             )
 
                         Err error ->
-                            Debug.todo ""
+                            ( GeneratingRandomTroopCounts { gameConfiguration | error = Just (error |> ActiveGame.errorToString) } session, Cmd.none )
 
                 NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
@@ -127,8 +127,8 @@ maximumNeutralCountryTroops =
     10
 
 
-startGame : Session.Session -> Model -> GameConfiguration -> ( Model, Cmd Msg )
-startGame session model gameConfiguration =
+startGame : Session.Session -> GameConfiguration -> ( Model, Cmd Msg )
+startGame session gameConfiguration =
     case Dict.get gameConfiguration.gameMapId session.gameMaps of
         Just gameMap ->
             ( GeneratingRandomTroopCounts gameConfiguration session
@@ -136,11 +136,7 @@ startGame session model gameConfiguration =
             )
 
         Nothing ->
-            Debug.todo ""
-
-
-
--- ConfiguringGame { gameConfiguration | error = Just "Couldn't find game map" }
+            ( ConfiguringGame { gameConfiguration | error = Just "Couldn't find game map" } session, Cmd.none )
 
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)
