@@ -7,6 +7,7 @@ import Html
 type Page
     = ActiveGame
     | GameConfiguration
+    | EditMap
 
 
 view : Page -> { title : String, content : Html.Html msg } -> Browser.Document msg

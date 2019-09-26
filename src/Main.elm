@@ -6,6 +6,7 @@ import Browser.Navigation
 import Html
 import Page
 import Page.ActiveGame
+import Page.EditMap
 import Page.GameConfiguration
 import Route
 import Session
@@ -19,6 +20,7 @@ import Url
 type Model
     = GameConfiguration Page.GameConfiguration.Model
     | ActiveGame Page.ActiveGame.Model
+    | EditMap Page.EditMap.Model
     | Redirect Session.Session
 
 
@@ -50,6 +52,7 @@ type Msg
     | ClickedLink Browser.UrlRequest
     | GotActiveGameMsg Page.ActiveGame.Msg
     | GotGameConfigurationMsg Page.GameConfiguration.Msg
+    | GotEditMapMsg Page.EditMap.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -120,6 +123,9 @@ toSession model =
         ActiveGame activeGame ->
             activeGame |> Page.ActiveGame.toSession
 
+        EditMap editMap ->
+            editMap |> Page.EditMap.toSession
+
         Redirect session ->
             session
 
@@ -147,6 +153,9 @@ view model =
         ActiveGame activeGame ->
             viewPage Page.ActiveGame GotActiveGameMsg (Page.ActiveGame.view activeGame)
 
+        EditMap editMap ->
+            viewPage Page.EditMap GotEditMapMsg (Page.EditMap.view editMap)
+
         Redirect _ ->
             { title = "...", body = [ Html.div [] [] ] }
 
@@ -163,6 +172,9 @@ subscriptions model =
 
         ActiveGame activeGame ->
             Sub.map GotActiveGameMsg (Page.ActiveGame.subscriptions activeGame)
+
+        EditMap editMap ->
+            Sub.map GotEditMapMsg (Page.EditMap.subscriptions editMap)
 
         Redirect _ ->
             Sub.none
