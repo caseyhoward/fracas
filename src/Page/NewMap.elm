@@ -10,9 +10,14 @@ module Page.NewMap exposing
 
 import Browser.Events
 import Element
+import Element.Background
 import Element.Input
+import Graphql.Http
+import Graphql.Http.GraphqlError
 import Html
+import Http
 import Map
+import RemoteData
 import Session
 import ViewHelpers
 
@@ -21,6 +26,7 @@ type alias Model =
     { session : Session.Session
     , rawMap : String
     , name : String
+    , savingMap : RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map
     }
 
 
@@ -29,13 +35,16 @@ init session =
     ( { session = session
       , name = ""
       , rawMap = ""
+      , savingMap = RemoteData.NotAsked
       }
     , Cmd.none
     )
 
 
 type Msg
-    = UpdateRawMap String
+    = CreateMap
+    | CreatedMap (RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map)
+    | UpdateRawMap String
     | UpdateName String
     | WindowResized Int Int
 
@@ -47,6 +56,12 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        CreateMap ->
+            ( model, Map.create model.name model.rawMap CreatedMap )
+
+        CreatedMap savingMap ->
+            ( { model | savingMap = savingMap }, Cmd.none )
+
         UpdateName name ->
             ( { model | name = name }, Cmd.none )
 
@@ -84,6 +99,29 @@ view model =
                     , text = model.rawMap
                     , spellcheck = False
                     }
+                , Element.Input.button
+                    (ViewHelpers.defaultButtonAttributes
+                        ++ [ Element.width (Element.px 120)
+                           , Element.centerX
+                           , 40 |> Element.px |> Element.height
+                           , Element.Background.color (Element.rgb255 100 200 100)
+                           ]
+                    )
+                    { onPress = Just CreateMap, label = ViewHelpers.centerText "Create Map" }
+                , Element.el []
+                    (case model.savingMap of
+                        RemoteData.NotAsked ->
+                            Element.text "not asked"
+
+                        RemoteData.Loading ->
+                            Element.text "Loading."
+
+                        RemoteData.Failure err ->
+                            Element.text ("Error: " ++ (err |> errorToString))
+
+                        RemoteData.Success news ->
+                            Element.text "Redirecting"
+                    )
                 ]
             )
     }
@@ -97,3 +135,39 @@ toSession model =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Browser.Events.onResize (\x y -> WindowResized x y)
+
+
+errorToString : Graphql.Http.Error parsedData -> String
+errorToString errorData =
+    case errorData of
+        Graphql.Http.GraphqlError _ graphqlErrors ->
+            graphqlErrors
+                |> List.map graphqlErrorToString
+                |> String.join "\n"
+
+        Graphql.Http.HttpError httpError ->
+            case httpError of
+                Graphql.Http.BadUrl url ->
+                    "Http error: Bad url - " ++ url
+
+                Graphql.Http.Timeout ->
+                    "Http error: timeout"
+
+                Graphql.Http.NetworkError ->
+                    "Http error: network error"
+
+                Graphql.Http.BadStatus metadata string ->
+                    "Http error: bad status - " ++ string
+
+                Graphql.Http.BadPayload error ->
+                    "Http error: bad payload"
+
+
+
+-- Graphql.Http.BadBody body ->
+--     "Http error: Bad body - <br>" ++ body
+
+
+graphqlErrorToString : Graphql.Http.GraphqlError.GraphqlError -> String
+graphqlErrorToString error =
+    error.message
