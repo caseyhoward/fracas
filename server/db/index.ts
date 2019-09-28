@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, QueryConfig, QueryResult, QueryResultRow } from "pg";
 
 const pool = new Pool({
   user: "fracas",
@@ -14,8 +14,9 @@ const pool = new Pool({
 // PGPASSWORD=null
 // PGPORT=5432
 
-module.exports = {
-  query: (text: string, params: any, callback: any) => {
-    return pool.query(text, params, callback);
-  }
-};
+export function query<R extends QueryResultRow = any, I extends any[] = any[]>(
+  queryTextOrConfig: string | QueryConfig<I>,
+  values?: I
+): Promise<QueryResult<R>> {
+  return pool.query(queryTextOrConfig, values);
+}

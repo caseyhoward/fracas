@@ -1,15 +1,39 @@
 import { GraphQLServer } from "graphql-yoga";
 import * as fs from "fs";
+import * as database from "./db/index";
 
 const resolvers = {
   Query: {
-    map: (_: any, x: { id: string }) => {
-      return `Hello ${x.id || "World"}`;
+    map: async (_: any, x: { id: string }) => {
+      try {
+        // console.log(x);
+        const result = await database.query(
+          "SELECT * FROM maps WHERE id = $1*",
+          [x.id]
+        );
+        console.log(result.rows[0]);
+        return result.rows[0];
+      } catch (error) {
+        console.log(error);
+      }
     }
   },
   Mutation: {
-    createMap: (_: any, x: {}) => {
-      console.log(x);
+    createMap: async (_: any, x: { map: NewMap }) => {
+      try {
+        const result = await database.query(
+          "INSERT INTO maps(name, map_json) VALUES ($1, $2) RETURNING *",
+          [x.map.name, x.map.mapJson]
+        );
+        console.log(result.rows[0]);
+        return {
+          id: result.rows[0].id,
+          name: result.rows[0].name,
+          mapJson: result.rows[0].map_json
+        };
+      } catch (error) {
+        console.log(error);
+      }
     }
   }
 };
@@ -23,24 +47,10 @@ fs.readFile("schema.graphql", (error, typeDefsData) => {
 interface Map {
   id: string;
   name: string;
-  legacy_raw_map: string;
-  countries: Country[];
-  width: number;
-  height: number;
-  neighboringCountries: { countryId1: string; countryId2: string }[];
-  countriesAdjacentToWater: { countryId: String; countryId2: string }[];
+  mapJson: string;
 }
 
-interface Country {
-  id: string;
-  polygon: Point[];
-  waterEdges: {
-    point1: Point;
-    point2: Point;
-  }[];
-}
-
-interface Point {
-  x: number;
-  y: number;
+interface NewMap {
+  name: string;
+  mapJson: string;
 }

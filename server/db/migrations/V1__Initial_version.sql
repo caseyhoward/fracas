@@ -1,6 +1,5 @@
 CREATE TABLE maps (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
-  rawMap TEXT NULL,
-  mapJson TEXT NOT NULL
+  map_json TEXT NOT NULL
 );
