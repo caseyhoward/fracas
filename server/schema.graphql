@@ -1,45 +1,7 @@
-# type Point {
-#   x: Int!
-#   y: Int!
-# }
-
-# type Polygon {
-#   points: [Point!]!
-# }
-
-# type Country {
-#   id: String!
-#   name: String!
-#   polygon: Polygon!
-#   capitolDotPoints: [Point!]!
-# }
-
-# input CountryInput {
-#   id: String!
-#   name: String!
-#   polygon: Polygon!
-#   capitolDotPoints: [Point!]!
-# }
-
-# type NeighboringCountries {
-#   country1Id: String!
-#   country2Id: String!
-# }
-
-# type WaterCountry {
-#   countryId: String!
-#   waterId: String!
-# }
-
 input MapInput {
   name: String!
   # rawMap: String!
   mapJson: String!
-  # countries: [Country!]!
-  # width: Int! # Used for drawing the water since we don't store the water polygons
-  # height: Int! # used for drawing the water since we don't store the water polygons
-  # neighboringCountries: [NeighboringCountries!]!
-  # countriesAdjacentToWater: [WaterCountry]! # Maybe there is no water
 }
 
 type Map {
@@ -47,11 +9,6 @@ type Map {
   name: String!
   mapJson: String!
   # rawMap: String!
-  # countries: [Country!]!
-  # width: Int! # Used for drawing the water since we don't store the water polygons
-  # height: Int! # used for drawing the water since we don't store the water polygons
-  # neighboringCountries: [NeighboringCountries!]!
-  # countriesAdjacentToWater: [WaterCountry]! # Maybe there is no water
 }
 
 type Mutation {

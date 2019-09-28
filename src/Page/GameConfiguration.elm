@@ -30,6 +30,7 @@ type alias GameConfiguration =
     { numberOfPlayers : String
     , gameMapId : String
     , error : Maybe String
+    , selectedMapId : String
     , maps : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map)
     }
 
@@ -41,7 +42,7 @@ type Model
 
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    ( ConfiguringGame { numberOfPlayers = "2", gameMapId = "1", error = Nothing, maps = RemoteData.NotAsked } session, Cmd.none )
+    ( ConfiguringGame { numberOfPlayers = "2", gameMapId = "1", error = Nothing, maps = RemoteData.NotAsked, selectedMapId = "" } session, Cmd.none )
         |> Tuple.mapSecond
             (\_ ->
                 Cmd.batch
@@ -91,6 +92,7 @@ type Msg
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | NumberOfPlayersKeyPressed Int
     | WindowResized Int Int
+    | SelectMap String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -119,6 +121,9 @@ update msg model =
 
                 GotMaps maps ->
                     ( ConfiguringGame { gameConfiguration | maps = maps } session, Cmd.none )
+
+                SelectMap mapId ->
+                    ( ConfiguringGame { gameConfiguration | selectedMapId = mapId } session, Cmd.none )
 
         GeneratingRandomTroopCounts gameConfiguration session ->
             case msg of
@@ -153,6 +158,9 @@ update msg model =
                     ( GeneratingRandomTroopCounts gameConfiguration (Session.updateWindowSize { width = width, height = height } session), Cmd.none )
 
                 GotMaps _ ->
+                    ( model, Cmd.none )
+
+                SelectMap mapId ->
                     ( model, Cmd.none )
 
 
@@ -196,9 +204,9 @@ view model =
                 [ title
                 , Element.el [ Element.centerX ]
                     (Element.column
-                        [ Element.width Element.fill ]
+                        [ Element.width Element.fill, Element.spacing 20 ]
                         [ numberOfPlayersInput (model |> toGameConfiguration |> .numberOfPlayers)
-                        , mapSelect
+                        , mapSelect (model |> toGameConfiguration |> .maps) (model |> toGameConfiguration |> .selectedMapId)
                         , startGameButton
                         ]
                     )
@@ -207,9 +215,33 @@ view model =
     }
 
 
-mapSelect : Element.Element Msg
-mapSelect =
-    Element.none
+mapSelect : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map) -> String -> Element.Element Msg
+mapSelect mapsRemoteData selectedMapId =
+    case mapsRemoteData of
+        RemoteData.Success maps ->
+            Element.Input.radio
+                [ Element.padding 10
+                , Element.spacing 20
+                ]
+                { onChange = SelectMap
+                , selected = Just selectedMapId
+                , label = Element.Input.labelAbove [] (Element.text "Select map")
+                , options =
+                    maps
+                        |> List.map
+                            (\map ->
+                                Element.Input.option map.id (Element.text map.name)
+                            )
+                }
+
+        RemoteData.Loading ->
+            Element.text "Loading"
+
+        RemoteData.Failure _ ->
+            Element.text "fail"
+
+        RemoteData.NotAsked ->
+            Element.text "not asked"
 
 
 numberOfPlayersInput : String -> Element.Element Msg

@@ -19,7 +19,6 @@ const resolvers = {
     },
     maps: async (_: any, x: { id: string }) => {
       try {
-        // console.log(x);
         const result = await database.query("SELECT * FROM maps");
         console.log(result.rows);
         return result.rows.map(toJson);

@@ -1,10 +1,20 @@
-module ViewHelpers exposing (centerText, colorToElementColor, defaultButtonAttributes, defaultLabelAttributes, defaultTextInputAttributes, pixelsPerMapSquare)
+module ViewHelpers exposing
+    ( centerText
+    , colorToElementColor
+    , defaultButtonAttributes
+    , defaultLabelAttributes
+    , defaultTextInputAttributes
+    ,  pixelsPerMapSquare
+       -- , selectButton
+
+    )
 
 import Color
 import Element
 import Element.Background
 import Element.Border
 import Element.Font
+import Element.Input
 
 
 centerText : String -> Element.Element msg
@@ -53,3 +63,52 @@ defaultTextInputAttributes =
 pixelsPerMapSquare : Int
 pixelsPerMapSquare =
     100
+
+
+
+-- selectButton : String -> Element.Element msg -> msg -> Element.Element msg
+-- selectButton labelString selectedItem message =
+--     Element.column
+--         [ Element.width Element.fill, Element.height Element.fill ]
+--         [ Element.Input.button
+--             ([ Element.Border.width 1
+--              , Element.inFront
+--                 (Element.el
+--                     labelAttributes
+--                     (Element.text labelString)
+--                 )
+--              ]
+--                 ++ defaultTextInputAttributes
+--             )
+--             { label =
+--                 Element.row
+--                     [ Element.width Element.fill ]
+--                     [ Element.el
+--                         [ Element.width (Element.px 200), Element.clipX ]
+--                         selectedItem
+--                     , Element.el
+--                         [ Element.alignRight ]
+--                         -- (fontAwesomeIconSolid "angle-down")
+--                         (Element.text ".")
+--                     ]
+--             , onPress = Just message
+--             }
+--         , errorMessage ""
+--         ]
+-- labelAttributes =
+--     [ Element.Font.size 12
+--     , Element.moveUp 7
+--     , Element.moveRight 5
+--     -- , Element.Background.color white
+--     , Element.paddingEach { left = 5, top = 0, right = 5, bottom = 0 }
+--     ]
+
+
+errorMessage : String -> Element.Element msg
+errorMessage error =
+    Element.el
+        [ Element.height (Element.px 20)
+        , Element.Font.color (Element.rgb255 255 0 0)
+        , Element.Font.size 12
+        ]
+        (Element.text error)
