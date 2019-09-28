@@ -105,4 +105,5 @@ type Mutation {
 
 type Query {
   map(id: String): Map
+  maps: [Map!]!
 }

@@ -39,3 +39,9 @@ map fillInOptionals object_ =
                 |> List.filterMap identity
     in
     Object.selectionForCompositeField "map" optionalArgs object_ (identity >> Decode.nullable)
+
+
+{-| -}
+maps : SelectionSet decodesTo Api.Object.Map -> SelectionSet (List decodesTo) RootQuery
+maps object_ =
+    Object.selectionForCompositeField "maps" [] object_ (identity >> Decode.list)

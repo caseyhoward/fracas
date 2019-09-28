@@ -3,6 +3,7 @@ module Map exposing
     , Map
     , NewMap
     , create
+    , getAll
     , idToString
     , parse
     , urlParser
@@ -11,7 +12,9 @@ module Map exposing
 
 import Api.InputObject
 import Api.Mutation
+import Api.Object as ApiObject
 import Api.Object.Map
+import Api.Query
 import Collage
 import Collage.Render
 import Color
@@ -112,6 +115,14 @@ urlParser =
     Url.Parser.custom "GAMEID" (\str -> Just (Id str))
 
 
+mapSelection : SelectionSet Map ApiObject.Map
+mapSelection =
+    Graphql.SelectionSet.map3 Map
+        Api.Object.Map.id
+        Api.Object.Map.name
+        Api.Object.Map.mapJson
+
+
 create : NewMap -> (RemoteData.RemoteData (Graphql.Http.Error Map) Map -> msg) -> Cmd msg
 create newMap toMsg =
     let
@@ -121,15 +132,16 @@ create newMap toMsg =
                 , mapJson = newMap |> newMapToMapJson |> Json.Encode.encode 0
                 }
             }
-
-        mapSelection =
-            Graphql.SelectionSet.map3 Map
-                Api.Object.Map.id
-                Api.Object.Map.name
-                Api.Object.Map.mapJson
     in
     Api.Mutation.createMap input mapSelection
         |> Graphql.Http.mutationRequest "http://localhost:4000"
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+getAll : (RemoteData.RemoteData (Graphql.Http.Error (List Map)) (List Map) -> msg) -> Cmd msg
+getAll toMsg =
+    Api.Query.maps mapSelection
+        |> Graphql.Http.queryRequest "http://localhost:4000"
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
@@ -188,6 +200,10 @@ encodeSegment segment =
             Json.Encode.list Json.Encode.int [ point |> Tuple.first, point |> Tuple.second ]
         )
         [ segment |> Tuple.first, segment |> Tuple.second ]
+
+
+
+---- PARSING ----
 
 
 type alias CountryWhileParsing =

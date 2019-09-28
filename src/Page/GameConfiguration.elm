@@ -10,12 +10,15 @@ import Element.Background
 import Element.Font
 import Element.Input
 import GameMap
+import Graphql.Http
 import Html
 import Html.Events
 import Json.Decode
+import Map
 import Random
 import Random.Dict
 import Random.List
+import RemoteData
 import Route
 import Session
 import Task
@@ -27,6 +30,7 @@ type alias GameConfiguration =
     { numberOfPlayers : String
     , gameMapId : String
     , error : Maybe String
+    , maps : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map)
     }
 
 
@@ -37,29 +41,53 @@ type Model
 
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    ( ConfiguringGame { numberOfPlayers = "2", gameMapId = "1", error = Nothing } session, Cmd.none )
+    ( ConfiguringGame { numberOfPlayers = "2", gameMapId = "1", error = Nothing, maps = RemoteData.NotAsked } session, Cmd.none )
         |> Tuple.mapSecond
             (\_ ->
-                Task.attempt
-                    (\viewportResult ->
-                        case viewportResult of
-                            Ok viewport ->
-                                WindowResized (round viewport.viewport.width) (round viewport.viewport.height)
+                Cmd.batch
+                    [ Task.attempt
+                        (\viewportResult ->
+                            case viewportResult of
+                                Ok viewport ->
+                                    WindowResized (round viewport.viewport.width) (round viewport.viewport.height)
 
-                            Err _ ->
-                                WindowResized 0 0
-                    )
-                    Browser.Dom.getViewport
+                                Err _ ->
+                                    WindowResized 0 0
+                        )
+                        Browser.Dom.getViewport
+                    , Map.getAll GotMaps
+                    ]
             )
+
+
+toSession : Model -> Session.Session
+toSession model =
+    case model of
+        ConfiguringGame _ session ->
+            session
+
+        GeneratingRandomTroopCounts _ session ->
+            session
 
 
 
 ---- UPDATE ----
 
 
+toGameConfiguration : Model -> GameConfiguration
+toGameConfiguration model =
+    case model of
+        ConfiguringGame gameConfiguration _ ->
+            gameConfiguration
+
+        GeneratingRandomTroopCounts gameConfiguration _ ->
+            gameConfiguration
+
+
 type Msg
     = NumberOfPlayersChanged String
     | StartGameClicked
+    | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map))
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | NumberOfPlayersKeyPressed Int
     | WindowResized Int Int
@@ -88,6 +116,9 @@ update msg model =
 
                 WindowResized width height ->
                     ( ConfiguringGame gameConfiguration { session | windowSize = Just { width = width, height = height } }, Cmd.none )
+
+                GotMaps maps ->
+                    ( ConfiguringGame { gameConfiguration | maps = maps } session, Cmd.none )
 
         GeneratingRandomTroopCounts gameConfiguration session ->
             case msg of
@@ -121,6 +152,9 @@ update msg model =
                 WindowResized width height ->
                     ( GeneratingRandomTroopCounts gameConfiguration (Session.updateWindowSize { width = width, height = height } session), Cmd.none )
 
+                GotMaps _ ->
+                    ( model, Cmd.none )
+
 
 maximumNeutralCountryTroops : Int
 maximumNeutralCountryTroops =
@@ -152,16 +186,6 @@ randomTroopPlacementsGenerator countryIds =
 ---- VIEW ----
 
 
-toGameConfiguration : Model -> GameConfiguration
-toGameConfiguration model =
-    case model of
-        ConfiguringGame gameConfiguration _ ->
-            gameConfiguration
-
-        GeneratingRandomTroopCounts gameConfiguration _ ->
-            gameConfiguration
-
-
 view : Model -> { title : String, content : Html.Html Msg }
 view model =
     { title = ""
@@ -169,47 +193,13 @@ view model =
         Element.layout [ Element.width Element.fill, Element.centerX ]
             (Element.column
                 [ Element.width Element.fill, Element.centerX ]
-                [ Element.el
-                    [ Element.padding 100
-                    , Element.Font.bold
-                    , Element.Font.size 80
-                    , Element.centerX
-                    , Element.Font.color (Color.darkBlue |> ViewHelpers.colorToElementColor)
-                    ]
-                    (Element.text "Fracas")
+                [ title
                 , Element.el [ Element.centerX ]
                     (Element.column
                         [ Element.width Element.fill ]
-                        [ Element.Input.text
-                            [ Element.width (Element.px 50)
-                            , Element.htmlAttribute
-                                (Html.Events.on
-                                    "keyup"
-                                    (Json.Decode.map NumberOfPlayersKeyPressed Html.Events.keyCode)
-                                )
-                            ]
-                            { onChange = NumberOfPlayersChanged
-                            , text = model |> toGameConfiguration |> .numberOfPlayers
-                            , placeholder = Nothing
-                            , label =
-                                Element.Input.labelLeft
-                                    [ Element.centerY
-                                    , Element.paddingEach { top = 0, left = 0, right = 10, bottom = 0 }
-                                    ]
-                                    (Element.text "Number of players")
-                            }
-                        , Element.Input.button
-                            (ViewHelpers.defaultButtonAttributes
-                                ++ [ Element.Background.color (Element.rgb255 0 150 0)
-                                   , Element.width Element.fill
-                                   , Element.padding 20
-                                   , Element.centerX
-                                   , Element.moveDown 30
-                                   , Element.Font.size 30
-                                   , Element.Font.color (Color.white |> ViewHelpers.colorToElementColor)
-                                   ]
-                            )
-                            { onPress = Just StartGameClicked, label = ViewHelpers.centerText "Start Game" }
+                        [ numberOfPlayersInput (model |> toGameConfiguration |> .numberOfPlayers)
+                        , mapSelect
+                        , startGameButton
                         ]
                     )
                 ]
@@ -217,14 +207,59 @@ view model =
     }
 
 
-toSession : Model -> Session.Session
-toSession model =
-    case model of
-        ConfiguringGame _ session ->
-            session
+mapSelect : Element.Element Msg
+mapSelect =
+    Element.none
 
-        GeneratingRandomTroopCounts _ session ->
-            session
+
+numberOfPlayersInput : String -> Element.Element Msg
+numberOfPlayersInput numberOfPlayers =
+    Element.Input.text
+        [ Element.width (Element.px 50)
+        , Element.htmlAttribute
+            (Html.Events.on
+                "keyup"
+                (Json.Decode.map NumberOfPlayersKeyPressed Html.Events.keyCode)
+            )
+        ]
+        { onChange = NumberOfPlayersChanged
+        , text = numberOfPlayers
+        , placeholder = Nothing
+        , label =
+            Element.Input.labelLeft
+                [ Element.centerY
+                , Element.paddingEach { top = 0, left = 0, right = 10, bottom = 0 }
+                ]
+                (Element.text "Number of players")
+        }
+
+
+startGameButton : Element.Element Msg
+startGameButton =
+    Element.Input.button
+        (ViewHelpers.defaultButtonAttributes
+            ++ [ Element.Background.color (Element.rgb255 0 150 0)
+               , Element.width Element.fill
+               , Element.padding 20
+               , Element.centerX
+               , Element.moveDown 30
+               , Element.Font.size 30
+               , Element.Font.color (Color.white |> ViewHelpers.colorToElementColor)
+               ]
+        )
+        { onPress = Just StartGameClicked, label = ViewHelpers.centerText "Start Game" }
+
+
+title : Element.Element Msg
+title =
+    Element.el
+        [ Element.padding 100
+        , Element.Font.bold
+        , Element.Font.size 80
+        , Element.centerX
+        , Element.Font.color (Color.darkBlue |> ViewHelpers.colorToElementColor)
+        ]
+        (Element.text "Fracas")
 
 
 
