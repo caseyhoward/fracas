@@ -70,15 +70,18 @@ type Water
     = Water (Set.Set String) -- Country Ids
 
 
+type alias Dimensions =
+    { width : Int
+    , height : Int
+    }
+
+
 type alias NewMap =
     { name : String
     , countries : List Country
     , neighboringCountries : List NeighboringCountries
     , water : List Water
-    , dimensions :
-        { width : Int
-        , height : Int
-        }
+    , dimensions : Dimensions
     }
 
 
@@ -540,16 +543,14 @@ view : NewMap -> Html.Html msg
 view map =
     let
         scaledWidth =
-            map.dimensions.width |> scale |> Debug.log "width"
+            map.dimensions.width |> scale
 
         scaledHeight =
             map.dimensions.height |> scale
-
-        waterCollage =
-            getWaterCollage map
     in
     Collage.group
-        [ waterCollage
+        [ getCountriesCollage map.countries
+        , getWaterCollage map.dimensions |> Debug.log "getWaterCollage"
         ]
         |> Collage.Render.svgExplicit
             [ Html.Attributes.style "width" "100%"
@@ -570,14 +571,59 @@ view map =
             ]
 
 
-getWaterCollage : NewMap -> Collage.Collage msg
-getWaterCollage map =
+getCountriesCollage : List Country -> Collage.Collage msg
+getCountriesCollage countries =
+    countries
+        |> List.map
+            (\country ->
+                let
+                    countryPolygon =
+                        country |> getCountryPolygon |> scalePolygon |> Collage.polygon
+
+                    fill =
+                        countryPolygon
+                            |> Collage.filled (Collage.uniform Color.gray)
+
+                    border =
+                        countryPolygon
+                            |> Collage.outlined
+                                (Collage.solid 30.0
+                                    (Collage.uniform Color.black)
+                                )
+                in
+                Collage.group [ fill, border ]
+            )
+        |> Collage.group
+
+
+scalePolygon : Polygon -> List ( Float, Float )
+scalePolygon points =
+    points |> List.map scalePoint
+
+
+scalePoint : Point -> ( Float, Float )
+scalePoint ( x, y ) =
+    ( x |> scale, y |> scale )
+
+
+getCountryPolygon : Country -> Polygon
+getCountryPolygon country =
+    case country of
+        LandLockedCountry countryProperties ->
+            countryProperties.polygon
+
+        CoastalCountry countryProperties _ ->
+            countryProperties.polygon
+
+
+getWaterCollage : Dimensions -> Collage.Collage msg
+getWaterCollage dimensions =
     let
         scaledWidth =
-            map.dimensions.width |> scale
+            dimensions.width |> scale
 
         scaledHeight =
-            map.dimensions.height |> scale
+            dimensions.height |> scale
 
         background =
             Collage.polygon
