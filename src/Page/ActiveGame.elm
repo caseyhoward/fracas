@@ -664,9 +664,9 @@ getWaterCollage gameMap =
         background =
             Collage.polygon
                 [ ( 0, 0 )
-                , ( 0, gameMap.dimensions |> Tuple.second )
-                , ( gameMap.dimensions |> Tuple.first, gameMap.dimensions |> Tuple.second )
-                , ( gameMap.dimensions |> Tuple.first, 0 )
+                , ( 0, gameMap.dimensions |> Tuple.second |> toFloat )
+                , ( gameMap.dimensions |> Tuple.first |> toFloat, gameMap.dimensions |> Tuple.second |> toFloat )
+                , ( gameMap.dimensions |> Tuple.first |> toFloat, 0.0 )
                 ]
 
         backgroundWater =

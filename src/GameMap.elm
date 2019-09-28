@@ -4,14 +4,17 @@ module GameMap exposing
     , CountryId(..)
     , GameMap
     , Id(..)
+    , RawGameMap
     , capitolDotsCoordinates
     , errorToString
     , get
     , getCountriesThatCanReachCountryThroughWater
     , getCountry
     , getCountryIds
+    , getMapDimensions
     , isCountryNeighboringWater
     , parse
+    , parseRawMap
     , updateCountry
     )
 
@@ -23,7 +26,7 @@ type alias GameMap =
     { id : Id
     , countries : Dict.Dict String Country
     , bodiesOfWater : Dict.Dict String (Set.Set String)
-    , dimensions : ( Float, Float )
+    , dimensions : ( Int, Int )
     }
 
 
@@ -43,7 +46,6 @@ type alias Country =
     , neighboringCountries : Set.Set String
     , neighboringBodiesOfWater : Set.Set String
     }
-
 
 
 type alias Area =
@@ -207,8 +209,8 @@ parse text scale =
     , bodiesOfWater =
         gameMapWithoutPolygons.bodiesOfWaterNeighborCountries
     , dimensions =
-        ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * scale |> toFloat
-        , (gameMapWithoutPolygons.dimensions |> Tuple.second) * scale |> toFloat
+        ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * scale
+        , (gameMapWithoutPolygons.dimensions |> Tuple.second) * scale
         )
     , id = Id "1"
     }

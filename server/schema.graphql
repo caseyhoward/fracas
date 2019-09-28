@@ -33,7 +33,7 @@
 
 input MapInput {
   name: String!
-  rawMap: String!
+  # rawMap: String!
   mapJson: String!
   # countries: [Country!]!
   # width: Int! # Used for drawing the water since we don't store the water polygons
@@ -46,7 +46,7 @@ type Map {
   id: String!
   name: String!
   mapJson: String!
-  rawMap: String!
+  # rawMap: String!
   # countries: [Country!]!
   # width: Int! # Used for drawing the water since we don't store the water polygons
   # height: Int! # used for drawing the water since we don't store the water polygons

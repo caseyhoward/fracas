@@ -57,7 +57,11 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         CreateMap ->
-            ( model, Map.create model.name model.rawMap CreatedMap )
+            let
+                newMap =
+                    Map.parse model.name model.rawMap
+            in
+            ( model, Map.create newMap CreatedMap )
 
         CreatedMap savingMap ->
             ( { model | savingMap = savingMap }, Cmd.none )
@@ -161,11 +165,6 @@ errorToString errorData =
 
                 Graphql.Http.BadPayload error ->
                     "Http error: bad payload"
-
-
-
--- Graphql.Http.BadBody body ->
---     "Http error: Bad body - <br>" ++ body
 
 
 graphqlErrorToString : Graphql.Http.GraphqlError.GraphqlError -> String
