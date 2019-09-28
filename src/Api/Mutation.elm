@@ -19,6 +19,20 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
+type alias CreateGameRequiredArguments =
+    { gameConfiguration : Api.InputObject.GameInput }
+
+
+{-|
+
+  - gameConfiguration -
+
+-}
+createGame : CreateGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
+createGame requiredArgs object_ =
+    Object.selectionForCompositeField "createGame" [ Argument.required "gameConfiguration" requiredArgs.gameConfiguration Api.InputObject.encodeGameInput ] object_ identity
+
+
 type alias CreateMapRequiredArguments =
     { map : Api.InputObject.MapInput }
 

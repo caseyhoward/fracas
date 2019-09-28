@@ -1,4 +1,4 @@
-module Game exposing (Game)
+module Game exposing (Game, create)
 
 import Collage
 import Color
@@ -81,3 +81,7 @@ type alias Game =
     , playerTurn : PlayerId
     , turnStatus : TurnStatus
     }
+
+
+create selectedMapId numberOfPlayers =
+    Debug.todo "Game.create"

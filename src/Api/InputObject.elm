@@ -17,6 +17,33 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+buildGameInput : GameInputRequiredFields -> GameInput
+buildGameInput required =
+    { mapId = required.mapId, numberOfPlayers = required.numberOfPlayers }
+
+
+type alias GameInputRequiredFields =
+    { mapId : String
+    , numberOfPlayers : Int
+    }
+
+
+{-| Type for the GameInput input object.
+-}
+type alias GameInput =
+    { mapId : String
+    , numberOfPlayers : Int
+    }
+
+
+{-| Encode a GameInput into a value that can be used as an argument.
+-}
+encodeGameInput : GameInput -> Value
+encodeGameInput input =
+    Encode.maybeObject
+        [ ( "mapId", Encode.string input.mapId |> Just ), ( "numberOfPlayers", Encode.int input.numberOfPlayers |> Just ) ]
+
+
 buildMapInput : MapInputRequiredFields -> MapInput
 buildMapInput required =
     { name = required.name, mapJson = required.mapJson }

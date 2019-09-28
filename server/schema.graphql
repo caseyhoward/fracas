@@ -1,64 +1,29 @@
 input MapInput {
   name: String!
-  # rawMap: String!
   mapJson: String!
+}
+
+input GameInput {
+  mapId: String!
+  numberOfPlayers: Int!
 }
 
 type Map {
   id: String!
   name: String!
   mapJson: String!
-  # rawMap: String!
 }
 
 type Mutation {
-  # startGame(gameConfiguration: GameConfiguration): Game
-
+  createGame(gameConfiguration: GameInput!): Game!
   createMap(map: MapInput!): Map!
 }
 
-# type Player {
-#   id: String
-#   name: String
-#   color: String
-#   capitolId: String
-# }
-
-# enum TurnStatus {
-#   PLACING_CAPITOL
-#   PLACING_REINFORCEMENTS
-#   ACTION
-#   MOVING_TROOPS
-#   GAME_OVER
-# }
-
-# type CountriesAdjacentToWater {
-#   countryIds = [String]! # There might not be water
-# }
-
-# type Game {
-#   id: String
-#   mapName: String
-#   countries: [GameCountry!]!
-#   players: [Player!]!
-#   playerTurnOrder: [String!]!
-#   neighboringCountries: [NeighboringCountries!]! # Stored here so we don't have duplicate information in the country type. Both countries would be storing the fact that they are adjacent.
-#   bodiesOfWater : [BodyOfWater]!
-#   playerTurn: String
-#   turnStatus: TurnStatus
-# }
-
-# type GameCountry {
-#   polygon: Polygon!
-#   owner_id: String # null if neutral
-#   troop_count: Int!
-#   adjacentWater: [String]!
-# }
-
-# type GameConfiguration {
-#   mapId: String
-#   numberOfPlayers: Int
-# }
+type Game {
+  id: String!
+  map: Map!
+  gameJson: String!
+}
 
 type Query {
   map(id: String): Map

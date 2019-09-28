@@ -5,5 +5,9 @@
 module Api.Object exposing (..)
 
 
+type Game
+    = Game
+
+
 type Map
     = Map

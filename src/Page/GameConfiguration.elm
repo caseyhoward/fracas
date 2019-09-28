@@ -9,6 +9,8 @@ import Element
 import Element.Background
 import Element.Font
 import Element.Input
+import FeatureFlags
+import Game
 import GameMap
 import Graphql.Http
 import Html
@@ -134,16 +136,20 @@ update msg model =
                                 |> String.toInt
                                 |> Maybe.withDefault 6
                     in
-                    case ActiveGame.start session.gameMaps (GameMap.Id "1") numberOfPlayers neutralCountryTroopCounts of
-                        Ok activeGame ->
-                            ( GeneratingRandomTroopCounts
-                                gameConfiguration
-                                (session |> Session.addActiveGame (ActiveGame.Id "123") activeGame)
-                            , Route.replaceUrl (Session.navKey session) (Route.ActiveGame (ActiveGame.Id "123"))
-                            )
+                    if FeatureFlags.isServerEnabled then
+                        ( model, Game.create gameConfiguration.selectedMapId gameConfiguration.numberOfPlayers )
 
-                        Err error ->
-                            ( GeneratingRandomTroopCounts { gameConfiguration | error = Just (error |> ActiveGame.errorToString) } session, Cmd.none )
+                    else
+                        case ActiveGame.start session.gameMaps (GameMap.Id "1") numberOfPlayers neutralCountryTroopCounts of
+                            Ok activeGame ->
+                                ( GeneratingRandomTroopCounts
+                                    gameConfiguration
+                                    (session |> Session.addActiveGame (ActiveGame.Id "123") activeGame)
+                                , Route.replaceUrl (Session.navKey session) (Route.ActiveGame (ActiveGame.Id "123"))
+                                )
+
+                            Err error ->
+                                ( GeneratingRandomTroopCounts { gameConfiguration | error = Just (error |> ActiveGame.errorToString) } session, Cmd.none )
 
                 NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
@@ -160,7 +166,7 @@ update msg model =
                 GotMaps _ ->
                     ( model, Cmd.none )
 
-                SelectMap mapId ->
+                SelectMap _ ->
                     ( model, Cmd.none )
 
 

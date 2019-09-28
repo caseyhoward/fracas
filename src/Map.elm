@@ -10,7 +10,6 @@ module Map exposing
     , view
     )
 
-import Api.InputObject
 import Api.Mutation
 import Api.Object as ApiObject
 import Api.Object.Map
@@ -19,10 +18,8 @@ import Collage
 import Collage.Render
 import Color
 import Dict
-import Element
 import GameMap
 import Graphql.Http
-import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html
 import Html.Attributes
