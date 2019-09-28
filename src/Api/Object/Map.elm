@@ -35,9 +35,3 @@ name =
 mapJson : SelectionSet String Api.Object.Map
 mapJson =
     Object.selectionForField "String" "mapJson" [] Decode.string
-
-
-{-| -}
-rawMap : SelectionSet String Api.Object.Map
-rawMap =
-    Object.selectionForField "String" "rawMap" [] Decode.string

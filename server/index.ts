@@ -8,7 +8,9 @@ const resolvers = {
     }
   },
   Mutation: {
-    createMap: (_: any, x: {}) => {}
+    createMap: (_: any, x: {}) => {
+      console.log(x);
+    }
   }
 };
 

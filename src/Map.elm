@@ -55,12 +55,6 @@ type alias Point =
     ( Int, Int )
 
 
-
--- { x : Int
--- , y : Int
--- }
-
-
 type alias NeighboringCountries =
     ( String, String )
 
@@ -98,16 +92,6 @@ type alias Map =
     }
 
 
-type alias NewMapRequest =
-    { name : String
-    , mapJson : String
-    , dimensions :
-        { width : Int
-        , height : Int
-        }
-    }
-
-
 idToString : Id -> String
 idToString (Id id) =
     id
@@ -124,8 +108,7 @@ create newMap toMsg =
         input =
             { map =
                 { name = newMap.name
-                , mapJson = newMap |> newMapToMapJson |> Json.Encode.encode 2
-                , rawMap = ""
+                , mapJson = newMap |> newMapToMapJson |> Json.Encode.encode 0
                 }
             }
 
@@ -140,19 +123,10 @@ create newMap toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-newMapToRequest : NewMap -> NewMapRequest
-newMapToRequest newMap =
-    { name = newMap.name
-    , dimensions = newMap.dimensions
-    , mapJson = newMap |> newMapToMapJson |> Json.Encode.encode 2
-    }
-
-
 newMapToMapJson : NewMap -> Json.Encode.Value
 newMapToMapJson newMap =
     Json.Encode.object
-        [ ( "name", newMap.name |> Json.Encode.string )
-        , ( "dimensions"
+        [ ( "dimensions"
           , Json.Encode.object
                 [ ( "width", newMap.dimensions.width |> Json.Encode.int )
                 , ( "height", newMap.dimensions.height |> Json.Encode.int )
@@ -166,10 +140,44 @@ encodeCountry : Country -> Json.Encode.Value
 encodeCountry country =
     case country of
         CoastalCountry countryProperties segments ->
-            Json.Encode.object []
+            Json.Encode.object
+                (encodeCountryProperties countryProperties ++ [ ( "segments", segments |> Json.Encode.set encodeSegment ) ])
 
         LandLockedCountry countryProperties ->
-            Json.Encode.object []
+            Json.Encode.object
+                (encodeCountryProperties countryProperties)
+
+
+encodeCountryProperties : CountryProperties -> List ( String, Json.Encode.Value )
+encodeCountryProperties countryProperties =
+    [ ( "id", encodeCountryId countryProperties.id )
+    , ( "polygon", encodePolygon countryProperties.polygon )
+    , ( "points", Json.Encode.set encodePoint countryProperties.points )
+    ]
+
+
+encodeCountryId : CountryId -> Json.Encode.Value
+encodeCountryId (CountryId countryId) =
+    Json.Encode.string countryId
+
+
+encodePoint : Point -> Json.Encode.Value
+encodePoint point =
+    Json.Encode.list Json.Encode.int [ point |> Tuple.first, point |> Tuple.second ]
+
+
+encodePolygon : Polygon -> Json.Encode.Value
+encodePolygon polygon =
+    Json.Encode.list encodePoint polygon
+
+
+encodeSegment : Segment -> Json.Encode.Value
+encodeSegment segment =
+    Json.Encode.list
+        (\point ->
+            Json.Encode.list Json.Encode.int [ point |> Tuple.first, point |> Tuple.second ]
+        )
+        [ segment |> Tuple.first, segment |> Tuple.second ]
 
 
 type alias CountryWhileParsing =
@@ -250,6 +258,7 @@ countriesWhileParsingToCountries countriesWhileParsing =
 getMapDimensions : RawGameMap -> ( Int, Int )
 getMapDimensions map =
     map
+        |> Debug.log ""
         |> Dict.keys
         |> List.foldl
             (\( x, y ) ( width, height ) ->

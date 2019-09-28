@@ -19,12 +19,11 @@ import Json.Decode as Decode
 
 buildMapInput : MapInputRequiredFields -> MapInput
 buildMapInput required =
-    { name = required.name, rawMap = required.rawMap, mapJson = required.mapJson }
+    { name = required.name, mapJson = required.mapJson }
 
 
 type alias MapInputRequiredFields =
     { name : String
-    , rawMap : String
     , mapJson : String
     }
 
@@ -33,7 +32,6 @@ type alias MapInputRequiredFields =
 -}
 type alias MapInput =
     { name : String
-    , rawMap : String
     , mapJson : String
     }
 
@@ -43,4 +41,4 @@ type alias MapInput =
 encodeMapInput : MapInput -> Value
 encodeMapInput input =
     Encode.maybeObject
-        [ ( "name", Encode.string input.name |> Just ), ( "rawMap", Encode.string input.rawMap |> Just ), ( "mapJson", Encode.string input.mapJson |> Just ) ]
+        [ ( "name", Encode.string input.name |> Just ), ( "mapJson", Encode.string input.mapJson |> Just ) ]
