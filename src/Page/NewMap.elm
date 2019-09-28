@@ -9,6 +9,8 @@ module Page.NewMap exposing
     )
 
 import Browser.Events
+import Collage
+import Color
 import Element
 import Element.Background
 import Element.Input
@@ -19,6 +21,7 @@ import Http
 import Map
 import RemoteData
 import Session
+import Tuple
 import ViewHelpers
 
 
@@ -26,6 +29,7 @@ type alias Model =
     { session : Session.Session
     , rawMap : String
     , name : String
+    , mapPreview : Map.NewMap
     , savingMap : RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map
     }
 
@@ -36,6 +40,7 @@ init session =
       , name = ""
       , rawMap = ""
       , savingMap = RemoteData.NotAsked
+      , mapPreview = Map.parse "" ""
       }
     , Cmd.none
     )
@@ -70,7 +75,7 @@ update msg model =
             ( { model | name = name }, Cmd.none )
 
         UpdateRawMap rawMap ->
-            ( { model | rawMap = rawMap }, Cmd.none )
+            ( { model | rawMap = rawMap, mapPreview = Map.parse model.name rawMap }, Cmd.none )
 
         WindowResized width height ->
             ( { model | session = model.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
@@ -86,7 +91,11 @@ view model =
     , content =
         Element.layout [ Element.width Element.fill ]
             (Element.column
-                [ Element.centerX, Element.width (Element.px 1000), Element.spacing 20, Element.padding 20 ]
+                [ Element.centerX
+                , Element.width (Element.fill |> Element.maximum 1000)
+                , Element.spacing 20
+                , Element.padding 20
+                ]
                 [ Element.el [] (Element.text "Create a new map")
                 , Element.Input.text
                     ViewHelpers.defaultTextInputAttributes
@@ -103,6 +112,7 @@ view model =
                     , text = model.rawMap
                     , spellcheck = False
                     }
+                , Map.view model.mapPreview |> Element.html |> Element.el [ Element.width Element.fill ]
                 , Element.Input.button
                     (ViewHelpers.defaultButtonAttributes
                         ++ [ Element.width (Element.px 120)

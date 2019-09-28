@@ -19,7 +19,7 @@ const resolvers = {
     }
   },
   Mutation: {
-    createMap: async (_: any, x: { map: NewMap }) => {
+    createMap: async (_: any, x: { map: NewMap }): Promise<Map | string> => {
       try {
         const result = await database.query(
           "INSERT INTO maps(name, map_json) VALUES ($1, $2) RETURNING *",
@@ -33,6 +33,7 @@ const resolvers = {
         };
       } catch (error) {
         console.log(error);
+        return error.toString();
       }
     }
   }

@@ -1,21 +1,28 @@
 module Map exposing
     ( Id
     , Map
+    , NewMap
     , create
     , idToString
     , parse
     , urlParser
+    , view
     )
 
 import Api.InputObject
 import Api.Mutation
 import Api.Object.Map
 import Collage
+import Collage.Render
+import Color
 import Dict
+import Element
 import GameMap
 import Graphql.Http
 import Graphql.Operation exposing (RootMutation)
 import Graphql.SelectionSet exposing (SelectionSet)
+import Html
+import Html.Attributes
 import Json.Encode
 import RemoteData
 import Set
@@ -258,7 +265,6 @@ countriesWhileParsingToCountries countriesWhileParsing =
 getMapDimensions : RawGameMap -> ( Int, Int )
 getMapDimensions map =
     map
-        |> Debug.log ""
         |> Dict.keys
         |> List.foldl
             (\( x, y ) ( width, height ) ->
@@ -524,3 +530,74 @@ getEdgesForCountryForCoordinate allAreas point =
                     Set.insert edge result
             )
             Set.empty
+
+
+
+---- View
+
+
+view : NewMap -> Html.Html msg
+view map =
+    let
+        scaledWidth =
+            map.dimensions.width |> scale |> Debug.log "width"
+
+        scaledHeight =
+            map.dimensions.height |> scale
+
+        waterCollage =
+            getWaterCollage map
+    in
+    Collage.group
+        [ waterCollage
+        ]
+        |> Collage.Render.svgExplicit
+            [ Html.Attributes.style "width" "100%"
+            , Html.Attributes.style "max-height" "100%"
+            , Html.Attributes.style "top" "0"
+            , Html.Attributes.style "left" "0"
+            , Html.Attributes.attribute "width" "0"
+            , Html.Attributes.attribute
+                "viewBox"
+                ((0 * scaledWidth |> String.fromFloat)
+                    ++ " "
+                    ++ (-1 * scaledHeight |> String.fromFloat)
+                    ++ " "
+                    ++ (1 * scaledWidth |> String.fromFloat)
+                    ++ " "
+                    ++ (1 * scaledHeight |> String.fromFloat)
+                )
+            ]
+
+
+getWaterCollage : NewMap -> Collage.Collage msg
+getWaterCollage map =
+    let
+        scaledWidth =
+            map.dimensions.width |> scale
+
+        scaledHeight =
+            map.dimensions.height |> scale
+
+        background =
+            Collage.polygon
+                [ ( 0, 0 )
+                , ( 0, scaledHeight )
+                , ( scaledWidth, scaledHeight )
+                , ( scaledWidth, 0.0 )
+                ]
+
+        backgroundWater =
+            background
+                |> Collage.filled (Collage.uniform Color.blue)
+
+        backgroundBorder =
+            background
+                |> Collage.outlined (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 8.0) (Collage.uniform Color.black))
+    in
+    Collage.group [ backgroundBorder, backgroundWater ]
+
+
+scale : Int -> Float
+scale number =
+    number * 100 |> toFloat
