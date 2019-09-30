@@ -95,7 +95,8 @@ type TurnStatus
 type alias Game =
     { id : String
     , map : Map.Map
-    , countries : List Country
+
+    -- , countries : List Country
     , players : List Player
     , neighboringCountries : List NeighboringCountries
     , bodiesOfWater : List Water -- Could store on the CoastalProperties too. Not sure what's better.
@@ -175,7 +176,8 @@ get (Id id) toMsg =
                             game =
                                 { id = gameSelection.id
                                 , map = gameSelection.map
-                                , countries = []
+
+                                -- , countries = []
                                 , players = []
                                 , neighboringCountries = []
                                 , bodiesOfWater = []

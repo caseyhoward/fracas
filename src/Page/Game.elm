@@ -23,10 +23,8 @@ type alias Model =
 
 type Msg
     = WindowResized Int Int
-
-
-
--- | GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game)
+      -- | GotGame Game.Game
+    | GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game)
 
 
 init : Session.Session -> Game.Id -> ( Model, Cmd Msg )
