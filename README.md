@@ -11,5 +11,14 @@ Try the early terrible version [here](http://fracas.caseyhoward.net)
 
 ## Todo
 
-- Draw troop counts in their own layer on top of all the countries
-- Don't add defending country troop count twice when it has a port
+- Multiple maps to choose from
+- Mobile mouse events
+- Map builder
+- Multiplayer via internet
+  - Allies
+  - Chat
+- Sound effects
+- Single player (AI)
+- Log
+- Stats
+- Random map generator

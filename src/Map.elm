@@ -1,5 +1,5 @@
 module Map exposing
-    ( Id
+    ( Id(..)
     , Map
     , NewMap
     , create

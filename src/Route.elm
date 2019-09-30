@@ -45,7 +45,7 @@ parser : Parser (Route -> a) a
 parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
-        , Parser.map ActiveGame (s "games" </> ActiveGame.urlParser)
+        , Parser.map ActiveGame (s "active-games" </> ActiveGame.urlParser)
         , Parser.map Game (s "games" </> Game.urlParser)
         , Parser.map NewMap (s "maps" </> s "new")
         , Parser.map EditMap (s "maps" </> Map.urlParser)

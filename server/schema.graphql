@@ -5,7 +5,7 @@ input MapInput {
 
 input GameInput {
   mapId: String!
-  numberOfPlayers: Int!
+  gameJson: String!
 }
 
 type Map {

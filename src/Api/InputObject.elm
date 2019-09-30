@@ -19,12 +19,12 @@ import Json.Decode as Decode
 
 buildGameInput : GameInputRequiredFields -> GameInput
 buildGameInput required =
-    { mapId = required.mapId, numberOfPlayers = required.numberOfPlayers }
+    { mapId = required.mapId, gameJson = required.gameJson }
 
 
 type alias GameInputRequiredFields =
     { mapId : String
-    , numberOfPlayers : Int
+    , gameJson : String
     }
 
 
@@ -32,7 +32,7 @@ type alias GameInputRequiredFields =
 -}
 type alias GameInput =
     { mapId : String
-    , numberOfPlayers : Int
+    , gameJson : String
     }
 
 
@@ -41,7 +41,7 @@ type alias GameInput =
 encodeGameInput : GameInput -> Value
 encodeGameInput input =
     Encode.maybeObject
-        [ ( "mapId", Encode.string input.mapId |> Just ), ( "numberOfPlayers", Encode.int input.numberOfPlayers |> Just ) ]
+        [ ( "mapId", Encode.string input.mapId |> Just ), ( "gameJson", Encode.string input.gameJson |> Just ) ]
 
 
 buildMapInput : MapInputRequiredFields -> MapInput

@@ -11,9 +11,11 @@ import Api.Object as ApiObject
 import Api.Object.Game
 import Api.Object.Map
 import Collage
-import Color
+import Colors
+import Dict
 import Graphql.Http
 import Graphql.SelectionSet exposing (SelectionSet)
+import Json.Encode
 import Map
 import RemoteData
 import Set
@@ -31,7 +33,7 @@ type CountryId
 
 
 type PlayerId
-    = PlayerId String
+    = PlayerId Int
 
 
 type Country
@@ -61,10 +63,10 @@ type alias CoastalProperties =
 
 
 type alias Player =
-    { id : String
+    { id : PlayerId
     , name : String
-    , color : Color.Color
-    , capitolId : CountryId
+    , color : Colors.Color
+    , capitolId : Maybe CountryId
     }
 
 
@@ -88,11 +90,20 @@ type TurnStatus
 
 type alias Game =
     { id : String
+    , mapId : Map.Id
     , mapName : String
     , countries : List Country
     , players : List Player
     , neighboringCountries : List NeighboringCountries
     , bodiesOfWater : List Water -- Could store on the CoastalProperties too. Not sure what's better.
+    , playerTurn : PlayerId
+    , turnStatus : TurnStatus
+    }
+
+
+type alias NewGame =
+    { mapId : Map.Id
+    , players : List Player
     , playerTurn : PlayerId
     , turnStatus : TurnStatus
     }
@@ -120,10 +131,35 @@ gameSelection =
 create : String -> Int -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
 create selectedMapId numberOfPlayers toMsg =
     let
+        newGameJson : GameJson
+        newGameJson =
+            { players =
+                List.range 1 numberOfPlayers
+                    |> List.map
+                        (\playerId ->
+                            let
+                                player : Player
+                                player =
+                                    { id = PlayerId playerId
+                                    , name = ""
+                                    , color = playerId |> PlayerId |> getDefaultColor
+                                    , capitolId = Nothing
+                                    }
+                            in
+                            player
+                        )
+            , playerTurn = PlayerId 1
+            , turnStatus = PlacingCapitol
+            }
+
+        newGameEncoded : Json.Encode.Value
+        newGameEncoded =
+            newGameJson |> encodeGameJson
+
         input =
             { gameConfiguration =
                 { mapId = selectedMapId
-                , numberOfPlayers = numberOfPlayers
+                , gameJson = newGameEncoded |> Json.Encode.encode 0
                 }
             }
     in
@@ -142,18 +178,78 @@ urlParser =
     Url.Parser.custom "GAMEID" (\str -> Just (Id str))
 
 
+type alias GameJson =
+    { players : List Player
+    , playerTurn : PlayerId
+    , turnStatus : TurnStatus
+    }
 
--- createRequest : String -> Int -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
--- createRequest selectedMapId numberOfPlayers toMsg =
---     let
---         input =
---             { gameConfiguration =
---                 { mapId = selectedMapId
---                 , numberOfPlayers = numberOfPlayers
---                 }
---             }
---     in
---     Api.Mutation.createGame input gameSelection
---         |> Graphql.Http.mutationRequest "http://localhost:4000"
---         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
--- mapWithJsonToMap =
+
+encodeGameJson : GameJson -> Json.Encode.Value
+encodeGameJson gameJson =
+    let
+        encodePlayer : Player -> Json.Encode.Value
+        encodePlayer player =
+            Json.Encode.object
+                [ ( "id", player.id |> encodePlayerId )
+                , ( "color", player.color |> Colors.encode )
+                ]
+    in
+    Json.Encode.object
+        [ ( "players", gameJson.players |> Json.Encode.list encodePlayer )
+        , ( "playerTurn", gameJson.playerTurn |> encodePlayerId )
+        , ( "turnStatus", gameJson.turnStatus |> encodeTurnStatus )
+        ]
+
+
+playerColorOptions : Dict.Dict Int Colors.Color
+playerColorOptions =
+    Dict.fromList
+        [ ( 1, Colors.darkGreen )
+        , ( 3, Colors.lightGreen )
+        , ( 2, Colors.lightYellow )
+        , ( 5, Colors.orange )
+        , ( 4, Colors.brown )
+        , ( 6, Colors.lightPurple )
+        ]
+
+
+getDefaultColor : PlayerId -> Colors.Color
+getDefaultColor (PlayerId playerId) =
+    case Dict.get playerId playerColorOptions of
+        Just color ->
+            color
+
+        Nothing ->
+            Colors.black
+
+
+encodePlayerId : PlayerId -> Json.Encode.Value
+encodePlayerId (PlayerId id) =
+    Json.Encode.int id
+
+
+encodeId : Id -> Json.Encode.Value
+encodeId (Id id) =
+    Json.Encode.string id
+
+
+encodeTurnStatus : TurnStatus -> Json.Encode.Value
+encodeTurnStatus turnStatus =
+    (case turnStatus of
+        PlacingCapitol ->
+            "PlacingCapitol"
+
+        Action ->
+            "Action"
+
+        MovingTroops ->
+            "MovingTroops"
+
+        PlacingReinforcements ->
+            "PlacingReinforcements"
+
+        GameOver ->
+            "GameOver"
+    )
+        |> Json.Encode.string
