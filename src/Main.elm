@@ -7,6 +7,7 @@ import Html
 import Page
 import Page.ActiveGame
 import Page.EditMap
+import Page.Game
 import Page.GameConfiguration
 import Page.NewMap
 import Route
@@ -21,6 +22,7 @@ import Url
 type Model
     = GameConfiguration Page.GameConfiguration.Model
     | ActiveGame Page.ActiveGame.Model
+    | Game Page.Game.Model
     | EditMap Page.EditMap.Model
     | NewMap Page.NewMap.Model
     | Redirect Session.Session
@@ -53,6 +55,7 @@ type Msg
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
     | GotActiveGameMsg Page.ActiveGame.Msg
+    | GotGameMsg Page.Game.Msg
     | GotGameConfigurationMsg Page.GameConfiguration.Msg
     | GotEditMapMsg Page.EditMap.Msg
     | GotNewMapMsg Page.NewMap.Msg
@@ -116,6 +119,10 @@ changeRouteTo maybeRoute model =
             Page.ActiveGame.init session activeGameId
                 |> updateWith ActiveGame GotActiveGameMsg
 
+        Just (Route.Game gameId) ->
+            Page.Game.init session gameId
+                |> updateWith Game GotGameMsg
+
         Just (Route.EditMap mapId) ->
             Page.EditMap.init session mapId
                 |> updateWith EditMap GotEditMapMsg
@@ -137,6 +144,9 @@ toSession model =
 
         ActiveGame activeGame ->
             activeGame |> Page.ActiveGame.toSession
+
+        Game game ->
+            game |> Page.Game.toSession
 
         EditMap editMap ->
             editMap |> Page.EditMap.toSession
@@ -171,6 +181,9 @@ view model =
         ActiveGame activeGame ->
             viewPage Page.ActiveGame GotActiveGameMsg (Page.ActiveGame.view activeGame)
 
+        Game game ->
+            viewPage Page.Game GotGameMsg (Page.Game.view game)
+
         EditMap editMap ->
             viewPage Page.EditMap GotEditMapMsg (Page.EditMap.view editMap)
 
@@ -193,6 +206,9 @@ subscriptions model =
 
         ActiveGame activeGame ->
             Sub.map GotActiveGameMsg (Page.ActiveGame.subscriptions activeGame)
+
+        Game game ->
+            Sub.map GotGameMsg (Page.Game.subscriptions game)
 
         EditMap editMap ->
             Sub.map GotEditMapMsg (Page.EditMap.subscriptions editMap)

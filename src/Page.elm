@@ -1,4 +1,7 @@
-module Page exposing (Page(..), view)
+module Page exposing
+    ( Page(..)
+    , view
+    )
 
 import Browser
 import Html
@@ -9,6 +12,7 @@ type Page
     | GameConfiguration
     | EditMap
     | NewMap
+    | Game
 
 
 view : Page -> { title : String, content : Html.Html msg } -> Browser.Document msg

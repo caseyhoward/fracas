@@ -1,9 +1,24 @@
-module Game exposing (Game, create)
+module Game exposing
+    ( Game
+    , Id
+    , create
+    , idToString
+    , urlParser
+    )
 
+import Api.Mutation
+import Api.Object as ApiObject
+import Api.Object.Game
+import Api.Object.Map
 import Collage
 import Color
+import Graphql.Http
+import Graphql.SelectionSet exposing (SelectionSet)
+import Map
+import RemoteData
 import Set
 import TroopCount
+import Url.Parser
 
 
 type OwnerId
@@ -83,5 +98,62 @@ type alias Game =
     }
 
 
-create selectedMapId numberOfPlayers =
-    Debug.todo "Game.create"
+type Id
+    = Id String
+
+
+type alias GameSelectionSet =
+    { id : String
+    , map : Map.Map
+    , gameJson : String
+    }
+
+
+gameSelection : SelectionSet GameSelectionSet ApiObject.Game
+gameSelection =
+    Graphql.SelectionSet.map3 GameSelectionSet
+        Api.Object.Game.id
+        (Api.Object.Game.map Map.mapSelection)
+        Api.Object.Game.gameJson
+
+
+create : String -> Int -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
+create selectedMapId numberOfPlayers toMsg =
+    let
+        input =
+            { gameConfiguration =
+                { mapId = selectedMapId
+                , numberOfPlayers = numberOfPlayers
+                }
+            }
+    in
+    Api.Mutation.createGame input (Api.Object.Game.id |> Graphql.SelectionSet.map Id)
+        |> Graphql.Http.mutationRequest "http://localhost:4000"
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+idToString : Id -> String
+idToString (Id id) =
+    id
+
+
+urlParser : Url.Parser.Parser (Id -> a) a
+urlParser =
+    Url.Parser.custom "GAMEID" (\str -> Just (Id str))
+
+
+
+-- createRequest : String -> Int -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
+-- createRequest selectedMapId numberOfPlayers toMsg =
+--     let
+--         input =
+--             { gameConfiguration =
+--                 { mapId = selectedMapId
+--                 , numberOfPlayers = numberOfPlayers
+--                 }
+--             }
+--     in
+--     Api.Mutation.createGame input gameSelection
+--         |> Graphql.Http.mutationRequest "http://localhost:4000"
+--         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+-- mapWithJsonToMap =

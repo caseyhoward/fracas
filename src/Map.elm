@@ -5,6 +5,7 @@ module Map exposing
     , create
     , getAll
     , idToString
+    , mapSelection
     , parse
     , urlParser
     , view
@@ -563,7 +564,7 @@ view map =
     in
     Collage.group
         [ getCountriesCollage map.countries
-        , getWaterCollage map.dimensions |> Debug.log "getWaterCollage"
+        , getWaterCollage map.dimensions
         ]
         |> Collage.Render.svgExplicit
             [ Html.Attributes.style "width" "100%"

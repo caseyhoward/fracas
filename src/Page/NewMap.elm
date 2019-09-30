@@ -131,7 +131,7 @@ view model =
                             Element.text "Loading."
 
                         RemoteData.Failure err ->
-                            Element.text ("Error: " ++ (err |> errorToString))
+                            Element.text ("Error: " ++ (err |> ViewHelpers.errorToString))
 
                         RemoteData.Success news ->
                             Element.text "Redirecting"
@@ -149,34 +149,3 @@ toSession model =
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Browser.Events.onResize (\x y -> WindowResized x y)
-
-
-errorToString : Graphql.Http.Error parsedData -> String
-errorToString errorData =
-    case errorData of
-        Graphql.Http.GraphqlError _ graphqlErrors ->
-            graphqlErrors
-                |> List.map graphqlErrorToString
-                |> String.join "\n"
-
-        Graphql.Http.HttpError httpError ->
-            case httpError of
-                Graphql.Http.BadUrl url ->
-                    "Http error: Bad url - " ++ url
-
-                Graphql.Http.Timeout ->
-                    "Http error: timeout"
-
-                Graphql.Http.NetworkError ->
-                    "Http error: network error"
-
-                Graphql.Http.BadStatus metadata string ->
-                    "Http error: bad status - " ++ string
-
-                Graphql.Http.BadPayload error ->
-                    "Http error: bad payload"
-
-
-graphqlErrorToString : Graphql.Http.GraphqlError.GraphqlError -> String
-graphqlErrorToString error =
-    error.message

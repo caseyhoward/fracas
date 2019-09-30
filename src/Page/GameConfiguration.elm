@@ -40,6 +40,7 @@ type alias GameConfiguration =
 type Model
     = ConfiguringGame GameConfiguration Session.Session
     | GeneratingRandomTroopCounts GameConfiguration Session.Session
+    | Redirecting GameConfiguration Session.Session
 
 
 init : Session.Session -> ( Model, Cmd Msg )
@@ -72,6 +73,9 @@ toSession model =
         GeneratingRandomTroopCounts _ session ->
             session
 
+        Redirecting _ session ->
+            session
+
 
 
 ---- UPDATE ----
@@ -86,11 +90,15 @@ toGameConfiguration model =
         GeneratingRandomTroopCounts gameConfiguration _ ->
             gameConfiguration
 
+        Redirecting gameConfiguration _ ->
+            gameConfiguration
+
 
 type Msg
     = NumberOfPlayersChanged String
     | StartGameClicked
     | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map))
+    | GameCreated (RemoteData.RemoteData (Graphql.Http.Error Game.Id) Game.Id)
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | NumberOfPlayersKeyPressed Int
     | WindowResized Int Int
@@ -127,6 +135,9 @@ update msg model =
                 SelectMap mapId ->
                     ( ConfiguringGame { gameConfiguration | selectedMapId = mapId } session, Cmd.none )
 
+                GameCreated gameIdResult ->
+                    ( model, Cmd.none )
+
         GeneratingRandomTroopCounts gameConfiguration session ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
@@ -137,7 +148,7 @@ update msg model =
                                 |> Maybe.withDefault 6
                     in
                     if FeatureFlags.isServerEnabled then
-                        ( model, Game.create gameConfiguration.selectedMapId gameConfiguration.numberOfPlayers )
+                        ( model, Game.create gameConfiguration.selectedMapId numberOfPlayers GameCreated )
 
                     else
                         case ActiveGame.start session.gameMaps (GameMap.Id "1") numberOfPlayers neutralCountryTroopCounts of
@@ -168,6 +179,23 @@ update msg model =
 
                 SelectMap _ ->
                     ( model, Cmd.none )
+
+                GameCreated gameIdResult ->
+                    case gameIdResult of
+                        RemoteData.Success gameId ->
+                            ( Redirecting gameConfiguration session, Route.replaceUrl (Session.navKey session) (Route.Game gameId) )
+
+                        RemoteData.NotAsked ->
+                            ( model, Cmd.none )
+
+                        RemoteData.Loading ->
+                            ( model, Cmd.none )
+
+                        RemoteData.Failure error ->
+                            ( ConfiguringGame { gameConfiguration | error = Just (ViewHelpers.errorToString error) } session, Cmd.none )
+
+        Redirecting _ _ ->
+            ( model, Cmd.none )
 
 
 maximumNeutralCountryTroops : Int

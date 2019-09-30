@@ -4,6 +4,7 @@ module ViewHelpers exposing
     , defaultButtonAttributes
     , defaultLabelAttributes
     , defaultTextInputAttributes
+    , errorToString
     ,  pixelsPerMapSquare
        -- , selectButton
 
@@ -14,7 +15,8 @@ import Element
 import Element.Background
 import Element.Border
 import Element.Font
-import Element.Input
+import Graphql.Http
+import Graphql.Http.GraphqlError
 
 
 centerText : String -> Element.Element msg
@@ -102,13 +104,42 @@ pixelsPerMapSquare =
 --     -- , Element.Background.color white
 --     , Element.paddingEach { left = 5, top = 0, right = 5, bottom = 0 }
 --     ]
+-- errorMessage : String -> Element.Element msg
+-- errorMessage error =
+--     Element.el
+--         [ Element.height (Element.px 20)
+--         , Element.Font.color (Element.rgb255 255 0 0)
+--         , Element.Font.size 12
+--         ]
+--         (Element.text error)
 
 
-errorMessage : String -> Element.Element msg
-errorMessage error =
-    Element.el
-        [ Element.height (Element.px 20)
-        , Element.Font.color (Element.rgb255 255 0 0)
-        , Element.Font.size 12
-        ]
-        (Element.text error)
+errorToString : Graphql.Http.Error parsedData -> String
+errorToString errorData =
+    case errorData of
+        Graphql.Http.GraphqlError _ graphqlErrors ->
+            graphqlErrors
+                |> List.map graphqlErrorToString
+                |> String.join "\n"
+
+        Graphql.Http.HttpError httpError ->
+            case httpError of
+                Graphql.Http.BadUrl url ->
+                    "Http error: Bad url - " ++ url
+
+                Graphql.Http.Timeout ->
+                    "Http error: timeout"
+
+                Graphql.Http.NetworkError ->
+                    "Http error: network error"
+
+                Graphql.Http.BadStatus _ string ->
+                    "Http error: bad status - " ++ string
+
+                Graphql.Http.BadPayload _ ->
+                    "Http error: bad payload"
+
+
+graphqlErrorToString : Graphql.Http.GraphqlError.GraphqlError -> String
+graphqlErrorToString error =
+    error.message
