@@ -183,8 +183,9 @@ update msg model =
                 GameCreated gameIdResult ->
                     case gameIdResult of
                         RemoteData.Success gameId ->
-                            ( Redirecting gameConfiguration session, Route.replaceUrl (Session.navKey session) (Route.Game gameId) )
+                            Debug.todo ""
 
+                        -- ( Redirecting gameConfiguration session, Route.replaceUrl (Session.navKey session) (Route.Game gameId) )
                         RemoteData.NotAsked ->
                             ( model, Cmd.none )
 

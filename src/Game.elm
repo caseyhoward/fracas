@@ -2,6 +2,7 @@ module Game exposing
     ( Game
     , Id
     , create
+    , get
     , idToString
     , urlParser
     )
@@ -10,10 +11,13 @@ import Api.Mutation
 import Api.Object as ApiObject
 import Api.Object.Game
 import Api.Object.Map
+import Api.Query
 import Collage
 import Colors
 import Dict
 import Graphql.Http
+import Graphql.Operation
+import Graphql.OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Encode
 import Map
@@ -90,20 +94,11 @@ type TurnStatus
 
 type alias Game =
     { id : String
-    , mapId : Map.Id
-    , mapName : String
+    , map : Map.Map
     , countries : List Country
     , players : List Player
     , neighboringCountries : List NeighboringCountries
     , bodiesOfWater : List Water -- Could store on the CoastalProperties too. Not sure what's better.
-    , playerTurn : PlayerId
-    , turnStatus : TurnStatus
-    }
-
-
-type alias NewGame =
-    { mapId : Map.Id
-    , players : List Player
     , playerTurn : PlayerId
     , turnStatus : TurnStatus
     }
@@ -118,14 +113,6 @@ type alias GameSelectionSet =
     , map : Map.Map
     , gameJson : String
     }
-
-
-gameSelection : SelectionSet GameSelectionSet ApiObject.Game
-gameSelection =
-    Graphql.SelectionSet.map3 GameSelectionSet
-        Api.Object.Game.id
-        (Api.Object.Game.map Map.mapSelection)
-        Api.Object.Game.gameJson
 
 
 create : String -> Int -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
@@ -165,6 +152,46 @@ create selectedMapId numberOfPlayers toMsg =
     in
     Api.Mutation.createGame input (Api.Object.Game.id |> Graphql.SelectionSet.map Id)
         |> Graphql.Http.mutationRequest "http://localhost:4000"
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+get : Id -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
+get (Id id) toMsg =
+    let
+        gameWithJsonSelection : SelectionSet GameSelectionSet ApiObject.Game
+        gameWithJsonSelection =
+            Graphql.SelectionSet.map3 GameSelectionSet
+                Api.Object.Game.id
+                (Api.Object.Game.map Map.mapSelection)
+                Api.Object.Game.gameJson
+
+        gameSelectionSet : SelectionSet Game ApiObject.Game
+        gameSelectionSet =
+            gameWithJsonSelection
+                |> Graphql.SelectionSet.map
+                    (\gameSelection ->
+                        let
+                            game : Game
+                            game =
+                                { id = gameSelection.id
+                                , map = gameSelection.map
+                                , countries = []
+                                , players = []
+                                , neighboringCountries = []
+                                , bodiesOfWater = []
+                                , playerTurn = PlayerId 1
+                                , turnStatus = PlacingCapitol
+                                }
+                        in
+                        game
+                    )
+
+        query : SelectionSet Game Graphql.Operation.RootQuery
+        query =
+            Api.Query.game (\_ -> { id = Graphql.OptionalArgument.Present id }) gameSelectionSet
+    in
+    query
+        |> Graphql.Http.queryRequest "http://localhost:4000"
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 

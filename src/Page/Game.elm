@@ -9,21 +9,33 @@ module Page.Game exposing
 
 import Browser.Events
 import Game
+import Graphql.Http
 import Html
+import RemoteData
 import Session
 
 
 type alias Model =
-    { session : Session.Session }
+    { session : Session.Session
+    , game : RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game
+    }
 
 
 type Msg
     = WindowResized Int Int
 
 
+
+-- | GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game)
+
+
 init : Session.Session -> Game.Id -> ( Model, Cmd Msg )
 init session gameId =
-    ( { session = session }, Cmd.none )
+    Debug.todo ""
+
+
+
+-- ( { session = session, game = RemoteData.NotAsked }, Game.get gameId GotGame )
 
 
 toSession : Model -> Session.Session

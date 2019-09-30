@@ -28,7 +28,7 @@ type alias MapOptionalArguments =
   - id -
 
 -}
-map : (MapOptionalArguments -> MapOptionalArguments) -> SelectionSet decodesTo Api.Object.Map -> SelectionSet (Maybe decodesTo) RootQuery
+map : (MapOptionalArguments -> MapOptionalArguments) -> SelectionSet decodesTo Api.Object.Map -> SelectionSet decodesTo RootQuery
 map fillInOptionals object_ =
     let
         filledInOptionals =
@@ -38,7 +38,29 @@ map fillInOptionals object_ =
             [ Argument.optional "id" filledInOptionals.id Encode.string ]
                 |> List.filterMap identity
     in
-    Object.selectionForCompositeField "map" optionalArgs object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "map" optionalArgs object_ identity
+
+
+type alias GameOptionalArguments =
+    { id : OptionalArgument String }
+
+
+{-|
+
+  - id -
+
+-}
+game : (GameOptionalArguments -> GameOptionalArguments) -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootQuery
+game fillInOptionals object_ =
+    let
+        filledInOptionals =
+            fillInOptionals { id = Absent }
+
+        optionalArgs =
+            [ Argument.optional "id" filledInOptionals.id Encode.string ]
+                |> List.filterMap identity
+    in
+    Object.selectionForCompositeField "game" optionalArgs object_ identity
 
 
 {-| -}

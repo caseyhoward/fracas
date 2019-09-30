@@ -132,7 +132,6 @@ changeRouteTo maybeRoute model =
                 |> updateWith NewMap GotNewMapMsg
 
         Nothing ->
-            -- ( NotFound windowSize, Cmd.none )
             ( model, Cmd.none )
 
 
