@@ -45,6 +45,7 @@ parser : Parser (Route -> a) a
 parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
+        , Parser.map ConfiguringGame (s "games" </> s "new")
         , Parser.map ActiveGame (s "active-games" </> ActiveGame.urlParser)
         , Parser.map Game (s "games" </> Game.urlParser)
         , Parser.map NewMap (s "maps" </> s "new")
@@ -58,7 +59,7 @@ routeToString page =
         pieces =
             case page of
                 ConfiguringGame ->
-                    []
+                    [ "games", "new" ]
 
                 ActiveGame activeGameId ->
                     [ "active-games/", ActiveGame.idToString activeGameId ]

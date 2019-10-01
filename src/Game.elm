@@ -19,6 +19,7 @@ import Graphql.Http
 import Graphql.Operation
 import Graphql.OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
+import Json.Decode
 import Json.Encode
 import Map
 import RemoteData
@@ -40,29 +41,9 @@ type PlayerId
     = PlayerId Int
 
 
-type Country
-    = CoastalCountry CountryProperties CoastalProperties
-    | LandLockedCountry CountryProperties
-
-
 type alias Point =
     { x : Int
     , y : Int
-    }
-
-
-type alias CountryProperties =
-    { polygon : Collage.Shape
-    , ownerId : OwnerId
-    , troopCount : TroopCount.TroopCount
-    }
-
-
-type alias CoastalProperties =
-    { waterEdges : Set.Set ( Point, Point )
-    , hasPort : Bool
-
-    -- , adjacentWater : Set.Set String
     }
 
 
@@ -95,11 +76,7 @@ type TurnStatus
 type alias Game =
     { id : String
     , map : Map.Map
-
-    -- , countries : List Country
     , players : List Player
-    , neighboringCountries : List NeighboringCountries
-    , bodiesOfWater : List Water -- Could store on the CoastalProperties too. Not sure what's better.
     , playerTurn : PlayerId
     , turnStatus : TurnStatus
     }
@@ -169,21 +146,26 @@ get (Id id) toMsg =
         gameSelectionSet : SelectionSet Game ApiObject.Game
         gameSelectionSet =
             gameWithJsonSelection
-                |> Graphql.SelectionSet.map
+                |> Graphql.SelectionSet.mapOrFail
                     (\gameSelection ->
                         let
-                            game : Game
-                            game =
-                                { id = gameSelection.id
-                                , map = gameSelection.map
+                            gameJsonResult : Result Json.Decode.Error GameJson
+                            gameJsonResult =
+                                decodeGameJson gameSelection.gameJson
 
-                                -- , countries = []
-                                , players = []
-                                , neighboringCountries = []
-                                , bodiesOfWater = []
-                                , playerTurn = PlayerId 1
-                                , turnStatus = PlacingCapitol
-                                }
+                            game : Result String Game
+                            game =
+                                gameJsonResult
+                                    |> Result.map
+                                        (\gameJson ->
+                                            { id = gameSelection.id
+                                            , map = gameSelection.map
+                                            , players = gameJson.players
+                                            , playerTurn = gameJson.playerTurn
+                                            , turnStatus = gameJson.turnStatus
+                                            }
+                                        )
+                                    |> Result.mapError Json.Decode.errorToString
                         in
                         game
                     )
@@ -212,6 +194,11 @@ type alias GameJson =
     , playerTurn : PlayerId
     , turnStatus : TurnStatus
     }
+
+
+decodeGameJson : String -> Result Json.Decode.Error GameJson
+decodeGameJson json =
+    Debug.todo ""
 
 
 encodeGameJson : GameJson -> Json.Encode.Value

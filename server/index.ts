@@ -16,6 +16,19 @@ const resolvers = {
         console.log(error);
       }
     },
+    game: async (_: any, x: { id: string }) => {
+      try {
+        console.log(x);
+        const result = await database.query(
+          "SELECT * FROM games WHERE id = $1*",
+          [x.id]
+        );
+        console.log(result);
+        return result.rows[0];
+      } catch (error) {
+        console.log(error);
+      }
+    },
     maps: async (_: any, x: { id: string }) => {
       try {
         const result = await database.query("SELECT * FROM maps");

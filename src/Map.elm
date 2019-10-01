@@ -1,5 +1,6 @@
 module Map exposing
-    ( Id(..)
+    ( Country
+    , Id(..)
     , Map
     , NewMap
     , create

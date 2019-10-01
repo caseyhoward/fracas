@@ -4,6 +4,7 @@ module Page.Game exposing
     , init
     , subscriptions
     , toSession
+    , update
     , view
     )
 
@@ -23,17 +24,30 @@ type alias Model =
 
 type Msg
     = WindowResized Int Int
-      -- | GotGame Game.Game
     | GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game)
 
 
 init : Session.Session -> Game.Id -> ( Model, Cmd Msg )
 init session gameId =
-    Debug.todo ""
+    ( { session = session
+      , game = RemoteData.NotAsked
+      }
+    , Game.get gameId GotGame
+    )
 
 
 
--- ( { session = session, game = RemoteData.NotAsked }, Game.get gameId GotGame )
+---- UPDATE ----
+
+
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
+    case msg of
+        GotGame game ->
+            ( { model | game = game }, Cmd.none )
+
+        WindowResized width height ->
+            ( { model | session = Session.updateWindowSize { width = width, height = height } model.session }, Cmd.none )
 
 
 toSession : Model -> Session.Session
@@ -41,9 +55,17 @@ toSession model =
     model.session
 
 
+
+---- VIEW ----
+
+
 view : Model -> { title : String, content : Html.Html Msg }
 view model =
     { title = "", content = Html.div [] [] }
+
+
+
+---- SUBSCRIPTIONS ----
 
 
 subscriptions : Model -> Sub Msg

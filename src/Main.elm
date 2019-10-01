@@ -84,6 +84,10 @@ update msg model =
             Page.ActiveGame.update subMsg activeGame
                 |> updateWith ActiveGame GotActiveGameMsg
 
+        ( GotGameMsg subMsg, Game game ) ->
+            Page.Game.update subMsg game
+                |> updateWith Game GotGameMsg
+
         ( GotNewMapMsg subMsg, NewMap newMap ) ->
             Page.NewMap.update subMsg newMap
                 |> updateWith NewMap GotNewMapMsg
