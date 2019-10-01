@@ -8,7 +8,7 @@ import Page
 import Page.ActiveGame
 import Page.EditMap
 import Page.Game
-import Page.GameConfiguration
+import Page.NewGame
 import Page.NewMap
 import Route
 import Session
@@ -20,7 +20,7 @@ import Url
 
 
 type Model
-    = GameConfiguration Page.GameConfiguration.Model
+    = NewGame Page.NewGame.Model
     | ActiveGame Page.ActiveGame.Model
     | Game Page.Game.Model
     | EditMap Page.EditMap.Model
@@ -56,7 +56,7 @@ type Msg
     | ClickedLink Browser.UrlRequest
     | GotActiveGameMsg Page.ActiveGame.Msg
     | GotGameMsg Page.Game.Msg
-    | GotGameConfigurationMsg Page.GameConfiguration.Msg
+    | GotNewGameMsg Page.NewGame.Msg
     | GotEditMapMsg Page.EditMap.Msg
     | GotNewMapMsg Page.NewMap.Msg
 
@@ -92,9 +92,9 @@ update msg model =
             Page.NewMap.update subMsg newMap
                 |> updateWith NewMap GotNewMapMsg
 
-        ( GotGameConfigurationMsg subMsg, GameConfiguration gameConfiguration ) ->
-            Page.GameConfiguration.update subMsg gameConfiguration
-                |> updateWith GameConfiguration GotGameConfigurationMsg
+        ( GotNewGameMsg subMsg, NewGame newGame ) ->
+            Page.NewGame.update subMsg newGame
+                |> updateWith NewGame GotNewGameMsg
 
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
@@ -116,8 +116,8 @@ changeRouteTo maybeRoute model =
     in
     case maybeRoute of
         Just Route.ConfiguringGame ->
-            Page.GameConfiguration.init session
-                |> updateWith GameConfiguration GotGameConfigurationMsg
+            Page.NewGame.init session
+                |> updateWith NewGame GotNewGameMsg
 
         Just (Route.ActiveGame activeGameId) ->
             Page.ActiveGame.init session activeGameId
@@ -142,8 +142,8 @@ changeRouteTo maybeRoute model =
 toSession : Model -> Session.Session
 toSession model =
     case model of
-        GameConfiguration gameConfiguration ->
-            gameConfiguration |> Page.GameConfiguration.toSession
+        NewGame newGame ->
+            newGame |> Page.NewGame.toSession
 
         ActiveGame activeGame ->
             activeGame |> Page.ActiveGame.toSession
@@ -178,8 +178,8 @@ view model =
             }
     in
     case model of
-        GameConfiguration gameConfiguration ->
-            viewPage Page.GameConfiguration GotGameConfigurationMsg (Page.GameConfiguration.view gameConfiguration)
+        NewGame newGame ->
+            viewPage Page.NewGame GotNewGameMsg (Page.NewGame.view newGame)
 
         ActiveGame activeGame ->
             viewPage Page.ActiveGame GotActiveGameMsg (Page.ActiveGame.view activeGame)
@@ -204,8 +204,8 @@ view model =
 subscriptions : Model -> Sub Msg
 subscriptions model =
     case model of
-        GameConfiguration gameConfiguration ->
-            Sub.map GotGameConfigurationMsg (Page.GameConfiguration.subscriptions gameConfiguration)
+        NewGame newGame ->
+            Sub.map GotNewGameMsg (Page.NewGame.subscriptions newGame)
 
         ActiveGame activeGame ->
             Sub.map GotActiveGameMsg (Page.ActiveGame.subscriptions activeGame)

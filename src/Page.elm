@@ -9,7 +9,7 @@ import Html
 
 type Page
     = ActiveGame
-    | GameConfiguration
+    | NewGame
     | EditMap
     | NewMap
     | Game

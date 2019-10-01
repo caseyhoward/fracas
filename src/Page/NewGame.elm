@@ -1,4 +1,4 @@
-module Page.GameConfiguration exposing (Model, Msg, init, subscriptions, toSession, update, view)
+module Page.NewGame exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
 import ActiveGame
 import Browser.Dom
@@ -28,7 +28,7 @@ import TroopCount
 import ViewHelpers
 
 
-type alias GameConfiguration =
+type alias NewGame =
     { numberOfPlayers : String
     , gameMapId : String
     , error : Maybe String
@@ -38,9 +38,9 @@ type alias GameConfiguration =
 
 
 type Model
-    = ConfiguringGame GameConfiguration Session.Session
-    | GeneratingRandomTroopCounts GameConfiguration Session.Session
-    | Redirecting GameConfiguration Session.Session
+    = ConfiguringGame NewGame Session.Session
+    | GeneratingRandomTroopCounts NewGame Session.Session
+    | Redirecting NewGame Session.Session
 
 
 init : Session.Session -> ( Model, Cmd Msg )
@@ -81,17 +81,17 @@ toSession model =
 ---- UPDATE ----
 
 
-toGameConfiguration : Model -> GameConfiguration
-toGameConfiguration model =
+toNewGame : Model -> NewGame
+toNewGame model =
     case model of
-        ConfiguringGame gameConfiguration _ ->
-            gameConfiguration
+        ConfiguringGame newGame _ ->
+            newGame
 
-        GeneratingRandomTroopCounts gameConfiguration _ ->
-            gameConfiguration
+        GeneratingRandomTroopCounts newGame _ ->
+            newGame
 
-        Redirecting gameConfiguration _ ->
-            gameConfiguration
+        Redirecting newGame _ ->
+            newGame
 
 
 type Msg
@@ -108,17 +108,17 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
-        ConfiguringGame gameConfiguration session ->
+        ConfiguringGame newGame session ->
             case msg of
                 NumberOfPlayersChanged numberOfPlayers ->
-                    ( ConfiguringGame { gameConfiguration | numberOfPlayers = numberOfPlayers } session, Cmd.none )
+                    ( ConfiguringGame { newGame | numberOfPlayers = numberOfPlayers } session, Cmd.none )
 
                 StartGameClicked ->
-                    startGame session gameConfiguration
+                    startGame session newGame
 
                 NumberOfPlayersKeyPressed key ->
                     if key == 13 then
-                        startGame session gameConfiguration
+                        startGame session newGame
 
                     else
                         ( model, Cmd.none )
@@ -127,40 +127,40 @@ update msg model =
                     ( model, Cmd.none )
 
                 WindowResized width height ->
-                    ( ConfiguringGame gameConfiguration { session | windowSize = Just { width = width, height = height } }, Cmd.none )
+                    ( ConfiguringGame newGame { session | windowSize = Just { width = width, height = height } }, Cmd.none )
 
                 GotMaps maps ->
-                    ( ConfiguringGame { gameConfiguration | maps = maps } session, Cmd.none )
+                    ( ConfiguringGame { newGame | maps = maps } session, Cmd.none )
 
                 SelectMap mapId ->
-                    ( ConfiguringGame { gameConfiguration | selectedMapId = mapId } session, Cmd.none )
+                    ( ConfiguringGame { newGame | selectedMapId = mapId } session, Cmd.none )
 
                 GameCreated gameIdResult ->
                     ( model, Cmd.none )
 
-        GeneratingRandomTroopCounts gameConfiguration session ->
+        GeneratingRandomTroopCounts newGame session ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
                     let
                         numberOfPlayers =
-                            gameConfiguration.numberOfPlayers
+                            newGame.numberOfPlayers
                                 |> String.toInt
                                 |> Maybe.withDefault 6
                     in
                     if FeatureFlags.isServerEnabled then
-                        ( model, Game.create gameConfiguration.selectedMapId numberOfPlayers GameCreated )
+                        ( model, Game.create newGame.selectedMapId numberOfPlayers GameCreated )
 
                     else
                         case ActiveGame.start session.gameMaps (GameMap.Id "1") numberOfPlayers neutralCountryTroopCounts of
                             Ok activeGame ->
                                 ( GeneratingRandomTroopCounts
-                                    gameConfiguration
+                                    newGame
                                     (session |> Session.addActiveGame (ActiveGame.Id "123") activeGame)
                                 , Route.replaceUrl (Session.navKey session) (Route.ActiveGame (ActiveGame.Id "123"))
                                 )
 
                             Err error ->
-                                ( GeneratingRandomTroopCounts { gameConfiguration | error = Just (error |> ActiveGame.errorToString) } session, Cmd.none )
+                                ( GeneratingRandomTroopCounts { newGame | error = Just (error |> ActiveGame.errorToString) } session, Cmd.none )
 
                 NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
@@ -172,7 +172,7 @@ update msg model =
                     ( model, Cmd.none )
 
                 WindowResized width height ->
-                    ( GeneratingRandomTroopCounts gameConfiguration (Session.updateWindowSize { width = width, height = height } session), Cmd.none )
+                    ( GeneratingRandomTroopCounts newGame (Session.updateWindowSize { width = width, height = height } session), Cmd.none )
 
                 GotMaps _ ->
                     ( model, Cmd.none )
@@ -183,7 +183,7 @@ update msg model =
                 GameCreated gameIdResult ->
                     case gameIdResult of
                         RemoteData.Success gameId ->
-                            ( Redirecting gameConfiguration session, Route.replaceUrl (Session.navKey session) (Route.Game gameId) )
+                            ( Redirecting newGame session, Route.replaceUrl (Session.navKey session) (Route.Game gameId) )
 
                         RemoteData.NotAsked ->
                             ( model, Cmd.none )
@@ -192,7 +192,7 @@ update msg model =
                             ( model, Cmd.none )
 
                         RemoteData.Failure error ->
-                            ( ConfiguringGame { gameConfiguration | error = Just (ViewHelpers.errorToString error) } session, Cmd.none )
+                            ( ConfiguringGame { newGame | error = Just (ViewHelpers.errorToString error) } session, Cmd.none )
 
         Redirecting _ _ ->
             ( model, Cmd.none )
@@ -203,16 +203,16 @@ maximumNeutralCountryTroops =
     10
 
 
-startGame : Session.Session -> GameConfiguration -> ( Model, Cmd Msg )
-startGame session gameConfiguration =
-    case Dict.get gameConfiguration.gameMapId session.gameMaps of
+startGame : Session.Session -> NewGame -> ( Model, Cmd Msg )
+startGame session newGame =
+    case Dict.get newGame.gameMapId session.gameMaps of
         Just gameMap ->
-            ( GeneratingRandomTroopCounts gameConfiguration session
+            ( GeneratingRandomTroopCounts newGame session
             , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys gameMap.countries))
             )
 
         Nothing ->
-            ( ConfiguringGame { gameConfiguration | error = Just "Couldn't find game map" } session, Cmd.none )
+            ( ConfiguringGame { newGame | error = Just "Couldn't find game map" } session, Cmd.none )
 
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)
@@ -239,8 +239,8 @@ view model =
                 , Element.el [ Element.centerX ]
                     (Element.column
                         [ Element.width Element.fill, Element.spacing 20 ]
-                        [ numberOfPlayersInput (model |> toGameConfiguration |> .numberOfPlayers)
-                        , mapSelect (model |> toGameConfiguration |> .maps) (model |> toGameConfiguration |> .selectedMapId)
+                        [ numberOfPlayersInput (model |> toNewGame |> .numberOfPlayers)
+                        , mapSelect (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId)
                         , startGameButton
                         ]
                     )

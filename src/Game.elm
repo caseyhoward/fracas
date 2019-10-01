@@ -122,7 +122,7 @@ create selectedMapId numberOfPlayers toMsg =
             newGameJson |> encodeGameJson
 
         input =
-            { gameConfiguration =
+            { newGame =
                 { mapId = selectedMapId
                 , gameJson = newGameEncoded |> Json.Encode.encode 0
                 }
