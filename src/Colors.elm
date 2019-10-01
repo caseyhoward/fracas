@@ -17,6 +17,7 @@ module Colors exposing
     , darkPurple
     , darkRed
     , darkYellow
+    , decoder
     , encode
     , gray
     , green
@@ -42,6 +43,7 @@ module Colors exposing
 
 import Color as ElmColor
 import Element
+import Json.Decode
 import Json.Encode
 
 
@@ -69,6 +71,14 @@ encode color =
         , ( "green", color.green |> Json.Encode.int )
         , ( "blue", color.blue |> Json.Encode.int )
         ]
+
+
+decoder : Json.Decode.Decoder Color
+decoder =
+    Json.Decode.map3 Color
+        (Json.Decode.field "red" Json.Decode.int)
+        (Json.Decode.field "green" Json.Decode.int)
+        (Json.Decode.field "blue" Json.Decode.int)
 
 
 lightRed : Color

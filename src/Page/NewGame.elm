@@ -135,7 +135,7 @@ update msg model =
                 SelectMap mapId ->
                     ( ConfiguringGame { newGame | selectedMapId = mapId } session, Cmd.none )
 
-                GameCreated gameIdResult ->
+                GameCreated _ ->
                     ( model, Cmd.none )
 
         GeneratingRandomTroopCounts newGame session ->

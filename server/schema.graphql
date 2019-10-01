@@ -15,7 +15,7 @@ type Map {
 }
 
 type Mutation {
-  createGame(gameConfiguration: GameInput!): Game!
+  createGame(newGame: GameInput!): Game!
   createMap(map: MapInput!): Map!
 }
 

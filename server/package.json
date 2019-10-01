@@ -13,5 +13,8 @@
     "graphql-yoga": "^1.18.3",
     "pg": "^7.12.1",
     "typescript": "^3.6.3"
+  },
+  "devDependencies": {
+    "@types/ws": "^6.0.3"
   }
 }

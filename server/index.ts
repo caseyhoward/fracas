@@ -2,13 +2,18 @@ import { GraphQLServer } from "graphql-yoga";
 import * as fs from "fs";
 import * as database from "./db/index";
 
+async function getMap(id: string): Promise<Map> {
+  const result = await database.query("SELECT * FROM maps WHERE id = $1", [id]);
+  return result.rows[0];
+}
+
 const resolvers = {
   Query: {
     map: async (_: any, x: { id: string }) => {
       try {
         // console.log(x);
         const result = await database.query(
-          "SELECT * FROM maps WHERE id = $1*",
+          "SELECT * FROM maps WHERE id = $1",
           [x.id]
         );
         return result.rows[0];
@@ -20,11 +25,10 @@ const resolvers = {
       try {
         console.log(x);
         const result = await database.query(
-          "SELECT * FROM games WHERE id = $1*",
+          "SELECT * FROM games WHERE id = $1",
           [x.id]
         );
-        console.log(result);
-        return result.rows[0];
+        return gameToJson(result.rows[0]);
       } catch (error) {
         console.log(error);
       }
@@ -36,6 +40,14 @@ const resolvers = {
       } catch (error) {
         console.log(error);
       }
+    }
+  },
+  Game: {
+    map: async (game: Game) => {
+      console.log("Game.map : game = " + JSON.stringify(game));
+      const map = await getMap(game.mapId);
+      console.log("map: " + JSON.stringify(map));
+      return mapToJson(map);
     }
   },
   Mutation: {
@@ -54,15 +66,12 @@ const resolvers = {
 
     createGame: async (
       _: any,
-      x: { gameConfiguration: NewGame }
+      x: { newGame: NewGame }
     ): Promise<Game | string> => {
       try {
         const result = await database.query(
           "INSERT INTO games(map_id, game_json) VALUES ($1, $2) RETURNING *",
-          [
-            parseInt(x.gameConfiguration.mapId, 10),
-            x.gameConfiguration.gameJson
-          ]
+          [parseInt(x.newGame.mapId, 10), x.newGame.gameJson]
         );
         return gameToJson(result.rows[0]);
       } catch (error) {
@@ -102,9 +111,10 @@ interface Game {
 }
 
 function gameToJson(gameRow: any): Game {
+  console.log("gameToJson: " + JSON.stringify(gameRow));
   return {
     id: gameRow.id,
-    mapId: gameRow.mapId,
+    mapId: gameRow.map_id,
     gameJson: gameRow.game_json
   };
 }
