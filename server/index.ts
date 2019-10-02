@@ -1,6 +1,7 @@
 import { GraphQLServer } from "graphql-yoga";
 import * as fs from "fs";
 import * as database from "./db/index";
+import * as express from "express";
 
 async function getMap(id: string): Promise<Map> {
   const result = await database.query("SELECT * FROM maps WHERE id = $1", [id]);
@@ -83,9 +84,16 @@ const resolvers = {
 };
 
 fs.readFile("schema.graphql", (error, typeDefsData) => {
+  const options = {
+    port: 4000,
+    bodyParserOptions: { limit: "50mb", type: "application/json" }
+  };
+
   const typeDefs = typeDefsData.toString("utf-8");
   const server = new GraphQLServer({ typeDefs, resolvers });
-  server.start(() => console.log("Server is running on localhost:4000"));
+  server.start(options, () =>
+    console.log("Server is running on localhost:4000")
+  );
 });
 
 interface Map {

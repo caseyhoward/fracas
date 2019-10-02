@@ -19,8 +19,8 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode exposing (Decoder)
 
 
-type alias MapOptionalArguments =
-    { id : OptionalArgument String }
+type alias MapRequiredArguments =
+    { id : String }
 
 
 {-|
@@ -28,21 +28,13 @@ type alias MapOptionalArguments =
   - id -
 
 -}
-map : (MapOptionalArguments -> MapOptionalArguments) -> SelectionSet decodesTo Api.Object.Map -> SelectionSet decodesTo RootQuery
-map fillInOptionals object_ =
-    let
-        filledInOptionals =
-            fillInOptionals { id = Absent }
-
-        optionalArgs =
-            [ Argument.optional "id" filledInOptionals.id Encode.string ]
-                |> List.filterMap identity
-    in
-    Object.selectionForCompositeField "map" optionalArgs object_ identity
+map : MapRequiredArguments -> SelectionSet decodesTo Api.Object.Map -> SelectionSet decodesTo RootQuery
+map requiredArgs object_ =
+    Object.selectionForCompositeField "map" [ Argument.required "id" requiredArgs.id Encode.string ] object_ identity
 
 
-type alias GameOptionalArguments =
-    { id : OptionalArgument String }
+type alias GameRequiredArguments =
+    { id : String }
 
 
 {-|
@@ -50,20 +42,18 @@ type alias GameOptionalArguments =
   - id -
 
 -}
-game : (GameOptionalArguments -> GameOptionalArguments) -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootQuery
-game fillInOptionals object_ =
-    let
-        filledInOptionals =
-            fillInOptionals { id = Absent }
-
-        optionalArgs =
-            [ Argument.optional "id" filledInOptionals.id Encode.string ]
-                |> List.filterMap identity
-    in
-    Object.selectionForCompositeField "game" optionalArgs object_ identity
+game : GameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootQuery
+game requiredArgs object_ =
+    Object.selectionForCompositeField "game" [ Argument.required "id" requiredArgs.id Encode.string ] object_ identity
 
 
 {-| -}
 maps : SelectionSet decodesTo Api.Object.Map -> SelectionSet (List decodesTo) RootQuery
 maps object_ =
     Object.selectionForCompositeField "maps" [] object_ (identity >> Decode.list)
+
+
+{-| -}
+a : SelectionSet decodesTo Api.Object.A -> SelectionSet decodesTo RootQuery
+a object_ =
+    Object.selectionForCompositeField "a" [] object_ identity

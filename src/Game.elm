@@ -9,6 +9,7 @@ module Game exposing
 
 import Api.Mutation
 import Api.Object as ApiObject
+import Api.Object.A
 import Api.Object.Game
 import Api.Object.Map
 import Api.Query
@@ -136,16 +137,24 @@ create selectedMapId numberOfPlayers toMsg =
 get : Id -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
 get (Id id) toMsg =
     let
-        gameWithJsonSelection : SelectionSet GameSelectionSet ApiObject.Game
-        gameWithJsonSelection =
+        c : SelectionSet Map.Map ApiObject.Map
+        c =
+            Graphql.SelectionSet.map3 Map.MapSelection
+                Api.Object.Map.id
+                Api.Object.Map.name
+                Api.Object.Map.mapJson
+                |> Graphql.SelectionSet.mapOrFail Map.mapSelectionSetToMap
+
+        gameSelectionSet : SelectionSet GameSelectionSet ApiObject.Game
+        gameSelectionSet =
             Graphql.SelectionSet.map3 GameSelectionSet
                 Api.Object.Game.id
-                (Api.Object.Game.map Map.mapSelection)
+                (Api.Object.Game.map c)
                 Api.Object.Game.gameJson
 
-        gameSelectionSet : SelectionSet Game ApiObject.Game
-        gameSelectionSet =
-            gameWithJsonSelection
+        game1 : SelectionSet Game ApiObject.Game
+        game1 =
+            gameSelectionSet
                 |> Graphql.SelectionSet.mapOrFail
                     (\gameSelection ->
                         let
@@ -172,7 +181,7 @@ get (Id id) toMsg =
 
         query : SelectionSet Game Graphql.Operation.RootQuery
         query =
-            Api.Query.game (\_ -> { id = Graphql.OptionalArgument.Present id }) gameSelectionSet
+            Api.Query.game { id = id } game1
     in
     query
         |> Graphql.Http.queryRequest "http://localhost:4000"

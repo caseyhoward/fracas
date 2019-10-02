@@ -30,7 +30,7 @@ type alias Model =
     , rawMap : String
     , name : String
     , mapPreview : Map.NewMap
-    , savingMap : RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map
+    , savingMap : RemoteData.RemoteData (Graphql.Http.Error Map.MapSelection) Map.MapSelection
     }
 
 
@@ -48,7 +48,7 @@ init session =
 
 type Msg
     = CreateMap
-    | CreatedMap (RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map)
+    | CreatedMap (RemoteData.RemoteData (Graphql.Http.Error Map.MapSelection) Map.MapSelection)
     | UpdateRawMap String
     | UpdateName String
     | WindowResized Int Int
@@ -112,7 +112,7 @@ view model =
                     , text = model.rawMap
                     , spellcheck = False
                     }
-                , Map.view model.mapPreview |> Element.html |> Element.el [ Element.width Element.fill ]
+                , Map.view model.mapPreview.countries model.mapPreview.dimensions |> Element.html |> Element.el [ Element.width Element.fill ]
                 , Element.Input.button
                     (ViewHelpers.defaultButtonAttributes
                         ++ [ Element.width (Element.px 120)

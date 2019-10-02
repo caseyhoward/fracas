@@ -29,4 +29,5 @@ type Query {
   map(id: String!): Map!
   game(id: String!): Game!
   maps: [Map!]!
+  a: A!
 }

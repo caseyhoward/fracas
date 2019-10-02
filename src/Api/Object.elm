@@ -5,6 +5,14 @@
 module Api.Object exposing (..)
 
 
+type A
+    = A
+
+
+type B
+    = B
+
+
 type Game
     = Game
 

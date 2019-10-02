@@ -2,11 +2,13 @@ module Map exposing
     ( Country
     , Id(..)
     , Map
+    , MapSelection
     , NewMap
     , create
     , getAll
     , idToString
     , mapSelection
+    , mapSelectionSetToMap
     , parse
     , urlParser
     , view
@@ -25,6 +27,7 @@ import Graphql.Http
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html
 import Html.Attributes
+import Json.Decode
 import Json.Encode
 import RemoteData
 import Set
@@ -87,6 +90,24 @@ type alias NewMap =
     }
 
 
+type alias Map =
+    { id : String
+    , name : String
+    , countries : List Country
+    , neighboringCountries : List NeighboringCountries
+    , water : List Water
+    , dimensions : Dimensions
+    }
+
+
+type alias MapJson =
+    { countries : List Country
+    , neighboringCountries : List NeighboringCountries
+    , water : List Water
+    , dimensions : Dimensions
+    }
+
+
 
 -- type alias Map =
 --     { id : String
@@ -97,7 +118,7 @@ type alias NewMap =
 --     }
 
 
-type alias Map =
+type alias MapSelection =
     { id : String
     , name : String
     , mapJson : String
@@ -114,15 +135,15 @@ urlParser =
     Url.Parser.custom "GAMEID" (\str -> Just (Id str))
 
 
-mapSelection : SelectionSet Map ApiObject.Map
+mapSelection : SelectionSet MapSelection ApiObject.Map
 mapSelection =
-    Graphql.SelectionSet.map3 Map
+    Graphql.SelectionSet.map3 MapSelection
         Api.Object.Map.id
         Api.Object.Map.name
         Api.Object.Map.mapJson
 
 
-create : NewMap -> (RemoteData.RemoteData (Graphql.Http.Error Map) Map -> msg) -> Cmd msg
+create : NewMap -> (RemoteData.RemoteData (Graphql.Http.Error MapSelection) MapSelection -> msg) -> Cmd msg
 create newMap toMsg =
     let
         input =
@@ -140,8 +161,148 @@ create newMap toMsg =
 getAll : (RemoteData.RemoteData (Graphql.Http.Error (List Map)) (List Map) -> msg) -> Cmd msg
 getAll toMsg =
     Api.Query.maps mapSelection
+        |> Graphql.SelectionSet.mapOrFail
+            (\mapSelectionsSets ->
+                mapSelectionsSets |> mapSelectionSetsToMaps
+            )
         |> Graphql.Http.queryRequest "http://localhost:4000"
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+mapSelectionSetsToMaps : List MapSelection -> Result String (List Map)
+mapSelectionSetsToMaps mapSelectionSets =
+    mapSelectionSets
+        |> List.foldl
+            (\mapSelectionSet result ->
+                result
+                    |> Result.andThen
+                        (\maps ->
+                            mapSelectionSet
+                                |> mapSelectionSetToMap
+                                |> Result.map (\map -> map :: maps)
+                        )
+            )
+            (Ok [])
+
+
+mapSelectionSetToMap : MapSelection -> Result String Map
+mapSelectionSetToMap mapSelectionSet =
+    case decodeMapJson mapSelectionSet.mapJson of
+        Ok mapJson ->
+            Ok
+                { id = mapSelectionSet.id
+                , countries = mapJson.countries
+                , name = mapSelectionSet.name
+                , dimensions = mapJson.dimensions
+                , neighboringCountries = mapJson.neighboringCountries
+                , water = mapJson.water
+                }
+
+        Err error ->
+            Err (Json.Decode.errorToString error)
+
+
+decodeMapJson : String -> Result Json.Decode.Error MapJson
+decodeMapJson mapJson =
+    let
+        decodePoint : Json.Decode.Decoder Point
+        decodePoint =
+            Json.Decode.andThen
+                (\values ->
+                    case values of
+                        x :: y :: _ ->
+                            Json.Decode.succeed ( x, y )
+
+                        _ ->
+                            Json.Decode.fail "Error decoding point"
+                )
+                (Json.Decode.list Json.Decode.int)
+
+        decodePolygon : Json.Decode.Decoder Polygon
+        decodePolygon =
+            Json.Decode.list decodePoint
+
+        decodePoints : Json.Decode.Decoder (Set.Set Point)
+        decodePoints =
+            Json.Decode.list decodePoint
+                |> Json.Decode.map Set.fromList
+
+        decodeSegment : Json.Decode.Decoder Segment
+        decodeSegment =
+            Json.Decode.list decodePoint
+                |> Json.Decode.andThen
+                    (\points ->
+                        case points of
+                            point1 :: point2 :: _ ->
+                                Json.Decode.succeed ( point1, point2 )
+
+                            _ ->
+                                Json.Decode.fail "Error decoding segment"
+                    )
+
+        decodeWaterEdges : Json.Decode.Decoder (Set.Set Segment)
+        decodeWaterEdges =
+            Json.Decode.list decodeSegment
+                |> Json.Decode.map Set.fromList
+
+        decodeCountry : Json.Decode.Decoder Country
+        decodeCountry =
+            Json.Decode.map4
+                (\id polygon points waterEdges ->
+                    let
+                        countryProperties : CountryProperties
+                        countryProperties =
+                            { id = id
+                            , polygon = polygon
+                            , points = points
+                            }
+                    in
+                    case Set.size waterEdges of
+                        0 ->
+                            LandLockedCountry countryProperties
+
+                        _ ->
+                            CoastalCountry countryProperties waterEdges
+                )
+                (Json.Decode.field "id" (Json.Decode.map CountryId Json.Decode.string))
+                (Json.Decode.field "polygon" decodePolygon)
+                (Json.Decode.field "points" decodePoints)
+                (Json.Decode.field "waterEdges" decodeWaterEdges)
+
+        decodeWater : Json.Decode.Decoder Water
+        decodeWater =
+            Json.Decode.map
+                (\countryIds ->
+                    countryIds
+                        |> Set.fromList
+                        |> Water
+                )
+                (Json.Decode.list Json.Decode.string)
+
+        decodeNeighboringCountry : Json.Decode.Decoder NeighboringCountries
+        decodeNeighboringCountry =
+            Json.Decode.map2
+                (\countryId1 countryId2 ->
+                    ( countryId1, countryId2 )
+                )
+                (Json.Decode.field "countryId1" Json.Decode.string)
+                (Json.Decode.field "countryId2" Json.Decode.string)
+
+        decodeDimensions : Json.Decode.Decoder Dimensions
+        decodeDimensions =
+            Json.Decode.map2 Dimensions
+                (Json.Decode.field "width" Json.Decode.int)
+                (Json.Decode.field "height" Json.Decode.int)
+
+        mapJsonDecoder : Json.Decode.Decoder MapJson
+        mapJsonDecoder =
+            Json.Decode.map4 MapJson
+                (Json.Decode.field "countries" (Json.Decode.list decodeCountry))
+                (Json.Decode.field "neighboringCountries" (Json.Decode.list decodeNeighboringCountry))
+                (Json.Decode.field "water" (Json.Decode.list decodeWater))
+                (Json.Decode.field "dimensions" decodeDimensions)
+    in
+    mapJson |> Json.Decode.decodeString mapJsonDecoder
 
 
 newMapToMapJson : NewMap -> Json.Encode.Value
@@ -154,19 +315,21 @@ newMapToMapJson newMap =
                 ]
           )
         , ( "countries", newMap.countries |> Json.Encode.list encodeCountry )
+        , ( "neighboringCountries", newMap.neighboringCountries |> Json.Encode.list encodeNeighboringCountries )
+        , ( "water", newMap.water |> Json.Encode.list encodeWater )
         ]
 
 
 encodeCountry : Country -> Json.Encode.Value
 encodeCountry country =
     case country of
-        CoastalCountry countryProperties segments ->
+        CoastalCountry countryProperties waterEdges ->
             Json.Encode.object
-                (encodeCountryProperties countryProperties ++ [ ( "segments", segments |> Json.Encode.set encodeSegment ) ])
+                (encodeCountryProperties countryProperties ++ [ ( "waterEdges", waterEdges |> Json.Encode.set encodeSegment ) ])
 
         LandLockedCountry countryProperties ->
             Json.Encode.object
-                (encodeCountryProperties countryProperties)
+                (encodeCountryProperties countryProperties ++ [ ( "waterEdges", Set.empty |> Json.Encode.set encodeSegment ) ])
 
 
 encodeCountryProperties : CountryProperties -> List ( String, Json.Encode.Value )
@@ -187,6 +350,14 @@ encodePoint point =
     Json.Encode.list Json.Encode.int [ point |> Tuple.first, point |> Tuple.second ]
 
 
+encodeNeighboringCountries : NeighboringCountries -> Json.Encode.Value
+encodeNeighboringCountries ( countryId1, countryId2 ) =
+    Json.Encode.object
+        [ ( "countryId1", Json.Encode.string countryId1 )
+        , ( "countryId2", Json.Encode.string countryId2 )
+        ]
+
+
 encodePolygon : Polygon -> Json.Encode.Value
 encodePolygon polygon =
     Json.Encode.list encodePoint polygon
@@ -199,6 +370,11 @@ encodeSegment segment =
             Json.Encode.list Json.Encode.int [ point |> Tuple.first, point |> Tuple.second ]
         )
         [ segment |> Tuple.first, segment |> Tuple.second ]
+
+
+encodeWater : Water -> Json.Encode.Value
+encodeWater (Water water) =
+    Json.Encode.set Json.Encode.string water
 
 
 
@@ -554,18 +730,18 @@ getEdgesForCountryForCoordinate allAreas point =
 ---- View
 
 
-view : NewMap -> Html.Html msg
-view map =
+view : List Country -> Dimensions -> Html.Html msg
+view countries dimensions =
     let
         scaledWidth =
-            map.dimensions.width |> scale
+            dimensions.width |> scale
 
         scaledHeight =
-            map.dimensions.height |> scale
+            dimensions.height |> scale
     in
     Collage.group
-        [ getCountriesCollage map.countries
-        , getWaterCollage map.dimensions
+        [ getCountriesCollage countries
+        , getWaterCollage dimensions
         ]
         |> Collage.Render.svgExplicit
             [ Html.Attributes.style "width" "100%"
