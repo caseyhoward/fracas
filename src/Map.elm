@@ -1,5 +1,5 @@
 module Map exposing
-    ( Country
+    ( Dimensions
     , Id(..)
     , Map
     , MapSelection
@@ -21,6 +21,7 @@ import Api.Query
 import Collage
 import Collage.Render
 import Color
+import Country
 import Dict
 import GameMap
 import Graphql.Http
@@ -39,32 +40,9 @@ type Id
     = Id String
 
 
-type CountryId
-    = CountryId String
 
-
-type alias Polygon =
-    List Point
-
-
-type alias Segment =
-    ( Point, Point )
-
-
-type Country
-    = CoastalCountry CountryProperties (Set.Set Segment)
-    | LandLockedCountry CountryProperties
-
-
-type alias CountryProperties =
-    { id : CountryId
-    , polygon : Polygon
-    , points : Set.Set Point
-    }
-
-
-type alias Point =
-    ( Int, Int )
+-- type CountryId
+--     = CountryId String
 
 
 type alias NeighboringCountries =
@@ -83,7 +61,7 @@ type alias Dimensions =
 
 type alias NewMap =
     { name : String
-    , countries : List Country
+    , countries : List Country.Country
     , neighboringCountries : List NeighboringCountries
     , water : List Water
     , dimensions : Dimensions
@@ -93,7 +71,7 @@ type alias NewMap =
 type alias Map =
     { id : String
     , name : String
-    , countries : List Country
+    , countries : List Country.Country
     , neighboringCountries : List NeighboringCountries
     , water : List Water
     , dimensions : Dimensions
@@ -101,7 +79,7 @@ type alias Map =
 
 
 type alias MapJson =
-    { countries : List Country
+    { countries : List Country.Country
     , neighboringCountries : List NeighboringCountries
     , water : List Water
     , dimensions : Dimensions
@@ -112,7 +90,7 @@ type alias MapJson =
 -- type alias Map =
 --     { id : String
 --     , name : String
---     , countries : List Country
+--     , countries : List Country.Country
 --     , neighboringCountries : List NeighboringCountries
 --     , bodiesOfWater : List Water -- Could store on the CoastalProperties too. Not sure what's better.
 --     }
@@ -205,70 +183,6 @@ mapSelectionSetToMap mapSelectionSet =
 decodeMapJson : String -> Result Json.Decode.Error MapJson
 decodeMapJson mapJson =
     let
-        decodePoint : Json.Decode.Decoder Point
-        decodePoint =
-            Json.Decode.andThen
-                (\values ->
-                    case values of
-                        x :: y :: _ ->
-                            Json.Decode.succeed ( x, y )
-
-                        _ ->
-                            Json.Decode.fail "Error decoding point"
-                )
-                (Json.Decode.list Json.Decode.int)
-
-        decodePolygon : Json.Decode.Decoder Polygon
-        decodePolygon =
-            Json.Decode.list decodePoint
-
-        decodePoints : Json.Decode.Decoder (Set.Set Point)
-        decodePoints =
-            Json.Decode.list decodePoint
-                |> Json.Decode.map Set.fromList
-
-        decodeSegment : Json.Decode.Decoder Segment
-        decodeSegment =
-            Json.Decode.list decodePoint
-                |> Json.Decode.andThen
-                    (\points ->
-                        case points of
-                            point1 :: point2 :: _ ->
-                                Json.Decode.succeed ( point1, point2 )
-
-                            _ ->
-                                Json.Decode.fail "Error decoding segment"
-                    )
-
-        decodeWaterEdges : Json.Decode.Decoder (Set.Set Segment)
-        decodeWaterEdges =
-            Json.Decode.list decodeSegment
-                |> Json.Decode.map Set.fromList
-
-        decodeCountry : Json.Decode.Decoder Country
-        decodeCountry =
-            Json.Decode.map4
-                (\id polygon points waterEdges ->
-                    let
-                        countryProperties : CountryProperties
-                        countryProperties =
-                            { id = id
-                            , polygon = polygon
-                            , points = points
-                            }
-                    in
-                    case Set.size waterEdges of
-                        0 ->
-                            LandLockedCountry countryProperties
-
-                        _ ->
-                            CoastalCountry countryProperties waterEdges
-                )
-                (Json.Decode.field "id" (Json.Decode.map CountryId Json.Decode.string))
-                (Json.Decode.field "polygon" decodePolygon)
-                (Json.Decode.field "points" decodePoints)
-                (Json.Decode.field "waterEdges" decodeWaterEdges)
-
         decodeWater : Json.Decode.Decoder Water
         decodeWater =
             Json.Decode.map
@@ -297,7 +211,7 @@ decodeMapJson mapJson =
         mapJsonDecoder : Json.Decode.Decoder MapJson
         mapJsonDecoder =
             Json.Decode.map4 MapJson
-                (Json.Decode.field "countries" (Json.Decode.list decodeCountry))
+                (Json.Decode.field "countries" (Json.Decode.list Country.decoder))
                 (Json.Decode.field "neighboringCountries" (Json.Decode.list decodeNeighboringCountry))
                 (Json.Decode.field "water" (Json.Decode.list decodeWater))
                 (Json.Decode.field "dimensions" decodeDimensions)
@@ -314,40 +228,10 @@ newMapToMapJson newMap =
                 , ( "height", newMap.dimensions.height |> Json.Encode.int )
                 ]
           )
-        , ( "countries", newMap.countries |> Json.Encode.list encodeCountry )
+        , ( "countries", newMap.countries |> Json.Encode.list Country.encode )
         , ( "neighboringCountries", newMap.neighboringCountries |> Json.Encode.list encodeNeighboringCountries )
         , ( "water", newMap.water |> Json.Encode.list encodeWater )
         ]
-
-
-encodeCountry : Country -> Json.Encode.Value
-encodeCountry country =
-    case country of
-        CoastalCountry countryProperties waterEdges ->
-            Json.Encode.object
-                (encodeCountryProperties countryProperties ++ [ ( "waterEdges", waterEdges |> Json.Encode.set encodeSegment ) ])
-
-        LandLockedCountry countryProperties ->
-            Json.Encode.object
-                (encodeCountryProperties countryProperties ++ [ ( "waterEdges", Set.empty |> Json.Encode.set encodeSegment ) ])
-
-
-encodeCountryProperties : CountryProperties -> List ( String, Json.Encode.Value )
-encodeCountryProperties countryProperties =
-    [ ( "id", encodeCountryId countryProperties.id )
-    , ( "polygon", encodePolygon countryProperties.polygon )
-    , ( "points", Json.Encode.set encodePoint countryProperties.points )
-    ]
-
-
-encodeCountryId : CountryId -> Json.Encode.Value
-encodeCountryId (CountryId countryId) =
-    Json.Encode.string countryId
-
-
-encodePoint : Point -> Json.Encode.Value
-encodePoint point =
-    Json.Encode.list Json.Encode.int [ point |> Tuple.first, point |> Tuple.second ]
 
 
 encodeNeighboringCountries : NeighboringCountries -> Json.Encode.Value
@@ -356,20 +240,6 @@ encodeNeighboringCountries ( countryId1, countryId2 ) =
         [ ( "countryId1", Json.Encode.string countryId1 )
         , ( "countryId2", Json.Encode.string countryId2 )
         ]
-
-
-encodePolygon : Polygon -> Json.Encode.Value
-encodePolygon polygon =
-    Json.Encode.list encodePoint polygon
-
-
-encodeSegment : Segment -> Json.Encode.Value
-encodeSegment segment =
-    Json.Encode.list
-        (\point ->
-            Json.Encode.list Json.Encode.int [ point |> Tuple.first, point |> Tuple.second ]
-        )
-        [ segment |> Tuple.first, segment |> Tuple.second ]
 
 
 encodeWater : Water -> Json.Encode.Value
@@ -382,8 +252,8 @@ encodeWater (Water water) =
 
 
 type alias CountryWhileParsing =
-    { points : Set.Set Point
-    , waterEdges : Set.Set ( Point, Point )
+    { points : Set.Set Country.Point
+    , waterEdges : Set.Set ( Country.Point, Country.Point )
     }
 
 
@@ -433,25 +303,25 @@ parse name text =
     }
 
 
-countriesWhileParsingToCountries : Dict.Dict String CountryWhileParsing -> List Country
+countriesWhileParsingToCountries : Dict.Dict String CountryWhileParsing -> List Country.Country
 countriesWhileParsingToCountries countriesWhileParsing =
     countriesWhileParsing
         |> Dict.map
             (\countryId countryWhileParsing ->
                 let
-                    countryProperties : CountryProperties
+                    countryProperties : Country.CountryProperties
                     countryProperties =
                         { polygon =
                             countryWhileParsing.points |> getSegmentsFromPoints |> segmentsToPolygon
                         , points = countryWhileParsing.points
-                        , id = CountryId countryId
+                        , id = Country.Id countryId
                         }
                 in
                 if (countryWhileParsing.waterEdges |> Set.size) > 0 then
-                    CoastalCountry countryProperties countryWhileParsing.waterEdges
+                    Country.coastal countryProperties countryWhileParsing.waterEdges
 
                 else
-                    LandLockedCountry countryProperties
+                    Country.landlocked countryProperties
             )
         |> Dict.values
 
@@ -506,7 +376,7 @@ updateCountryWhileParsing countryId point rawMap newMapWhileParsing =
                 Nothing ->
                     { points = Set.singleton point, waterEdges = Set.empty }
 
-        waterNeigborIdAndBorderSegments : List ( String, Segment )
+        waterNeigborIdAndBorderSegments : List ( String, Country.Segment )
         waterNeigborIdAndBorderSegments =
             adjacentEdges point
                 |> List.filterMap
@@ -582,9 +452,9 @@ addNeighbor ( countryId1, countryId2 ) neighboringCountries =
         Set.insert ( countryId2, countryId1 ) neighboringCountries
 
 
-getMedianCoordinates : Set.Set Point -> ( Int, Int )
-getMedianCoordinates area =
-    area
+getMedianPoint : Set.Set Country.Point -> ( Int, Int )
+getMedianPoint points =
+    points
         |> Set.foldl
             (\( x, y ) ( xs, ys ) ->
                 ( x :: xs, y :: ys )
@@ -594,13 +464,13 @@ getMedianCoordinates area =
         |> Tuple.mapBoth
             (\xs ->
                 xs
-                    |> List.drop (Set.size area // 2)
+                    |> List.drop (Set.size points // 2)
                     |> List.head
                     |> Maybe.withDefault 0
             )
             (\ys ->
                 ys
-                    |> List.drop (Set.size area // 2)
+                    |> List.drop (Set.size points // 2)
                     |> List.head
                     |> Maybe.withDefault 0
             )
@@ -628,10 +498,10 @@ isCountry areaId =
     String.length areaId < 4
 
 
-segmentsToPolygon : Set.Set Segment -> List ( Int, Int )
+segmentsToPolygon : Set.Set Country.Segment -> List ( Int, Int )
 segmentsToPolygon edges =
     let
-        coordinateToPolygon : Set.Set Segment -> Point -> List Point -> List Point
+        coordinateToPolygon : Set.Set Country.Segment -> Country.Point -> List Country.Point -> List Country.Point
         coordinateToPolygon borderSegments currentPoint result =
             let
                 maybeSegment =
@@ -668,7 +538,7 @@ segmentsToPolygon edges =
             []
 
 
-adjacentEdges : Point -> List ( Point, Segment )
+adjacentEdges : Country.Point -> List ( Country.Point, Country.Segment )
 adjacentEdges ( x, y ) =
     let
         left =
@@ -702,7 +572,7 @@ adjacentEdges ( x, y ) =
     ]
 
 
-getSegmentsFromPoints : Set.Set ( Int, Int ) -> Set.Set Segment
+getSegmentsFromPoints : Set.Set ( Int, Int ) -> Set.Set Country.Segment
 getSegmentsFromPoints points =
     points
         |> Set.foldl
@@ -712,7 +582,7 @@ getSegmentsFromPoints points =
             Set.empty
 
 
-getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Set.Set Segment
+getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Set.Set Country.Segment
 getEdgesForCountryForCoordinate allAreas point =
     adjacentEdges point
         |> List.foldl
@@ -728,16 +598,23 @@ getEdgesForCountryForCoordinate allAreas point =
 
 
 ---- View
+-- type alias CountryOptions =
+--     { id : GameMap.CountryId
+--     , color : Color.Color
+--     , centerText : String
+--     , canBeClicked : Bool
+--     , isBeingMovedFrom : Bool
+--     }
 
 
-view : List Country -> Dimensions -> Html.Html msg
+view : List Country.Country -> Dimensions -> Html.Html msg
 view countries dimensions =
     let
         scaledWidth =
-            dimensions.width |> scale
+            dimensions.width * scale
 
         scaledHeight =
-            dimensions.height |> scale
+            dimensions.height * scale
     in
     Collage.group
         [ getCountriesCollage countries
@@ -751,25 +628,25 @@ view countries dimensions =
             , Html.Attributes.attribute "width" "0"
             , Html.Attributes.attribute
                 "viewBox"
-                ((0 * scaledWidth |> String.fromFloat)
+                ((0 * scaledWidth |> String.fromInt)
                     ++ " "
-                    ++ (-1 * scaledHeight |> String.fromFloat)
+                    ++ (-1 * scaledHeight |> String.fromInt)
                     ++ " "
-                    ++ (1 * scaledWidth |> String.fromFloat)
+                    ++ (1 * scaledWidth |> String.fromInt)
                     ++ " "
-                    ++ (1 * scaledHeight |> String.fromFloat)
+                    ++ (1 * scaledHeight |> String.fromInt)
                 )
             ]
 
 
-getCountriesCollage : List Country -> Collage.Collage msg
+getCountriesCollage : List Country.Country -> Collage.Collage msg
 getCountriesCollage countries =
     countries
         |> List.map
             (\country ->
                 let
                     countryPolygon =
-                        country |> getCountryPolygon |> scalePolygon |> Collage.polygon
+                        country |> Country.getScaledCountryPolygon (toFloat scale) |> Collage.polygon
 
                     fill =
                         countryPolygon
@@ -779,7 +656,7 @@ getCountriesCollage countries =
                         countryPolygon
                             |> Collage.outlined
                                 (Collage.solid 30.0
-                                    (Collage.uniform Color.black)
+                                    (Collage.uniform countryBorderColor)
                                 )
                 in
                 Collage.group [ fill, border ]
@@ -787,34 +664,19 @@ getCountriesCollage countries =
         |> Collage.group
 
 
-scalePolygon : Polygon -> List ( Float, Float )
-scalePolygon points =
-    points |> List.map scalePoint
-
-
-scalePoint : Point -> ( Float, Float )
-scalePoint ( x, y ) =
-    ( x |> scale, y |> scale )
-
-
-getCountryPolygon : Country -> Polygon
-getCountryPolygon country =
-    case country of
-        LandLockedCountry countryProperties ->
-            countryProperties.polygon
-
-        CoastalCountry countryProperties _ ->
-            countryProperties.polygon
+countryBorderColor : Color.Color
+countryBorderColor =
+    Color.rgb255 100 100 100
 
 
 getWaterCollage : Dimensions -> Collage.Collage msg
 getWaterCollage dimensions =
     let
         scaledWidth =
-            dimensions.width |> scale
+            dimensions.width * scale |> toFloat
 
         scaledHeight =
-            dimensions.height |> scale
+            dimensions.height * scale |> toFloat
 
         background =
             Collage.polygon
@@ -835,6 +697,6 @@ getWaterCollage dimensions =
     Collage.group [ backgroundBorder, backgroundWater ]
 
 
-scale : Int -> Float
-scale number =
-    number * 100 |> toFloat
+scale : Int
+scale =
+    100

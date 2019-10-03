@@ -17,6 +17,7 @@ import Html
 import Html.Events
 import Json.Decode
 import Map
+import Player
 import Random
 import Random.Dict
 import Random.List
@@ -183,7 +184,7 @@ update msg model =
                 GameCreated gameIdResult ->
                     case gameIdResult of
                         RemoteData.Success gameId ->
-                            ( Redirecting newGame session, Route.replaceUrl (Session.navKey session) (Route.Game gameId) )
+                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.Game gameId (Player.Id "1")) )
 
                         RemoteData.NotAsked ->
                             ( model, Cmd.none )

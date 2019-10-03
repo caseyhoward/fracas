@@ -14,16 +14,32 @@ import Game
 import Graphql.Http
 import Html
 import Map
+import Player
 import RemoteData
 import Session
+
+
+
+-- type Model1 =
 
 
 type alias Model =
     { session : Session.Session
     , game : RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game
-
-    -- , map : RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map
+    , showAvailableMoves : Bool
+    , playerId : Player.Id
     }
+
+
+
+-- type alias PlacingCapitols =
+--     { mapId : Map.Id
+--     , capitols : Dict.Dict String Map.CountryId
+--     , playerTurnOrder : List Player.Id
+--     }
+-- type alias CapitolsPlaced = {
+--         mapId: Map.Id,
+--     }
 
 
 type Msg
@@ -31,14 +47,12 @@ type Msg
     | GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game)
 
 
-
--- | GotMap (RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map)
-
-
-init : Session.Session -> Game.Id -> ( Model, Cmd Msg )
-init session gameId =
+init : Session.Session -> Game.Id -> Player.Id -> ( Model, Cmd Msg )
+init session gameId playerId =
     ( { session = session
       , game = RemoteData.NotAsked
+      , showAvailableMoves = False
+      , playerId = playerId
       }
     , Game.get gameId GotGame
     )
@@ -78,11 +92,11 @@ content model =
         (case model.game of
             RemoteData.Success game ->
                 Element.column
-                    []
-                    [ Map.view game.map.countries game.map.dimensions |> Element.html ]
+                    [ Element.width Element.fill ]
+                    [ Game.view game.map.countries game.map.dimensions ]
 
             _ ->
-                Element.text "whatever"
+                Element.text "Loading or something"
         )
 
 

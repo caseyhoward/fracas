@@ -18,7 +18,7 @@ type alias Model =
 
 
 init : Session.Session -> Map.Id -> ( Model, Cmd Msg )
-init session mapId =
+init session _ =
     ( { session = session }
     , Cmd.none
     )

@@ -5,61 +5,35 @@ module Game exposing
     , get
     , idToString
     , urlParser
+    , view
     )
 
 import Api.Mutation
 import Api.Object as ApiObject
-import Api.Object.A
 import Api.Object.Game
 import Api.Object.Map
 import Api.Query
-import Collage
 import Colors
+import Country
 import Dict
+import Element
 import Graphql.Http
 import Graphql.Operation
-import Graphql.OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode
 import Json.Encode
 import Map
+import Player
 import RemoteData
 import Set
 import TroopCount
 import Url.Parser
 
 
-type OwnerId
-    = PlayerOwner PlayerId
-    | NeutralPlayerOwner
 
-
-type CountryId
-    = CountryId String
-
-
-type PlayerId
-    = PlayerId Int
-
-
-type alias Point =
-    { x : Int
-    , y : Int
-    }
-
-
-type alias Player =
-    { id : PlayerId
-    , name : String
-    , color : Colors.Color
-    , capitolId : Maybe CountryId
-    }
-
-
-type alias NeighboringCountries =
-    { country1 : CountryId
-    , country2 : CountryId
-    }
+-- type OwnerId
+--     = PlayerOwner Player.Id
+--     | NeutralPlayerOwner
 
 
 type Water
@@ -77,10 +51,19 @@ type TurnStatus
 type alias Game =
     { id : String
     , map : Map.Map
-    , players : List Player
-    , playerTurn : PlayerId
+    , players : List Player.Player
+    , playerTurn : Player.Id
     , turnStatus : TurnStatus
     }
+
+
+
+-- type alias GameCountry =
+--     { countryId : Map.CountryId
+--     , hasPort : Bool
+--     , troopCount : TroopCount.TroopCount
+--     , playerId : Maybe Player.Id
+--     }
 
 
 type Id
@@ -104,17 +87,17 @@ create selectedMapId numberOfPlayers toMsg =
                     |> List.map
                         (\playerId ->
                             let
-                                player : Player
+                                player : Player.Player
                                 player =
-                                    { id = PlayerId playerId
+                                    { id = Player.Id (String.fromInt playerId)
                                     , name = ""
-                                    , color = playerId |> PlayerId |> getDefaultColor
+                                    , color = String.fromInt playerId |> Player.Id |> getDefaultColor
                                     , capitolId = Nothing
                                     }
                             in
                             player
                         )
-            , playerTurn = PlayerId 1
+            , playerTurn = Player.Id "1"
             , turnStatus = PlacingCapitol
             }
 
@@ -188,6 +171,11 @@ get (Id id) toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
+view : List Country.Country -> Map.Dimensions -> Element.Element msg
+view countries dimensions =
+    Map.view countries dimensions |> Element.html
+
+
 idToString : Id -> String
 idToString (Id id) =
     id
@@ -199,8 +187,8 @@ urlParser =
 
 
 type alias GameJson =
-    { players : List Player
-    , playerTurn : PlayerId
+    { players : List Player.Player
+    , playerTurn : Player.Id
     , turnStatus : TurnStatus
     }
 
@@ -233,19 +221,19 @@ decodeGameJson json =
                 )
                 Json.Decode.string
 
-        decodePlayer : Json.Decode.Decoder Player
+        decodePlayer : Json.Decode.Decoder Player.Player
         decodePlayer =
-            Json.Decode.map4 Player
-                (Json.Decode.field "id" Json.Decode.int |> Json.Decode.map PlayerId)
+            Json.Decode.map4 Player.Player
+                (Json.Decode.field "id" Json.Decode.string |> Json.Decode.map Player.Id)
                 (Json.Decode.field "name" Json.Decode.string)
                 (Json.Decode.field "color" Colors.decoder)
-                (Json.Decode.field "capitolId" (Json.Decode.string |> Json.Decode.map CountryId |> Json.Decode.nullable))
+                (Json.Decode.field "capitolId" (Json.Decode.string |> Json.Decode.map Country.Id |> Json.Decode.nullable))
 
         decoder : Json.Decode.Decoder GameJson
         decoder =
             Json.Decode.map3 GameJson
                 (Json.Decode.field "players" (Json.Decode.list decodePlayer))
-                (Json.Decode.field "playerTurn" (Json.Decode.int |> Json.Decode.map PlayerId))
+                (Json.Decode.field "playerTurn" (Json.Decode.string |> Json.Decode.map Player.Id))
                 (Json.Decode.field "turnStatus" decodeTurnStatus)
     in
     Json.Decode.decodeString decoder json
@@ -254,7 +242,7 @@ decodeGameJson json =
 encodeGameJson : GameJson -> Json.Encode.Value
 encodeGameJson gameJson =
     let
-        encodePlayer : Player -> Json.Encode.Value
+        encodePlayer : Player.Player -> Json.Encode.Value
         encodePlayer player =
             Json.Encode.object
                 ([ ( "id", player.id |> encodePlayerId )
@@ -277,25 +265,25 @@ encodeGameJson gameJson =
         ]
 
 
-encodeCountryId : CountryId -> Json.Encode.Value
-encodeCountryId (CountryId countryId) =
+encodeCountryId : Country.Id -> Json.Encode.Value
+encodeCountryId (Country.Id countryId) =
     Json.Encode.string countryId
 
 
-playerColorOptions : Dict.Dict Int Colors.Color
+playerColorOptions : Dict.Dict String Colors.Color
 playerColorOptions =
     Dict.fromList
-        [ ( 1, Colors.darkGreen )
-        , ( 3, Colors.lightGreen )
-        , ( 2, Colors.lightYellow )
-        , ( 5, Colors.orange )
-        , ( 4, Colors.brown )
-        , ( 6, Colors.lightPurple )
+        [ ( "1", Colors.darkGreen )
+        , ( "3", Colors.lightGreen )
+        , ( "2", Colors.lightYellow )
+        , ( "5", Colors.orange )
+        , ( "4", Colors.brown )
+        , ( "6", Colors.lightPurple )
         ]
 
 
-getDefaultColor : PlayerId -> Colors.Color
-getDefaultColor (PlayerId playerId) =
+getDefaultColor : Player.Id -> Colors.Color
+getDefaultColor (Player.Id playerId) =
     case Dict.get playerId playerColorOptions of
         Just color ->
             color
@@ -304,14 +292,15 @@ getDefaultColor (PlayerId playerId) =
             Colors.black
 
 
-encodePlayerId : PlayerId -> Json.Encode.Value
-encodePlayerId (PlayerId id) =
-    Json.Encode.int id
-
-
-encodeId : Id -> Json.Encode.Value
-encodeId (Id id) =
+encodePlayerId : Player.Id -> Json.Encode.Value
+encodePlayerId (Player.Id id) =
     Json.Encode.string id
+
+
+
+-- encodeId : Id -> Json.Encode.Value
+-- encodeId (Id id) =
+--     Json.Encode.string id
 
 
 encodeTurnStatus : TurnStatus -> Json.Encode.Value

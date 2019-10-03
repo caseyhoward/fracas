@@ -1,4 +1,10 @@
-module Route exposing (Route(..), fromUrl, href, replaceUrl)
+module Route exposing
+    ( Route(..)
+    , fromUrl
+    , href
+    , pushUrl
+    , replaceUrl
+    )
 
 import ActiveGame
 import Browser.Navigation as Nav
@@ -6,6 +12,7 @@ import Game
 import Html exposing (Attribute)
 import Html.Attributes as Attr
 import Map
+import Player
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
 
@@ -19,7 +26,7 @@ type Route
     | ActiveGame ActiveGame.Id
     | EditMap Map.Id
     | NewMap
-    | Game Game.Id
+    | Game Game.Id Player.Id
 
 
 href : Route -> Attribute msg
@@ -30,6 +37,11 @@ href targetRoute =
 replaceUrl : Nav.Key -> Route -> Cmd msg
 replaceUrl key route =
     Nav.replaceUrl key (routeToString route)
+
+
+pushUrl : Nav.Key -> Route -> Cmd msg
+pushUrl key route =
+    Nav.pushUrl key (routeToString route)
 
 
 fromUrl : Url -> Maybe Route
@@ -47,7 +59,9 @@ parser =
         [ Parser.map ConfiguringGame Parser.top
         , Parser.map ConfiguringGame (s "games" </> s "new")
         , Parser.map ActiveGame (s "active-games" </> ActiveGame.urlParser)
-        , Parser.map Game (s "games" </> Game.urlParser)
+
+        -- , Parser.map Game (s "games" </> Game.urlParser)
+        , Parser.map Game (s "games" </> Game.urlParser </> Player.urlParser)
         , Parser.map NewMap (s "maps" </> s "new")
         , Parser.map EditMap (s "maps" </> Map.urlParser)
         ]
@@ -67,8 +81,8 @@ routeToString page =
                 EditMap mapId ->
                     [ "maps", Map.idToString mapId ]
 
-                Game gameId ->
-                    [ "games", Game.idToString gameId ]
+                Game gameId playerId ->
+                    [ "games", Game.idToString gameId, Player.idToString playerId ]
 
                 NewMap ->
                     [ "maps", "new" ]

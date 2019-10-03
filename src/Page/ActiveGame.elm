@@ -64,7 +64,7 @@ init session (ActiveGame.Id activeGameId) =
             )
 
         Nothing ->
-            -- TODO: This is a hack for when someone refreshes to redirect back
+            --  This is a hack for when someone refreshes to redirect back
             ( { session = session
               , activeGame =
                     { currentPlayerTurn = ActiveGame.PlayerTurn ActiveGame.CapitolPlacement (ActiveGame.PlayerId 1)
@@ -723,7 +723,7 @@ getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus 
                         |> List.map renderCapitolDots
                         |> Collage.group
 
-                countryHighlights =
+                availableMoves =
                     if showAvailableMoves then
                         countriesToRender
                             |> List.map countryHighlight
@@ -745,7 +745,7 @@ getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus 
             Collage.group
                 [ countryEventHandlers
                 , countryInfoHighlights
-                , countryHighlights
+                , availableMoves
                 , troopCountsCollage
                 , capitolDots
                 , portCollages

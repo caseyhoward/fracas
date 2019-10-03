@@ -16,7 +16,7 @@ type Page
 
 
 view : Page -> { title : String, content : Html.Html msg } -> Browser.Document msg
-view page { title, content } =
+view _ { title, content } =
     { title = title ++ " - Fracas"
     , body = [ content ]
     }
