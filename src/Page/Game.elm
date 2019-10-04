@@ -31,17 +31,6 @@ type alias Model =
     }
 
 
-
--- type alias PlacingCapitols =
---     { mapId : Map.Id
---     , capitols : Dict.Dict String Map.CountryId
---     , playerTurnOrder : List Player.Id
---     }
--- type alias CapitolsPlaced = {
---         mapId: Map.Id,
---     }
-
-
 type Msg
     = WindowResized Int Int
     | GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game)

@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Api.Object.A exposing (..)
+module Api.Object.CountryTroopCounts exposing (..)
 
 import Api.InputObject
 import Api.Interface
@@ -20,12 +20,12 @@ import Json.Decode as Decode
 
 
 {-| -}
-id : SelectionSet String Api.Object.A
-id =
-    Object.selectionForField "String" "id" [] Decode.string
+countryId : SelectionSet String Api.Object.CountryTroopCounts
+countryId =
+    Object.selectionForField "String" "countryId" [] Decode.string
 
 
 {-| -}
-b : SelectionSet decodesTo Api.Object.B -> SelectionSet decodesTo Api.Object.A
-b object_ =
-    Object.selectionForCompositeField "b" [] object_ identity
+troopCount : SelectionSet Int Api.Object.CountryTroopCounts
+troopCount =
+    Object.selectionForField "Int" "troopCount" [] Decode.int

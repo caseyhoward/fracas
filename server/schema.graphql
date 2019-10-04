@@ -22,12 +22,39 @@ type Mutation {
 type Game {
   id: String!
   map: Map!
-  gameJson: String!
+  players: [Player!]!
+  neutralCountryTroops: [CountryTroopCounts!]!
+  numberOfPlayers: Int!
+}
+
+type CountryTroopCounts {
+  countryId: String!
+  troopCount: Int!
+}
+
+type PlayerTurn {
+  playerId: Int!
+  playerTurnStage: PlayerTurnStage!
+}
+
+type Player {
+  name: String!
+  countryTroopCounts: [CountryTroopCounts!]!
+  capitol: String
+  color: String
+  ports: [String]
+}
+
+enum PlayerTurnStage {
+  CapitolPlacement
+  TroopPlacement
+  AttackAnnexOrPort
+  TroopMovement
+  GameOver
 }
 
 type Query {
   map(id: String!): Map!
   game(id: String!): Game!
   maps: [Map!]!
-  a: A!
 }

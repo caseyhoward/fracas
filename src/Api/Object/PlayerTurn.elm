@@ -2,8 +2,9 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Api.Object.B exposing (..)
+module Api.Object.PlayerTurn exposing (..)
 
+import Api.Enum.PlayerTurnStage
 import Api.InputObject
 import Api.Interface
 import Api.Object
@@ -20,12 +21,12 @@ import Json.Decode as Decode
 
 
 {-| -}
-id : SelectionSet String Api.Object.B
-id =
-    Object.selectionForField "String" "id" [] Decode.string
+playerId : SelectionSet Int Api.Object.PlayerTurn
+playerId =
+    Object.selectionForField "Int" "playerId" [] Decode.int
 
 
 {-| -}
-name : SelectionSet String Api.Object.B
-name =
-    Object.selectionForField "String" "name" [] Decode.string
+playerTurnStage : SelectionSet Api.Enum.PlayerTurnStage.PlayerTurnStage Api.Object.PlayerTurn
+playerTurnStage =
+    Object.selectionForField "Enum.PlayerTurnStage.PlayerTurnStage" "playerTurnStage" [] Api.Enum.PlayerTurnStage.decoder

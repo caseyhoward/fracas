@@ -124,9 +124,10 @@ changeRouteTo maybeRoute model =
                 |> updateWith ActiveGame GotActiveGameMsg
 
         Just (Route.Game gameId playerId) ->
-            Page.Game.init session gameId playerId
-                |> updateWith Game GotGameMsg
+            Debug.todo ""
 
+        -- Page.Game.init session gameId playerId
+        --     |> updateWith Game GotGameMsg
         Just (Route.EditMap mapId) ->
             Page.EditMap.init session mapId
                 |> updateWith EditMap GotEditMapMsg

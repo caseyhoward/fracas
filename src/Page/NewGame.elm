@@ -157,7 +157,7 @@ update msg model =
                                 ( GeneratingRandomTroopCounts
                                     newGame
                                     (session |> Session.addActiveGame (ActiveGame.Id "123") activeGame)
-                                , Route.replaceUrl (Session.navKey session) (Route.ActiveGame (ActiveGame.Id "123"))
+                                , Route.pushUrl (Session.navKey session) (Route.ActiveGame (ActiveGame.Id "123"))
                                 )
 
                             Err error ->
@@ -182,19 +182,17 @@ update msg model =
                     ( model, Cmd.none )
 
                 GameCreated gameIdResult ->
-                    case gameIdResult of
-                        RemoteData.Success gameId ->
-                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.Game gameId (Player.Id "1")) )
+                    Debug.todo ""
 
-                        RemoteData.NotAsked ->
-                            ( model, Cmd.none )
-
-                        RemoteData.Loading ->
-                            ( model, Cmd.none )
-
-                        RemoteData.Failure error ->
-                            ( ConfiguringGame { newGame | error = Just (ViewHelpers.errorToString error) } session, Cmd.none )
-
+        -- case gameIdResult of
+        --     RemoteData.Success gameId ->
+        --         ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.Game gameId (Player.Id "1")) )
+        --     RemoteData.NotAsked ->
+        --         ( model, Cmd.none )
+        --     RemoteData.Loading ->
+        --         ( model, Cmd.none )
+        --     RemoteData.Failure error ->
+        --         ( ConfiguringGame { newGame | error = Just (ViewHelpers.errorToString error) } session, Cmd.none )
         Redirecting _ _ ->
             ( model, Cmd.none )
 

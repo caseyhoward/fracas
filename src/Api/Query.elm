@@ -51,9 +51,3 @@ game requiredArgs object_ =
 maps : SelectionSet decodesTo Api.Object.Map -> SelectionSet (List decodesTo) RootQuery
 maps object_ =
     Object.selectionForCompositeField "maps" [] object_ (identity >> Decode.list)
-
-
-{-| -}
-a : SelectionSet decodesTo Api.Object.A -> SelectionSet decodesTo RootQuery
-a object_ =
-    Object.selectionForCompositeField "a" [] object_ identity

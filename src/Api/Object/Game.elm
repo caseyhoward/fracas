@@ -32,6 +32,18 @@ map object_ =
 
 
 {-| -}
-gameJson : SelectionSet String Api.Object.Game
-gameJson =
-    Object.selectionForField "String" "gameJson" [] Decode.string
+players : SelectionSet decodesTo Api.Object.Player -> SelectionSet (List decodesTo) Api.Object.Game
+players object_ =
+    Object.selectionForCompositeField "players" [] object_ (identity >> Decode.list)
+
+
+{-| -}
+neutralCountryTroops : SelectionSet decodesTo Api.Object.CountryTroopCounts -> SelectionSet (List decodesTo) Api.Object.Game
+neutralCountryTroops object_ =
+    Object.selectionForCompositeField "neutralCountryTroops" [] object_ (identity >> Decode.list)
+
+
+{-| -}
+numberOfPlayers : SelectionSet Int Api.Object.Game
+numberOfPlayers =
+    Object.selectionForField "Int" "numberOfPlayers" [] Decode.int

@@ -5,12 +5,8 @@
 module Api.Object exposing (..)
 
 
-type A
-    = A
-
-
-type B
-    = B
+type CountryTroopCounts
+    = CountryTroopCounts
 
 
 type Game
@@ -19,3 +15,11 @@ type Game
 
 type Map
     = Map
+
+
+type Player
+    = Player
+
+
+type PlayerTurn
+    = PlayerTurn
