@@ -152,17 +152,17 @@ update msg model =
                         ( model, Game.create newGame.selectedMapId numberOfPlayers GameCreated )
 
                     else
-                        case ActiveGame.start session.gameMaps (GameMap.Id "1") numberOfPlayers neutralCountryTroopCounts of
-                            Ok activeGame ->
-                                ( GeneratingRandomTroopCounts
-                                    newGame
-                                    (session |> Session.addActiveGame (ActiveGame.Id "123") activeGame)
-                                , Route.pushUrl (Session.navKey session) (Route.ActiveGame (ActiveGame.Id "123"))
-                                )
+                        Debug.todo ""
 
-                            Err error ->
-                                ( GeneratingRandomTroopCounts { newGame | error = Just (error |> ActiveGame.errorToString) } session, Cmd.none )
-
+                -- case ActiveGame.start session.gameMaps (GameMap.Id newGame.selectedMapId) numberOfPlayers neutralCountryTroopCounts of
+                --     Ok activeGame ->
+                --         ( GeneratingRandomTroopCounts
+                --             newGame
+                --             (session |> Session.addActiveGame (ActiveGame.Id "123") activeGame)
+                --         , Route.pushUrl (Session.navKey session) (Route.ActiveGame (ActiveGame.Id "123"))
+                --         )
+                --     Err error ->
+                --         ( GeneratingRandomTroopCounts { newGame | error = Just (error |> ActiveGame.errorToString) } session, Cmd.none )
                 NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
 
@@ -204,14 +204,17 @@ maximumNeutralCountryTroops =
 
 startGame : Session.Session -> NewGame -> ( Model, Cmd Msg )
 startGame session newGame =
-    case Dict.get newGame.gameMapId session.gameMaps of
-        Just gameMap ->
-            ( GeneratingRandomTroopCounts newGame session
-            , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys gameMap.countries))
-            )
+    Debug.todo ""
 
-        Nothing ->
-            ( ConfiguringGame { newGame | error = Just "Couldn't find game map" } session, Cmd.none )
+
+
+-- case Dict.get newGame.gameMapId session.gameMaps of
+--     Just gameMap ->
+--         ( GeneratingRandomTroopCounts newGame session
+--         , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys gameMap.countries))
+--         )
+--     Nothing ->
+--         ( ConfiguringGame { newGame | error = Just "Couldn't find game map" } session, Cmd.none )
 
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)

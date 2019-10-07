@@ -8,11 +8,12 @@ module Game exposing
     , view
     )
 
+-- import Api.Query
+
 import Api.Mutation
 import Api.Object as ApiObject
 import Api.Object.Game
 import Api.Object.Map
-import Api.Query
 import Colors
 import Country
 import Dict

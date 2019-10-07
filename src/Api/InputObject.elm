@@ -17,6 +17,106 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
+buildBodyOfWaterInput : BodyOfWaterInputRequiredFields -> BodyOfWaterInput
+buildBodyOfWaterInput required =
+    { id = required.id, neighboringCountries = required.neighboringCountries }
+
+
+type alias BodyOfWaterInputRequiredFields =
+    { id : String
+    , neighboringCountries : List String
+    }
+
+
+{-| Type for the BodyOfWaterInput input object.
+-}
+type alias BodyOfWaterInput =
+    { id : String
+    , neighboringCountries : List String
+    }
+
+
+{-| Encode a BodyOfWaterInput into a value that can be used as an argument.
+-}
+encodeBodyOfWaterInput : BodyOfWaterInput -> Value
+encodeBodyOfWaterInput input =
+    Encode.maybeObject
+        [ ( "id", Encode.string input.id |> Just ), ( "neighboringCountries", (Encode.string |> Encode.list) input.neighboringCountries |> Just ) ]
+
+
+buildCountryInput : CountryInputRequiredFields -> CountryInput
+buildCountryInput required =
+    CountryInput { id = required.id, coordinates = required.coordinates, polygon = required.polygon, waterEdges = required.waterEdges, center = required.center, neighboringCountries = required.neighboringCountries, neighboringBodiesOfWater = required.neighboringBodiesOfWater }
+
+
+type alias CountryInputRequiredFields =
+    { id : String
+    , coordinates : List PointInput
+    , polygon : List PointInput
+    , waterEdges : List SegmentInput
+    , center : PointInput
+    , neighboringCountries : List String
+    , neighboringBodiesOfWater : List String
+    }
+
+
+{-| Type alias for the `CountryInput` attributes. Note that this type
+needs to use the `CountryInput` type (not just a plain type alias) because it has
+references to itself either directly (recursive) or indirectly (circular). See
+<https://github.com/dillonkearns/elm-graphql/issues/33>.
+-}
+type alias CountryInputRaw =
+    { id : String
+    , coordinates : List PointInput
+    , polygon : List PointInput
+    , waterEdges : List SegmentInput
+    , center : PointInput
+    , neighboringCountries : List String
+    , neighboringBodiesOfWater : List String
+    }
+
+
+{-| Type for the CountryInput input object.
+-}
+type CountryInput
+    = CountryInput CountryInputRaw
+
+
+{-| Encode a CountryInput into a value that can be used as an argument.
+-}
+encodeCountryInput : CountryInput -> Value
+encodeCountryInput (CountryInput input) =
+    Encode.maybeObject
+        [ ( "id", Encode.string input.id |> Just ), ( "coordinates", (encodePointInput |> Encode.list) input.coordinates |> Just ), ( "polygon", (encodePointInput |> Encode.list) input.polygon |> Just ), ( "waterEdges", (encodeSegmentInput |> Encode.list) input.waterEdges |> Just ), ( "center", encodePointInput input.center |> Just ), ( "neighboringCountries", (Encode.string |> Encode.list) input.neighboringCountries |> Just ), ( "neighboringBodiesOfWater", (Encode.string |> Encode.list) input.neighboringBodiesOfWater |> Just ) ]
+
+
+buildDimensionsInput : DimensionsInputRequiredFields -> DimensionsInput
+buildDimensionsInput required =
+    { width = required.width, height = required.height }
+
+
+type alias DimensionsInputRequiredFields =
+    { width : Int
+    , height : Int
+    }
+
+
+{-| Type for the DimensionsInput input object.
+-}
+type alias DimensionsInput =
+    { width : Int
+    , height : Int
+    }
+
+
+{-| Encode a DimensionsInput into a value that can be used as an argument.
+-}
+encodeDimensionsInput : DimensionsInput -> Value
+encodeDimensionsInput input =
+    Encode.maybeObject
+        [ ( "width", Encode.int input.width |> Just ), ( "height", Encode.int input.height |> Just ) ]
+
+
 buildGameInput : GameInputRequiredFields -> GameInput
 buildGameInput required =
     { mapId = required.mapId, gameJson = required.gameJson }
@@ -46,26 +146,93 @@ encodeGameInput input =
 
 buildMapInput : MapInputRequiredFields -> MapInput
 buildMapInput required =
-    { name = required.name, mapJson = required.mapJson }
+    MapInput { name = required.name, countries = required.countries, bodiesOfWater = required.bodiesOfWater, dimensions = required.dimensions }
 
 
 type alias MapInputRequiredFields =
     { name : String
-    , mapJson : String
+    , countries : List CountryInput
+    , bodiesOfWater : List BodyOfWaterInput
+    , dimensions : DimensionsInput
+    }
+
+
+{-| Type alias for the `MapInput` attributes. Note that this type
+needs to use the `MapInput` type (not just a plain type alias) because it has
+references to itself either directly (recursive) or indirectly (circular). See
+<https://github.com/dillonkearns/elm-graphql/issues/33>.
+-}
+type alias MapInputRaw =
+    { name : String
+    , countries : List CountryInput
+    , bodiesOfWater : List BodyOfWaterInput
+    , dimensions : DimensionsInput
     }
 
 
 {-| Type for the MapInput input object.
 -}
-type alias MapInput =
-    { name : String
-    , mapJson : String
-    }
+type MapInput
+    = MapInput MapInputRaw
 
 
 {-| Encode a MapInput into a value that can be used as an argument.
 -}
 encodeMapInput : MapInput -> Value
-encodeMapInput input =
+encodeMapInput (MapInput input) =
     Encode.maybeObject
-        [ ( "name", Encode.string input.name |> Just ), ( "mapJson", Encode.string input.mapJson |> Just ) ]
+        [ ( "name", Encode.string input.name |> Just ), ( "countries", (encodeCountryInput |> Encode.list) input.countries |> Just ), ( "bodiesOfWater", (encodeBodyOfWaterInput |> Encode.list) input.bodiesOfWater |> Just ), ( "dimensions", encodeDimensionsInput input.dimensions |> Just ) ]
+
+
+buildPointInput : PointInputRequiredFields -> PointInput
+buildPointInput required =
+    { x = required.x, y = required.y }
+
+
+type alias PointInputRequiredFields =
+    { x : Int
+    , y : Int
+    }
+
+
+{-| Type for the PointInput input object.
+-}
+type alias PointInput =
+    { x : Int
+    , y : Int
+    }
+
+
+{-| Encode a PointInput into a value that can be used as an argument.
+-}
+encodePointInput : PointInput -> Value
+encodePointInput input =
+    Encode.maybeObject
+        [ ( "x", Encode.int input.x |> Just ), ( "y", Encode.int input.y |> Just ) ]
+
+
+buildSegmentInput : SegmentInputRequiredFields -> SegmentInput
+buildSegmentInput required =
+    { point1 = required.point1, point2 = required.point2 }
+
+
+type alias SegmentInputRequiredFields =
+    { point1 : PointInput
+    , point2 : PointInput
+    }
+
+
+{-| Type for the SegmentInput input object.
+-}
+type alias SegmentInput =
+    { point1 : PointInput
+    , point2 : PointInput
+    }
+
+
+{-| Encode a SegmentInput into a value that can be used as an argument.
+-}
+encodeSegmentInput : SegmentInput -> Value
+encodeSegmentInput input =
+    Encode.maybeObject
+        [ ( "point1", encodePointInput input.point1 |> Just ), ( "point2", encodePointInput input.point2 |> Just ) ]

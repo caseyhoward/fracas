@@ -24,7 +24,8 @@ type alias WindowSize =
 type alias Session =
     { windowSize : Maybe WindowSize
     , navKey : Browser.Navigation.Key
-    , gameMaps : Dict.Dict String GameMap.GameMap
+
+    -- , gameMaps : Dict.Dict String GameMap.GameMap
     , activeGames : Dict.Dict String ActiveGame.ActiveGame
     }
 
@@ -33,10 +34,11 @@ init : Browser.Navigation.Key -> Session
 init key =
     { windowSize = Nothing
     , navKey = key
-    , gameMaps =
-        Dict.fromList
-            [ ( "1", GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare )
-            ]
+
+    -- , gameMaps =
+    --     Dict.fromList
+    --         [ ( "1", GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare )
+    --         ]
     , activeGames = Dict.empty
     }
 

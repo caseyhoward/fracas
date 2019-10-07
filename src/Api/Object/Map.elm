@@ -32,6 +32,18 @@ name =
 
 
 {-| -}
-mapJson : SelectionSet String Api.Object.Map
-mapJson =
-    Object.selectionForField "String" "mapJson" [] Decode.string
+countries : SelectionSet decodesTo Api.Object.Country -> SelectionSet (List decodesTo) Api.Object.Map
+countries object_ =
+    Object.selectionForCompositeField "countries" [] object_ (identity >> Decode.list)
+
+
+{-| -}
+bodiesOfWater : SelectionSet decodesTo Api.Object.BodyOfWater -> SelectionSet (List decodesTo) Api.Object.Map
+bodiesOfWater object_ =
+    Object.selectionForCompositeField "bodiesOfWater" [] object_ (identity >> Decode.list)
+
+
+{-| -}
+dimensions : SelectionSet decodesTo Api.Object.Dimensions -> SelectionSet decodesTo Api.Object.Map
+dimensions object_ =
+    Object.selectionForCompositeField "dimensions" [] object_ identity

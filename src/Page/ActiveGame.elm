@@ -65,23 +65,24 @@ init session (ActiveGame.Id activeGameId) =
 
         Nothing ->
             --  This is a hack for when someone refreshes to redirect back
-            ( { session = session
-              , activeGame =
-                    { currentPlayerTurn = ActiveGame.PlayerTurn ActiveGame.CapitolPlacement (ActiveGame.PlayerId 1)
-                    , map = GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare
-                    , players = Dict.empty
-                    , neutralCountryTroops = Dict.empty
-                    , numberOfPlayers = 0
-                    }
-              , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
-              , error = Nothing
-              , showAvailableMoves = False
-              }
-            , Route.replaceUrl (Session.navKey session) Route.ConfiguringGame
-            )
+            Debug.todo "s"
 
 
 
+-- ( { session = session
+--   , activeGame =
+--         { currentPlayerTurn = ActiveGame.PlayerTurn ActiveGame.CapitolPlacement (ActiveGame.PlayerId 1)
+--         , map = GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare
+--         , players = Dict.empty
+--         , neutralCountryTroops = Dict.empty
+--         , numberOfPlayers = 0
+--         }
+--   , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
+--   , error = Nothing
+--   , showAvailableMoves = False
+--   }
+-- , Route.replaceUrl (Session.navKey session) Route.ConfiguringGame
+-- )
 ---- UPDATE ----
 
 
@@ -969,7 +970,7 @@ getCountryInfoStatus gameMap players countryBorderHelperOutlineStatus countryId 
             NoInfo
 
 
-renderPort : Set.Set GameMap.BorderSegment -> Collage.Collage msg
+renderPort : Set.Set ( GameMap.ScaledPoint, GameMap.ScaledPoint ) -> Collage.Collage msg
 renderPort waterEdges =
     waterEdges
         |> Set.toList

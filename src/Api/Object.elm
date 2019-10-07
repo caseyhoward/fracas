@@ -5,8 +5,20 @@
 module Api.Object exposing (..)
 
 
+type BodyOfWater
+    = BodyOfWater
+
+
+type Country
+    = Country
+
+
 type CountryTroopCounts
     = CountryTroopCounts
+
+
+type Dimensions
+    = Dimensions
 
 
 type Game
@@ -23,3 +35,11 @@ type Player
 
 type PlayerTurn
     = PlayerTurn
+
+
+type Point
+    = Point
+
+
+type Segment
+    = Segment

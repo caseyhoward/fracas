@@ -1,22 +1,94 @@
+### MAP INPUT ###
+
 input MapInput {
   name: String!
-  mapJson: String!
+  countries: [CountryInput!]!
+  bodiesOfWater: [BodyOfWaterInput!]!
+  dimensions: DimensionsInput!
 }
+
+input DimensionsInput {
+  width: Int!
+  height: Int!
+}
+
+input CountryInput {
+  id: String!
+  coordinates: [PointInput!]!
+  polygon: [PointInput!]!
+  waterEdges: [SegmentInput!]!
+  center: PointInput!
+  neighboringCountries: [String!]!
+  neighboringBodiesOfWater: [String!]!
+}
+
+input BodyOfWaterInput {
+  id: String!
+  neighboringCountries: [String!]!
+}
+
+input SegmentInput {
+  point1: PointInput!
+  point2: PointInput!
+}
+
+# input PolygonInput {
+#   points: [PointInput!]!
+# }
+
+input PointInput {
+  x: Int!
+  y: Int!
+}
+
+### MAP ###
+type Map {
+  id: String!
+  name: String!
+  countries: [Country!]!
+  bodiesOfWater: [BodyOfWater!]!
+  dimensions: Dimensions!
+}
+
+type Country {
+  id: String!
+  coordinates: [Point!]!
+  polygon: [Point!]!
+  waterEdges: [Segment!]!
+  center: Point!
+  neighboringCountries: [String!]!
+  neighboringBodiesOfWater: [String!]!
+}
+
+type Dimensions {
+  width: Int!
+  height: Int!
+}
+
+type BodyOfWater {
+  id: String!
+  neighboringCountries: [String!]!
+}
+
+# type Polygon {
+#   points: [Point!]!
+# }
+
+type Point {
+  x: Int!
+  y: Int!
+}
+
+type Segment {
+  point1: Point!
+  point2: Point!
+}
+
+### GAME ###
 
 input GameInput {
   mapId: String!
   gameJson: String!
-}
-
-type Map {
-  id: String!
-  name: String!
-  mapJson: String!
-}
-
-type Mutation {
-  createGame(newGame: GameInput!): Game!
-  createMap(map: MapInput!): Map!
 }
 
 type Game {
@@ -57,4 +129,9 @@ type Query {
   map(id: String!): Map!
   game(id: String!): Game!
   maps: [Map!]!
+}
+
+type Mutation {
+  createGame(newGame: GameInput!): Game!
+  createMap(map: MapInput!): Map!
 }

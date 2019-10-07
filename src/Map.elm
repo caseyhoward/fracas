@@ -6,8 +6,9 @@ module Map exposing
     , NewMap
     , create
     , getAll
-    , idToString
-    , mapSelection
+    ,  idToString
+       -- , mapSelection
+
     , mapSelectionSetToMap
     , parse
     , urlParser
@@ -113,38 +114,48 @@ urlParser =
     Url.Parser.custom "GAMEID" (\str -> Just (Id str))
 
 
-mapSelection : SelectionSet MapSelection ApiObject.Map
-mapSelection =
-    Graphql.SelectionSet.map3 MapSelection
-        Api.Object.Map.id
-        Api.Object.Map.name
-        Api.Object.Map.mapJson
+
+-- mapSelection : SelectionSet MapSelection ApiObject.Map
+-- mapSelection =
+--     Debug.todo ""
+--     Graphql.SelectionSet.map3 MapSelection
+--         Api.Object.Map.id
+--         Api.Object.Map.name
+--         Api.Object.Map.mapJson
 
 
 create : NewMap -> (RemoteData.RemoteData (Graphql.Http.Error MapSelection) MapSelection -> msg) -> Cmd msg
 create newMap toMsg =
-    let
-        input =
-            { map =
-                { name = newMap.name
-                , mapJson = newMap |> newMapToMapJson |> Json.Encode.encode 0
-                }
-            }
-    in
-    Api.Mutation.createMap input mapSelection
-        |> Graphql.Http.mutationRequest "http://localhost:4000"
-        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+    Debug.todo ""
+
+
+
+-- let
+--     input =
+--         { map =
+--             { name = newMap.name
+--             , mapJson = newMap |> newMapToMapJson |> Json.Encode.encode 0
+--             }
+--         }
+-- in
+-- Api.Mutation.createMap input mapSelection
+--     |> Graphql.Http.mutationRequest "http://localhost:4000"
+--     |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 getAll : (RemoteData.RemoteData (Graphql.Http.Error (List Map)) (List Map) -> msg) -> Cmd msg
 getAll toMsg =
-    Api.Query.maps mapSelection
-        |> Graphql.SelectionSet.mapOrFail
-            (\mapSelectionsSets ->
-                mapSelectionsSets |> mapSelectionSetsToMaps
-            )
-        |> Graphql.Http.queryRequest "http://localhost:4000"
-        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+    Debug.todo ""
+
+
+
+-- Api.Query.maps mapSelection
+--     |> Graphql.SelectionSet.mapOrFail
+--         (\mapSelectionsSets ->
+--             mapSelectionsSets |> mapSelectionSetsToMaps
+--         )
+--     |> Graphql.Http.queryRequest "http://localhost:4000"
+--     |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 mapSelectionSetsToMaps : List MapSelection -> Result String (List Map)
@@ -598,13 +609,6 @@ getEdgesForCountryForCoordinate allAreas point =
 
 
 ---- View
--- type alias CountryOptions =
---     { id : GameMap.CountryId
---     , color : Color.Color
---     , centerText : String
---     , canBeClicked : Bool
---     , isBeingMovedFrom : Bool
---     }
 
 
 view : List Country.Country -> Dimensions -> Html.Html msg

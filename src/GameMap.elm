@@ -4,8 +4,14 @@ module GameMap exposing
     , CountryId(..)
     , GameMap
     , Id(..)
-    , RawGameMap
-    , capitolDotsCoordinates
+    , NewMap
+    , Point
+    ,  RawGameMap
+       -- , capitolDotsCoordinates
+
+    , ScaledCountry
+    , ScaledPoint
+    , create
     , errorToString
     , get
     , getCountriesThatCanReachCountryThroughWater
@@ -15,15 +21,40 @@ module GameMap exposing
     , isCountryNeighboringWater
     , parse
     , parseRawMap
+    , scaleCountry
+    , scaledCountries
     , updateCountry
     )
 
+import Api.InputObject
+import Api.Mutation
+import Api.Object as ApiObject
+import Api.Object.BodyOfWater
+import Api.Object.Country
+import Api.Object.Dimensions
+import Api.Object.Map
+import Api.Object.Point
+import Api.Object.Segment
 import Dict
+import Graphql.Http
+import Graphql.SelectionSet exposing (SelectionSet)
+import Html
+import Json.Encode
+import RemoteData
 import Set
 
 
 type alias GameMap =
     { id : Id
+    , name : String
+    , countries : Dict.Dict String Country
+    , bodiesOfWater : Dict.Dict String (Set.Set String)
+    , dimensions : ( Int, Int )
+    }
+
+
+type alias NewMap =
+    { name : String
     , countries : Dict.Dict String Country
     , bodiesOfWater : Dict.Dict String (Set.Set String)
     , dimensions : ( Int, Int )
@@ -39,13 +70,27 @@ type Id
 
 
 type alias Country =
-    { coordinates : Set.Set ( Int, Int ) -- Only needed for making the capitol dots
-    , polygon : List ( Float, Float )
-    , waterEdges : Set.Set ( ( Float, Float ), ( Float, Float ) )
-    , center : ( Int, Int )
+    { coordinates : Set.Set Point -- Only needed for making the capitol dots
+    , polygon : List Point
+    , waterEdges : Set.Set ( Point, Point )
+    , center : Point
     , neighboringCountries : Set.Set String
     , neighboringBodiesOfWater : Set.Set String
     }
+
+
+type alias ScaledCountry =
+    { coordinates : Set.Set ScaledPoint -- Only needed for making the capitol dots
+    , polygon : List ScaledPoint
+    , waterEdges : Set.Set ( ScaledPoint, ScaledPoint )
+    , center : ScaledPoint
+    , neighboringCountries : Set.Set String
+    , neighboringBodiesOfWater : Set.Set String
+    }
+
+
+type alias ScaledPoint =
+    ( Float, Float )
 
 
 type alias Area =
@@ -57,20 +102,223 @@ type alias RawGameMap =
 
 
 type alias BorderSegment =
-    ( ( Float, Float ), ( Float, Float ) )
+    ( Point, Point )
 
 
 type Error
     = Error String
 
 
-capitolDotsCoordinates : Area -> Int -> Set.Set ( Float, Float )
-capitolDotsCoordinates area scale =
-    area
-        |> Set.map
-            (\( x, y ) ->
-                ( (toFloat x + 0.5) * toFloat scale, (toFloat y + 0.5) * toFloat scale )
-            )
+type alias MapSelectionSet =
+    { id : String
+    , name : String
+    , countries : List CountrySelectionSet
+    , bodiesOfWater : List ( String, Set.Set String )
+    , dimensions : ( Int, Int )
+    }
+
+
+type alias CountrySelectionSet =
+    { id : String
+    , coordinates : Set.Set Point -- Only needed for making the capitol dots
+    , polygon : List Point
+    , waterEdges : Set.Set ( Point, Point )
+    , center : Point
+    , neighboringCountries : Set.Set String
+    , neighboringBodiesOfWater : Set.Set String
+    }
+
+
+type alias Point =
+    ( Int, Int )
+
+
+type alias Segment =
+    ( Point, Point )
+
+
+mapSelectionSet : SelectionSet MapSelectionSet ApiObject.Map
+mapSelectionSet =
+    let
+        segmentSelection : SelectionSet Segment ApiObject.Segment
+        segmentSelection =
+            Graphql.SelectionSet.map2 Tuple.pair
+                (Api.Object.Segment.point1 pointSelection)
+                (Api.Object.Segment.point2 pointSelection)
+
+        pointSelection : SelectionSet Point ApiObject.Point
+        pointSelection =
+            Graphql.SelectionSet.map2 Tuple.pair
+                Api.Object.Point.x
+                Api.Object.Point.y
+
+        coordinatesSelectionSet : SelectionSet Point ApiObject.Point
+        coordinatesSelectionSet =
+            Graphql.SelectionSet.map2 Tuple.pair
+                Api.Object.Point.x
+                Api.Object.Point.y
+
+        polygonSelectionSet : SelectionSet Point ApiObject.Point
+        polygonSelectionSet =
+            Graphql.SelectionSet.map2 Tuple.pair
+                Api.Object.Point.x
+                Api.Object.Point.y
+
+        countrySelection : SelectionSet CountrySelectionSet ApiObject.Country
+        countrySelection =
+            Graphql.SelectionSet.map7 CountrySelectionSet
+                Api.Object.Country.id
+                (Api.Object.Country.coordinates coordinatesSelectionSet |> Graphql.SelectionSet.map Set.fromList)
+                (Api.Object.Country.polygon polygonSelectionSet)
+                (Api.Object.Country.waterEdges segmentSelection |> Graphql.SelectionSet.map Set.fromList)
+                (Api.Object.Country.center pointSelection)
+                (Api.Object.Country.neighboringCountries |> Graphql.SelectionSet.map Set.fromList)
+                (Api.Object.Country.neighboringBodiesOfWater |> Graphql.SelectionSet.map Set.fromList)
+
+        bodyOfWaterSelection : SelectionSet ( String, Set.Set String ) ApiObject.BodyOfWater
+        bodyOfWaterSelection =
+            Graphql.SelectionSet.map2
+                (\id neighboringCountries ->
+                    ( id, neighboringCountries |> Set.fromList )
+                )
+                Api.Object.BodyOfWater.id
+                Api.Object.BodyOfWater.neighboringCountries
+
+        dimensionsSelection : SelectionSet ( Int, Int ) ApiObject.Dimensions
+        dimensionsSelection =
+            Graphql.SelectionSet.map2
+                (\width height ->
+                    ( width, height )
+                )
+                Api.Object.Dimensions.width
+                Api.Object.Dimensions.height
+    in
+    Graphql.SelectionSet.map5 MapSelectionSet
+        Api.Object.Map.id
+        Api.Object.Map.name
+        (Api.Object.Map.countries countrySelection)
+        (Api.Object.Map.bodiesOfWater bodyOfWaterSelection)
+        (Api.Object.Map.dimensions dimensionsSelection)
+
+
+mapSelection : SelectionSet GameMap ApiObject.Map
+mapSelection =
+    mapSelectionSet
+        |> Graphql.SelectionSet.map mapSelectionSetToMap
+
+
+pointToGraphql : ( Int, Int ) -> { x : Int, y : Int }
+pointToGraphql ( x, y ) =
+    { x = x, y = y }
+
+
+segmentToGraphql : ( ( Int, Int ), ( Int, Int ) ) -> { point1 : { x : Int, y : Int }, point2 : { x : Int, y : Int } }
+segmentToGraphql ( ( x1, y1 ), ( x2, y2 ) ) =
+    { point1 = { x = x1, y = y1 }, point2 = { x = x2, y = y2 } }
+
+
+create : NewMap -> (RemoteData.RemoteData (Graphql.Http.Error GameMap) GameMap -> msg) -> Cmd msg
+create newMap toMsg =
+    let
+        countryInputs : List Api.InputObject.CountryInput
+        countryInputs =
+            newMap.countries
+                |> Dict.map
+                    (\countryId country ->
+                        let
+                            center : Api.InputObject.PointInput
+                            center =
+                                country.coordinates |> getMedianCoordinates |> pointToGraphql |> Api.InputObject.buildPointInput
+
+                            coordinates : List Api.InputObject.PointInput
+                            coordinates =
+                                country.coordinates |> Set.toList |> List.map pointToGraphql |> List.map Api.InputObject.buildPointInput
+
+                            polygon : List Api.InputObject.PointInput
+                            polygon =
+                                country.polygon |> List.map pointToGraphql |> List.map Api.InputObject.buildPointInput
+
+                            waterEdges : List Api.InputObject.SegmentInput
+                            waterEdges =
+                                country.waterEdges |> Set.toList |> List.map segmentToGraphql |> List.map Api.InputObject.buildSegmentInput
+
+                            neighboringCountries =
+                                country.neighboringCountries |> Set.toList
+                        in
+                        { id = countryId
+                        , coordinates = coordinates
+                        , polygon = polygon
+                        , waterEdges = waterEdges
+                        , center = center
+                        , neighboringCountries = neighboringCountries
+                        , neighboringBodiesOfWater = country.neighboringBodiesOfWater |> Set.toList
+                        }
+                            |> Api.InputObject.buildCountryInput
+                    )
+                |> Dict.values
+
+        bodiesOfWater : List Api.InputObject.BodyOfWaterInput
+        bodiesOfWater =
+            newMap.bodiesOfWater
+                |> Dict.map
+                    (\waterId countries ->
+                        { id = waterId, neighboringCountries = countries |> Set.toList }
+                    )
+                |> Dict.values
+
+        dimensionsInput : Api.InputObject.DimensionsInput
+        dimensionsInput =
+            case newMap.dimensions of
+                ( width, height ) ->
+                    { width = width, height = height }
+
+        requiredFields : Api.InputObject.MapInputRequiredFields
+        requiredFields =
+            { name = newMap.name
+            , countries = countryInputs
+            , bodiesOfWater = bodiesOfWater
+            , dimensions = dimensionsInput
+            }
+
+        input : Api.InputObject.MapInput
+        input =
+            requiredFields |> Api.InputObject.buildMapInput
+    in
+    Api.Mutation.createMap { map = input } mapSelection
+        |> Graphql.Http.mutationRequest "http://localhost:4000"
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+mapSelectionSetToMap : MapSelectionSet -> GameMap
+mapSelectionSetToMap selectionSet =
+    let
+        countrySelectionSetsToCountries : List CountrySelectionSet -> Dict.Dict String Country
+        countrySelectionSetsToCountries countrySelectionSets =
+            countrySelectionSets
+                |> List.map
+                    (\countrySelectionSet ->
+                        ( countrySelectionSet.id
+                        , { coordinates = countrySelectionSet.coordinates
+                          , polygon = countrySelectionSet.polygon
+                          , waterEdges = countrySelectionSet.waterEdges
+                          , center = countrySelectionSet.center
+                          , neighboringCountries = countrySelectionSet.neighboringCountries
+                          , neighboringBodiesOfWater = countrySelectionSet.neighboringBodiesOfWater
+                          }
+                        )
+                    )
+                |> Dict.fromList
+
+        bodiesOfWaterSelectionToBodiesOfWater : List ( String, Set.Set String ) -> Dict.Dict String (Set.Set String)
+        bodiesOfWaterSelectionToBodiesOfWater waterSelectionSet =
+            waterSelectionSet |> Dict.fromList
+    in
+    { id = selectionSet.id |> Id
+    , name = selectionSet.name
+    , countries = selectionSet.countries |> countrySelectionSetsToCountries
+    , bodiesOfWater = selectionSet.bodiesOfWater |> bodiesOfWaterSelectionToBodiesOfWater
+    , dimensions = selectionSet.dimensions
+    }
 
 
 errorToString : Error -> String
@@ -134,8 +382,8 @@ isCountryNeighboringWater countryId countries =
             )
 
 
-parse : String -> Int -> GameMap
-parse text scale =
+parse : String -> String -> NewMap
+parse text name =
     let
         map =
             parseRawMap text
@@ -185,7 +433,7 @@ parse text scale =
                 (\_ country ->
                     let
                         edgesWithNeigborCoordinate =
-                            getEdgesForArea country.coordinates scale
+                            getEdgesForArea country.coordinates
 
                         edgesBorderingWater =
                             edgesWithNeigborCoordinate
@@ -208,11 +456,14 @@ parse text scale =
                 )
     , bodiesOfWater =
         gameMapWithoutPolygons.bodiesOfWaterNeighborCountries
-    , dimensions =
-        ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * scale
-        , (gameMapWithoutPolygons.dimensions |> Tuple.second) * scale
-        )
-    , id = Id "1"
+    , dimensions = gameMapWithoutPolygons.dimensions
+
+    --     ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * scale
+    --     , (gameMapWithoutPolygons.dimensions |> Tuple.second) * scale
+    --     )
+    , name = name
+
+    -- , id = Id "1"
     }
 
 
@@ -414,7 +665,7 @@ isCountry areaId =
     String.length areaId < 4
 
 
-coordinatesToPolygon : Set.Set ( ( Float, Float ), ( Float, Float ) ) -> List ( Float, Float )
+coordinatesToPolygon : Set.Set ( Point, Point ) -> List Point
 coordinatesToPolygon edges =
     case edges |> Set.toList of
         ( point1, point2 ) :: _ ->
@@ -424,7 +675,7 @@ coordinatesToPolygon edges =
             []
 
 
-recursiveStuff : Set.Set BorderSegment -> ( Float, Float ) -> List ( Float, Float ) -> List ( Float, Float )
+recursiveStuff : Set.Set BorderSegment -> Point -> List Point -> List Point
 recursiveStuff borderSegments currentPoint result =
     let
         maybeSegment =
@@ -454,28 +705,45 @@ recursiveStuff borderSegments currentPoint result =
             currentPoint :: result
 
 
-getEdgesForArea : Area -> Int -> Set.Set ( ( Int, Int ), BorderSegment )
-getEdgesForArea area scale =
+getEdgesForArea : Area -> Set.Set ( ( Int, Int ), BorderSegment )
+getEdgesForArea area =
     area
         |> Set.foldl
             (\coordinate result ->
-                Set.union result (getEdgesForCountryForCoordinate area coordinate scale)
+                Set.union result (getEdgesForCountryForCoordinate area coordinate)
             )
             Set.empty
 
 
-scaleCoordinate : Int -> ( Int, Int ) -> ( Float, Float )
-scaleCoordinate scale ( x, y ) =
+scalePoint : Int -> Point -> ScaledPoint
+scalePoint scale ( x, y ) =
     ( x * scale |> toFloat, y * scale |> toFloat )
 
 
-scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> BorderSegment
+scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> ( ScaledPoint, ScaledPoint )
 scaleEdge scale ( point1, point2 ) =
-    ( scaleCoordinate scale point1, scaleCoordinate scale point2 )
+    ( scalePoint scale point1, scalePoint scale point2 )
 
 
-getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Int -> Set.Set ( ( Int, Int ), BorderSegment )
-getEdgesForCountryForCoordinate allAreas ( x, y ) scaleFactor =
+scaleCountry : Int -> Country -> ScaledCountry
+scaleCountry scaleFactor country =
+    { coordinates = country.coordinates |> Set.map (scalePoint scaleFactor)
+    , polygon = country.polygon |> List.map (scalePoint scaleFactor)
+    , waterEdges = country.waterEdges |> Set.map (scaleEdge scaleFactor)
+    , center = country.center |> scalePoint scaleFactor
+    , neighboringCountries = country.neighboringCountries
+    , neighboringBodiesOfWater = country.neighboringBodiesOfWater
+    }
+
+
+scaledCountries : Int -> Dict.Dict String Country -> Dict.Dict String ScaledCountry
+scaledCountries scaleFactor countries =
+    countries
+        |> Dict.map (\_ country -> scaleCountry scaleFactor country)
+
+
+getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Set.Set ( ( Int, Int ), BorderSegment )
+getEdgesForCountryForCoordinate allAreas ( x, y ) =
     let
         left =
             ( x - 1, y )
@@ -515,6 +783,6 @@ getEdgesForCountryForCoordinate allAreas ( x, y ) scaleFactor =
                     result
 
                 else
-                    Set.insert ( adjacent, scaleEdge scaleFactor edge ) result
+                    Set.insert ( adjacent, edge ) result
             )
             Set.empty

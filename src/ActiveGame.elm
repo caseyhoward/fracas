@@ -73,12 +73,12 @@ type alias CountryToRender =
     { id : GameMap.CountryId
     , color : Color.Color
     , troopCount : TroopCount.TroopCount
-    , center : ( Float, Float )
-    , polygonPoints : List ( Float, Float )
-    , capitolDots : Maybe (Set.Set ( Float, Float ))
+    , center : GameMap.ScaledPoint
+    , polygonPoints : List GameMap.ScaledPoint
+    , capitolDots : Maybe (Set.Set GameMap.ScaledPoint)
     , canBeClicked : Bool
     , isBeingMovedFrom : Bool
-    , portSegments : Maybe (Set.Set ( ( Float, Float ), ( Float, Float ) ))
+    , portSegments : Maybe (Set.Set ( GameMap.ScaledPoint, GameMap.ScaledPoint ))
     }
 
 
@@ -291,33 +291,49 @@ getCountryAttackers gameMap players countryId =
 getCountriesToRender : GameMap.GameMap -> Players -> PlayerTurn -> Dict.Dict String TroopCount.TroopCount -> Maybe (List CountryToRender)
 getCountriesToRender gameMap players currentPlayerTurn neutralCountryTroops =
     gameMap.countries
+        |> GameMap.scaledCountries ViewHelpers.pixelsPerMapSquare
         |> Dict.map
             (\countryId country ->
                 let
                     countryOwnerAndTroopCount =
                         findCountryOwnerAndTroopCount (GameMap.CountryId countryId) players
 
-                    shift =
-                        \_ ->
-                            case country.center of
-                                ( medianX, medianY ) ->
-                                    ( (toFloat medianX + 0.5) * toFloat ViewHelpers.pixelsPerMapSquare, (toFloat medianY + 0.5) * toFloat ViewHelpers.pixelsPerMapSquare )
+                    -- shift =
+                    --     \_ ->
+                    --         case country.center of
+                    --             ( medianX, medianY ) ->
+                    --                 ( medianX * ViewHelpers.pixelsPerMapSquare, medianY * ViewHelpers.pixelsPerMapSquare )
+                    -- ( (toFloat medianX + 0.5) * toFloat ViewHelpers.pixelsPerMapSquare, (toFloat medianY + 0.5) * toFloat ViewHelpers.pixelsPerMapSquare )
                 in
                 case countryOwnerAndTroopCount of
                     Just ( countryOwnerId, troopCount ) ->
                         getPlayer countryOwnerId players
                             |> Maybe.map
                                 (\countryOwner ->
+                                    let
+                                        polygon : List GameMap.ScaledPoint
+                                        polygon =
+                                            country.polygon
+
+                                        center : GameMap.ScaledPoint
+                                        center =
+                                            country.center
+
+                                        scaledCountry : GameMap.ScaledCountry
+                                        scaledCountry =
+                                            country
+                                    in
+                                    -- Debug.todo ""
                                     { id = GameMap.CountryId countryId
                                     , troopCount = troopCount
-                                    , center = country.center |> shift
-                                    , polygonPoints = country.polygon
+                                    , center = scaledCountry.center
+                                    , polygonPoints = scaledCountry.polygon
                                     , color = countryOwner.color
                                     , capitolDots =
                                         case countryOwner.capitolStatus of
-                                            Capitol (GameMap.CountryId capitolId) coordinates ->
+                                            Capitol (GameMap.CountryId capitolId) ->
                                                 if capitolId == countryId then
-                                                    Just coordinates
+                                                    Just scaledCountry.coordinates
 
                                                 else
                                                     Nothing
@@ -326,22 +342,32 @@ getCountriesToRender gameMap players currentPlayerTurn neutralCountryTroops =
                                                 Nothing
                                     , canBeClicked = getCountryCanBeClicked currentPlayerTurn players gameMap (GameMap.CountryId countryId)
                                     , isBeingMovedFrom = getIsBeingMovedFrom currentPlayerTurn (GameMap.CountryId countryId)
-                                    , portSegments = getPortSegments (GameMap.CountryId countryId) country players
+                                    , portSegments =
+                                        getCountryHasPort (GameMap.CountryId countryId) players
+                                            |> Maybe.andThen
+                                                (\hasPort ->
+                                                    if hasPort then
+                                                        Just scaledCountry.waterEdges
+
+                                                    else
+                                                        Nothing
+                                                )
                                     }
                                 )
 
                     Nothing ->
-                        Just
-                            { id = GameMap.CountryId countryId
-                            , troopCount = getTroopCount (GameMap.CountryId countryId) neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
-                            , center = country.center |> shift
-                            , color = neutralCountryColor
-                            , polygonPoints = country.polygon
-                            , capitolDots = Nothing
-                            , canBeClicked = getCountryCanBeClicked currentPlayerTurn players gameMap (GameMap.CountryId countryId)
-                            , isBeingMovedFrom = False
-                            , portSegments = Nothing
-                            }
+                        Debug.todo ""
+             -- Just
+             --     { id = GameMap.CountryId countryId
+             --     , troopCount = getTroopCount (GameMap.CountryId countryId) neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
+             --     , center = country.center
+             --     , color = neutralCountryColor
+             --     , polygonPoints = country.polygon
+             --     , capitolDots = Nothing
+             --     , canBeClicked = getCountryCanBeClicked currentPlayerTurn players gameMap (GameMap.CountryId countryId)
+             --     , isBeingMovedFrom = False
+             --     , portSegments = Nothing
+             --     }
             )
         |> Dict.values
         |> List.foldl
@@ -543,7 +569,7 @@ getPlayerCountryAndTroopCounts { players, currentPlayerTurn } =
         |> Dict.map
             (\playerId player ->
                 case player.capitolStatus of
-                    Capitol _ _ ->
+                    Capitol  _ ->
                         { playerId = PlayerId playerId
                         , countryCount = Dict.size player.countryTroopCounts
                         , troopCount = getTotalTroopCountForPlayer player
@@ -619,7 +645,7 @@ isCountryIdCapitol playerId countryId players =
         |> Maybe.map
             (\player ->
                 case player.capitolStatus of
-                    Capitol capitolId _ ->
+                    Capitol capitolId ->
                         capitolId == countryId
 
                     NoCapitol ->
@@ -762,7 +788,7 @@ type PlayerTurnStage
 
 type CapitolStatus
     = NoCapitol
-    | Capitol GameMap.CountryId (Set.Set ( Float, Float ))
+    | Capitol GameMap.CountryId
 
 
 type CountryStatus
@@ -883,7 +909,9 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
                                     { currentPlayer
                                         | countryTroopCounts =
                                             updateTroopCount clickedCountryId neutralTroopCount currentPlayer.countryTroopCounts
-                                        , capitolStatus = Capitol clickedCountryId (GameMap.capitolDotsCoordinates clickedCountry.coordinates ViewHelpers.pixelsPerMapSquare)
+                                        , capitolStatus = Capitol clickedCountryId 
+
+                                        -- , capitolStatus = Capitol clickedCountryId (GameMap.capitolDotsCoordinates clickedCountry.coordinates ViewHelpers.pixelsPerMapSquare)
                                     }
 
                                 updatedPlayers =
@@ -1369,17 +1397,8 @@ getPlayerName playerId players =
         |> Maybe.map .name
 
 
-getPortSegments : GameMap.CountryId -> GameMap.Country -> Players -> Maybe (Set.Set ( ( Float, Float ), ( Float, Float ) ))
-getPortSegments countryId country players =
-    getCountryHasPort countryId players
-        |> Maybe.andThen
-            (\hasPort ->
-                if hasPort then
-                    Just country.waterEdges
 
-                else
-                    Nothing
-            )
+
 
 
 isCountryOwnedByPlayer : PlayerId -> GameMap.CountryId -> Players -> Bool
@@ -1442,7 +1461,7 @@ nextPlayerCheckForDeadPlayers players currentPlayerId =
     case getPlayer nextPlayerId players of
         Just newCurrentPlayer ->
             case newCurrentPlayer |> .capitolStatus of
-                Capitol _ _ ->
+                Capitol _  ->
                     nextPlayerId
 
                 NoCapitol ->
@@ -1520,7 +1539,7 @@ updateForSuccessfulAttack activeGame =
                         |> List.foldl
                             (\player capitols ->
                                 case player.capitolStatus of
-                                    Capitol capitolId _ ->
+                                    Capitol capitolId  ->
                                         capitolId :: capitols
 
                                     NoCapitol ->
