@@ -6,9 +6,11 @@ import ActiveGame
 import Browser.Dom
 import Browser.Events
 import Color
+import Colors
 import Dict
 import Element
 import Element.Background
+import Element.Border
 import Element.Font
 import Element.Input
 import FeatureFlags
@@ -270,7 +272,38 @@ mapSelect mapsRemoteData selectedMapId =
                     maps
                         |> List.map
                             (\map ->
-                                Element.Input.option (map.id |> GameMap.idToString) (Element.text map.name)
+                                Element.Input.optionWith
+                                    (map.id |> GameMap.idToString)
+                                    (\optionState ->
+                                        let
+                                            border =
+                                                case optionState of
+                                                    Element.Input.Idle ->
+                                                        [ Element.Border.color (Colors.white |> Colors.toElementColor)
+                                                        , Element.Border.solid
+                                                        , Element.Border.width 2
+                                                        ]
+
+                                                    Element.Input.Focused ->
+                                                        [ Element.Border.color (Colors.white |> Colors.toElementColor)
+                                                        , Element.Border.solid
+                                                        , Element.Border.width 2
+                                                        ]
+
+                                                    Element.Input.Selected ->
+                                                        [ Element.Border.color (Colors.blue |> Colors.toElementColor)
+                                                        , Element.Border.solid
+                                                        , Element.Border.width 2
+                                                        ]
+                                        in
+                                        Element.row
+                                            (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
+                                            [ Element.el
+                                                [ Element.width (Element.px 50) ]
+                                                (GameMap.view 100 map.countries ( 100, 100 ) |> Element.html)
+                                            , Element.text map.name
+                                            ]
+                                    )
                             )
                 }
 
