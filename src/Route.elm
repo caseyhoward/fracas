@@ -8,10 +8,8 @@ module Route exposing
 
 import ActiveGame
 import Browser.Navigation as Nav
-import Game
 import Html exposing (Attribute)
 import Html.Attributes as Attr
-import Map
 import Player
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
@@ -23,8 +21,6 @@ import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
 
 type Route
     = ConfiguringGame
-    | ActiveGame ActiveGame.Id
-    | EditMap Map.Id
     | NewMap
     | Game ActiveGame.Id ActiveGame.PlayerId
 
@@ -58,13 +54,8 @@ parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
         , Parser.map ConfiguringGame (s "games" </> s "new")
-        , Parser.map Game (s "active-games" </> ActiveGame.urlParser </> ActiveGame.playerUrlParser)
-        , Parser.map ActiveGame (s "active-games" </> ActiveGame.urlParser)
-
-        -- , Parser.map Game (s "games" </> Game.urlParser)
         , Parser.map Game (s "games" </> ActiveGame.urlParser </> ActiveGame.playerUrlParser)
         , Parser.map NewMap (s "maps" </> s "new")
-        , Parser.map EditMap (s "maps" </> Map.urlParser)
         ]
 
 
@@ -75,12 +66,6 @@ routeToString page =
             case page of
                 ConfiguringGame ->
                     [ "games", "new" ]
-
-                ActiveGame activeGameId ->
-                    [ "active-games", ActiveGame.idToString activeGameId ]
-
-                EditMap mapId ->
-                    [ "maps", Map.idToString mapId ]
 
                 Game gameId playerId ->
                     [ "games", ActiveGame.idToString gameId, ActiveGame.playerIdToString playerId ]

@@ -14,13 +14,11 @@ import Element.Border
 import Element.Font
 import Element.Input
 import FeatureFlags
-import Game
 import GameMap
 import Graphql.Http
 import Html
 import Html.Events
 import Json.Decode
-import Player
 import Random
 import Random.Dict
 import Random.List
