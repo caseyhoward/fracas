@@ -14,7 +14,7 @@ import Color
 import Element
 import Element.Background
 import Element.Input
-import GameMap
+import Map
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import Html
@@ -29,8 +29,8 @@ type alias Model =
     { session : Session.Session
     , rawMap : String
     , name : String
-    , mapPreview : GameMap.NewMap
-    , savingMap : RemoteData.RemoteData (Graphql.Http.Error GameMap.GameMap) GameMap.GameMap
+    , mapPreview : Map.NewMap
+    , savingMap : RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map
     }
 
 
@@ -40,7 +40,7 @@ init session =
       , name = ""
       , rawMap = ""
       , savingMap = RemoteData.NotAsked
-      , mapPreview = GameMap.parse "" ""
+      , mapPreview = Map.parse "" ""
       }
     , Cmd.none
     )
@@ -48,7 +48,7 @@ init session =
 
 type Msg
     = CreateMap
-    | CreatedMap (RemoteData.RemoteData (Graphql.Http.Error GameMap.GameMap) GameMap.GameMap)
+    | CreatedMap (RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map)
     | UpdateRawMap String
     | UpdateName String
     | WindowResized Int Int
@@ -62,7 +62,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         CreateMap ->
-            ( model, GameMap.create model.mapPreview CreatedMap )
+            ( model, Map.create model.mapPreview CreatedMap )
 
         CreatedMap savingMap ->
             ( { model | savingMap = savingMap }, Cmd.none )
@@ -71,7 +71,7 @@ update msg model =
             ( { model | name = name }, Cmd.none )
 
         UpdateRawMap rawMap ->
-            ( { model | rawMap = rawMap, mapPreview = GameMap.parse model.name rawMap }, Cmd.none )
+            ( { model | rawMap = rawMap, mapPreview = Map.parse model.name rawMap }, Cmd.none )
 
         WindowResized width height ->
             ( { model | session = model.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
@@ -108,7 +108,7 @@ view model =
                     , text = model.rawMap
                     , spellcheck = False
                     }
-                , GameMap.view ViewHelpers.pixelsPerMapSquare model.mapPreview.countries model.mapPreview.dimensions |> Element.html |> Element.el [ Element.width Element.fill ]
+                , Map.view ViewHelpers.pixelsPerMapSquare model.mapPreview.countries model.mapPreview.dimensions |> Element.html |> Element.el [ Element.width Element.fill ]
                 , Element.Input.button
                     (ViewHelpers.defaultButtonAttributes
                         ++ [ Element.width (Element.px 120)

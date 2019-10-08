@@ -5,7 +5,7 @@ import Browser.Events
 import Browser.Navigation
 import Html
 import Page
-import Page.ActiveGame
+import Page.Game
 import Page.NewGame
 import Page.NewMap
 import Route
@@ -19,7 +19,7 @@ import Url
 
 type Model
     = NewGame Page.NewGame.Model
-    | ActiveGame Page.ActiveGame.Model
+    | Game Page.Game.Model
     | NewMap Page.NewMap.Model
     | Redirect Session.Session
 
@@ -50,7 +50,7 @@ type Msg
     = ChangedRoute (Maybe Route.Route)
     | ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
-    | GotActiveGameMsg Page.ActiveGame.Msg
+    | GotGameMsg Page.Game.Msg
     | GotNewGameMsg Page.NewGame.Msg
     | GotNewMapMsg Page.NewMap.Msg
 
@@ -74,9 +74,9 @@ update msg model =
         ( ChangedRoute route, _ ) ->
             changeRouteTo route model
 
-        ( GotActiveGameMsg subMsg, ActiveGame activeGame ) ->
-            Page.ActiveGame.update subMsg activeGame
-                |> updateWith ActiveGame GotActiveGameMsg
+        ( GotGameMsg subMsg, Game activeGame ) ->
+            Page.Game.update subMsg activeGame
+                |> updateWith Game GotGameMsg
 
         ( GotNewMapMsg subMsg, NewMap newMap ) ->
             Page.NewMap.update subMsg newMap
@@ -110,8 +110,8 @@ changeRouteTo maybeRoute model =
                 |> updateWith NewGame GotNewGameMsg
 
         Just (Route.Game gameId playerId) ->
-            Page.ActiveGame.init session gameId playerId
-                |> updateWith ActiveGame GotActiveGameMsg
+            Page.Game.init session gameId playerId
+                |> updateWith Game GotGameMsg
 
         Just Route.NewMap ->
             Page.NewMap.init session
@@ -127,8 +127,8 @@ toSession model =
         NewGame newGame ->
             newGame |> Page.NewGame.toSession
 
-        ActiveGame activeGame ->
-            activeGame |> Page.ActiveGame.toSession
+        Game activeGame ->
+            activeGame |> Page.Game.toSession
 
         NewMap newMap ->
             newMap |> Page.NewMap.toSession
@@ -157,8 +157,8 @@ view model =
         NewGame newGame ->
             viewPage Page.NewGame GotNewGameMsg (Page.NewGame.view newGame)
 
-        ActiveGame activeGame ->
-            viewPage Page.ActiveGame GotActiveGameMsg (Page.ActiveGame.view activeGame)
+        Game activeGame ->
+            viewPage Page.Game GotGameMsg (Page.Game.view activeGame)
 
         NewMap newMap ->
             viewPage Page.NewMap GotNewMapMsg (Page.NewMap.view newMap)
@@ -177,8 +177,8 @@ subscriptions model =
         NewGame newGame ->
             Sub.map GotNewGameMsg (Page.NewGame.subscriptions newGame)
 
-        ActiveGame activeGame ->
-            Sub.map GotActiveGameMsg (Page.ActiveGame.subscriptions activeGame)
+        Game activeGame ->
+            Sub.map GotGameMsg (Page.Game.subscriptions activeGame)
 
         NewMap newMap ->
             Sub.map GotNewMapMsg (Page.NewMap.subscriptions newMap)

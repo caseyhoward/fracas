@@ -1,12 +1,12 @@
-module GameMap exposing
+module Map exposing
     ( BorderSegment
     , Country
     , CountryId(..)
-    , GameMap
+    , Map
     , Id(..)
     , NewMap
     , Point
-    , RawGameMap
+    , RawMap
     , ScaledCountry
     , ScaledPoint
     , create
@@ -51,7 +51,7 @@ import Set
 import ViewHelpers
 
 
-type alias GameMap =
+type alias Map =
     { id : Id
     , name : String
     , countries : Dict.Dict String Country
@@ -104,7 +104,7 @@ type alias Area =
     Set.Set ( Int, Int )
 
 
-type alias RawGameMap =
+type alias RawMap =
     Dict.Dict ( Int, Int ) String
 
 
@@ -149,7 +149,7 @@ idToString (Id id) =
     id
 
 
-getAll : (RemoteData.RemoteData (Graphql.Http.Error (List GameMap)) (List GameMap) -> msg) -> Cmd msg
+getAll : (RemoteData.RemoteData (Graphql.Http.Error (List Map)) (List Map) -> msg) -> Cmd msg
 getAll toMsg =
     Api.Query.maps mapSelection
         |> Graphql.Http.queryRequest "http://localhost:4000"
@@ -220,7 +220,7 @@ mapSelectionSet =
         (Api.Object.Map.dimensions dimensionsSelection)
 
 
-mapSelection : SelectionSet GameMap ApiObject.Map
+mapSelection : SelectionSet Map ApiObject.Map
 mapSelection =
     mapSelectionSet
         |> Graphql.SelectionSet.map mapSelectionSetToMap
@@ -236,7 +236,7 @@ segmentToGraphql ( ( x1, y1 ), ( x2, y2 ) ) =
     { point1 = { x = x1, y = y1 }, point2 = { x = x2, y = y2 } }
 
 
-create : NewMap -> (RemoteData.RemoteData (Graphql.Http.Error GameMap) GameMap -> msg) -> Cmd msg
+create : NewMap -> (RemoteData.RemoteData (Graphql.Http.Error Map) Map -> msg) -> Cmd msg
 create newMap toMsg =
     let
         countryInputs : List Api.InputObject.CountryInput
@@ -308,7 +308,7 @@ create newMap toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-mapSelectionSetToMap : MapSelectionSet -> GameMap
+mapSelectionSetToMap : MapSelectionSet -> Map
 mapSelectionSetToMap selectionSet =
     let
         countrySelectionSetsToCountries : List CountrySelectionSet -> Dict.Dict String Country
@@ -345,7 +345,7 @@ errorToString (Error error) =
     error
 
 
-get : Id -> Dict.Dict String GameMap -> Result Error GameMap
+get : Id -> Dict.Dict String Map -> Result Error Map
 get (Id id) gameMaps =
     case Dict.get id gameMaps of
         Just gameMap ->
@@ -355,7 +355,7 @@ get (Id id) gameMaps =
             Error "Game map not found" |> Err
 
 
-getCountriesThatCanReachCountryThroughWater : GameMap -> CountryId -> List CountryId
+getCountriesThatCanReachCountryThroughWater : Map -> CountryId -> List CountryId
 getCountriesThatCanReachCountryThroughWater gameMap countryId =
     let
         neighboringBodiesOfWater =
@@ -489,7 +489,7 @@ updateCountry (CountryId countryId) country countries =
 -- NOT EXPOSED
 
 
-parseRawMap : String -> RawGameMap
+parseRawMap : String -> RawMap
 parseRawMap text =
     let
         rowStrings : List String
@@ -498,21 +498,21 @@ parseRawMap text =
                 |> List.foldl
                     (\row result ->
                         case result of
-                            ( rawGameMap, rowIndex ) ->
+                            ( rawMap, rowIndex ) ->
                                 if rowIndex then
                                     if row /= "{Country Names}" then
-                                        ( row :: rawGameMap
+                                        ( row :: rawMap
                                         , True
                                         )
 
                                     else
-                                        ( rawGameMap, False )
+                                        ( rawMap, False )
 
                                 else if row == "{Map}" then
-                                    ( rawGameMap, True )
+                                    ( rawMap, True )
 
                                 else
-                                    ( rawGameMap, False )
+                                    ( rawMap, False )
                     )
                     ( [], False )
                 |> Tuple.first
@@ -547,7 +547,7 @@ parseRawMap text =
             Dict.empty
 
 
-getMapDimensions : RawGameMap -> ( Int, Int )
+getMapDimensions : RawMap -> ( Int, Int )
 getMapDimensions map =
     map
         |> Dict.keys
@@ -568,7 +568,7 @@ getMapDimensions map =
             ( 0, 0 )
 
 
-updateCountryWhileParsing : String -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Country -> Country
+updateCountryWhileParsing : String -> ( Int, Int ) -> ( Int, Int ) -> RawMap -> Country -> Country
 updateCountryWhileParsing countryId coordinates mapDimensions rawMap country =
     let
         ( neighboringCountries, neighboringBodiesOfWater ) =
@@ -601,7 +601,7 @@ updateCountryWhileParsing countryId coordinates mapDimensions rawMap country =
     }
 
 
-updateBodyOfWater : String -> ( Int, Int ) -> ( Int, Int ) -> RawGameMap -> Set.Set String -> Set.Set String
+updateBodyOfWater : String -> ( Int, Int ) -> ( Int, Int ) -> RawMap -> Set.Set String -> Set.Set String
 updateBodyOfWater bodyOfWaterId coordinates mapDimensions rawMap bodyOfWaterNeighborCountries =
     let
         neighboringCountries =

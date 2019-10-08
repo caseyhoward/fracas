@@ -6,7 +6,7 @@ module Route exposing
     , replaceUrl
     )
 
-import ActiveGame
+import Game
 import Browser.Navigation as Nav
 import Html exposing (Attribute)
 import Html.Attributes as Attr
@@ -22,7 +22,7 @@ import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
 type Route
     = ConfiguringGame
     | NewMap
-    | Game ActiveGame.Id ActiveGame.PlayerId
+    | Game Game.Id Game.PlayerId
 
 
 href : Route -> Attribute msg
@@ -54,7 +54,7 @@ parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
         , Parser.map ConfiguringGame (s "games" </> s "new")
-        , Parser.map Game (s "games" </> ActiveGame.urlParser </> ActiveGame.playerUrlParser)
+        , Parser.map Game (s "games" </> Game.urlParser </> Game.playerUrlParser)
         , Parser.map NewMap (s "maps" </> s "new")
         ]
 
@@ -68,7 +68,7 @@ routeToString page =
                     [ "games", "new" ]
 
                 Game gameId playerId ->
-                    [ "games", ActiveGame.idToString gameId, ActiveGame.playerIdToString playerId ]
+                    [ "games", Game.idToString gameId, Game.playerIdToString playerId ]
 
                 NewMap ->
                     [ "maps", "new" ]

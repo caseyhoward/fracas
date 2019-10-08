@@ -1,4 +1,4 @@
-module Page.ActiveGame exposing
+module Page.Game exposing
     ( Model
     , Msg
     , init
@@ -8,7 +8,7 @@ module Page.ActiveGame exposing
     , view
     )
 
-import ActiveGame
+import Game
 import Browser.Events
 import Collage
 import Collage.Events
@@ -23,7 +23,7 @@ import Element.Border
 import Element.Events
 import Element.Font
 import Element.Input
-import GameMap
+import Map
 import Graphql.Http
 import Html
 import Html.Attributes
@@ -43,30 +43,30 @@ type Model
 
 
 type alias GameLoadingModel =
-    { activeGame : RemoteData.RemoteData (Graphql.Http.Error ActiveGame.ActiveGame) ActiveGame.ActiveGame
+    { activeGame : RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game
     , error : Maybe String
     , session : Session.Session
-    , playerId : ActiveGame.PlayerId
+    , playerId : Game.PlayerId
     }
 
 
 type alias GameLoadedModel =
-    { activeGame : ActiveGame.ActiveGame
+    { activeGame : Game.Game
     , showAvailableMoves : Bool
     , session : Session.Session
     , error : Maybe String
-    , playerId : ActiveGame.PlayerId
+    , playerId : Game.PlayerId
     , countryBorderHelperOutlineStatus : CountryBorderHelperOutlineStatus
     }
 
 
 type CountryBorderHelperOutlineStatus
-    = CountryBorderHelperOutlineWaitingForDelay GameMap.CountryId
+    = CountryBorderHelperOutlineWaitingForDelay Map.CountryId
     | CountryBorderHelperOutlineInactive
-    | CountryBorderHelperOutlineActive GameMap.CountryId
+    | CountryBorderHelperOutlineActive Map.CountryId
 
 
-init : Session.Session -> ActiveGame.Id -> ActiveGame.PlayerId -> ( Model, Cmd Msg )
+init : Session.Session -> Game.Id -> Game.PlayerId -> ( Model, Cmd Msg )
 init session activeGameId playerId =
     ( GameLoading
         { activeGame = RemoteData.NotAsked
@@ -74,7 +74,7 @@ init session activeGameId playerId =
         , playerId = playerId
         , session = session
         }
-    , ActiveGame.get activeGameId GotGame
+    , Game.get activeGameId GotGame
     )
 
 
@@ -83,10 +83,10 @@ init session activeGameId playerId =
 
 
 type Msg
-    = CountryMouseUp GameMap.CountryId
-    | CountryMouseDown GameMap.CountryId
-    | CountryMouseOut GameMap.CountryId
-    | GotGame (RemoteData.RemoteData (Graphql.Http.Error ActiveGame.ActiveGame) ActiveGame.ActiveGame)
+    = CountryMouseUp Map.CountryId
+    | CountryMouseDown Map.CountryId
+    | CountryMouseOut Map.CountryId
+    | GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game)
     | MouseUp
     | Pass
     | UpdateNumberOfTroopsToMove String
@@ -144,13 +144,13 @@ update msg model =
                     ( stopShowingCountryHelperOutlines gameLoadedModel |> GameLoaded, Cmd.none )
 
                 Pass ->
-                    ( updateModelWithActiveGameResult (ActiveGame.pass gameLoadedModel.activeGame) gameLoadedModel |> GameLoaded, Cmd.none )
+                    ( updateModelWithGameResult (Game.pass gameLoadedModel.activeGame) gameLoadedModel |> GameLoaded, Cmd.none )
 
                 UpdateNumberOfTroopsToMove numberOfTroopsToMoveString ->
-                    ( GameLoaded { gameLoadedModel | activeGame = ActiveGame.updateNumberOfTroopsToMove numberOfTroopsToMoveString gameLoadedModel.activeGame }, Cmd.none )
+                    ( GameLoaded { gameLoadedModel | activeGame = Game.updateNumberOfTroopsToMove numberOfTroopsToMoveString gameLoadedModel.activeGame }, Cmd.none )
 
                 CancelMovingTroops ->
-                    ( GameLoaded { gameLoadedModel | activeGame = ActiveGame.cancelMovingTroops gameLoadedModel.activeGame }, Cmd.none )
+                    ( GameLoaded { gameLoadedModel | activeGame = Game.cancelMovingTroops gameLoadedModel.activeGame }, Cmd.none )
 
                 ShowCountryBorderHelper ->
                     ( makeCountryHelperOutlinesActive gameLoadedModel |> GameLoaded, Cmd.none )
@@ -162,17 +162,17 @@ update msg model =
                     ( model, Cmd.none )
 
 
-updateModelWithActiveGameResult : Result ActiveGame.Error ActiveGame.ActiveGame -> GameLoadedModel -> GameLoadedModel
-updateModelWithActiveGameResult result model =
+updateModelWithGameResult : Result Game.Error Game.Game -> GameLoadedModel -> GameLoadedModel
+updateModelWithGameResult result model =
     case result of
         Ok activeGame ->
             { model | activeGame = activeGame, error = Nothing }
 
         Err error ->
-            { model | error = Just (ActiveGame.errorToString error) }
+            { model | error = Just (Game.errorToString error) }
 
 
-handleCountryMouseUpFromPlayer : GameMap.CountryId -> GameLoadedModel -> GameLoadedModel
+handleCountryMouseUpFromPlayer : Map.CountryId -> GameLoadedModel -> GameLoadedModel
 handleCountryMouseUpFromPlayer clickedCountryId model =
     let
         updatedModel =
@@ -185,12 +185,12 @@ handleCountryMouseUpFromPlayer clickedCountryId model =
 
                 CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
                     if clickedCountryId == countryToShowInfoForId then
-                        case ActiveGame.countryClicked clickedCountryId model.activeGame of
-                            Ok updatedActiveGame ->
-                                { model | activeGame = updatedActiveGame }
+                        case Game.countryClicked clickedCountryId model.activeGame of
+                            Ok updatedGame ->
+                                { model | activeGame = updatedGame }
 
                             Err error ->
-                                { model | error = Just (ActiveGame.errorToString error) }
+                                { model | error = Just (Game.errorToString error) }
 
                     else
                         model
@@ -198,12 +198,12 @@ handleCountryMouseUpFromPlayer clickedCountryId model =
     { updatedModel | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
 
 
-handleCountryMouseDown : GameMap.CountryId -> GameLoadedModel -> GameLoadedModel
+handleCountryMouseDown : Map.CountryId -> GameLoadedModel -> GameLoadedModel
 handleCountryMouseDown countryId activeGame =
     { activeGame | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineWaitingForDelay countryId }
 
 
-handleCountryMouseOut : GameMap.CountryId -> GameLoadedModel -> GameLoadedModel
+handleCountryMouseOut : Map.CountryId -> GameLoadedModel -> GameLoadedModel
 handleCountryMouseOut mouseOutCountryId activeGame =
     case activeGame.countryBorderHelperOutlineStatus of
         CountryBorderHelperOutlineWaitingForDelay countryId ->
@@ -284,7 +284,7 @@ countryBorderColor =
     Colors.rgb255 100 100 100
 
 
-viewPlayingGameMobile : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
+viewPlayingGameMobile : Game.Game -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
 viewPlayingGameMobile activeGame showAvailableMoves countryBorderHelperOutlineStatus maybeError device =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.column
@@ -320,7 +320,7 @@ viewPlayingGameMobile activeGame showAvailableMoves countryBorderHelperOutlineSt
         )
 
 
-viewPlayingGameDesktop : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
+viewPlayingGameDesktop : Game.Game -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
 viewPlayingGameDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus maybeError device =
     Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
         (Element.row
@@ -356,7 +356,7 @@ viewPlayingGameDesktop activeGame showAvailableMoves countryBorderHelperOutlineS
         )
 
 
-viewInfoPanelPhone : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Element.Element Msg
+viewInfoPanelPhone : Game.Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Element Msg
 viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatus =
     Element.column
         [ Element.width Element.fill
@@ -376,7 +376,7 @@ viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatu
         ]
 
 
-viewInfoPanelDesktop : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Element.Element Msg
+viewInfoPanelDesktop : Game.Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Element Msg
 viewInfoPanelDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus =
     Element.column
         [ Element.width (Element.px 200)
@@ -412,13 +412,13 @@ viewShowAvailableMoves showAvailableMoves =
         ]
 
 
-viewPassButtonIfNecessary : ActiveGame.PlayerTurn -> Element.Element Msg
+viewPassButtonIfNecessary : Game.PlayerTurn -> Element.Element Msg
 viewPassButtonIfNecessary currentPlayerTurn =
     Element.el
         [ Element.width Element.fill
         , Element.height (Element.px 50)
         ]
-        (if ActiveGame.canCurrentPlayerPass currentPlayerTurn then
+        (if Game.canCurrentPlayerPass currentPlayerTurn then
             Element.Input.button
                 (ViewHelpers.defaultButtonAttributes
                     ++ [ Element.width (Element.px 120)
@@ -439,29 +439,29 @@ playerAndTroopCountBorderColor =
     Colors.darkGray |> ViewHelpers.colorToElementColor
 
 
-viewPlayerCountryAndTroopCounts : ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
+viewPlayerCountryAndTroopCounts : Game.PlayerTurn -> Dict.Dict Int Game.Player -> Element.Element Msg
 viewPlayerCountryAndTroopCounts currentPlayerTurn players =
     Element.column
         [ Element.spacing 10
         , Element.width Element.fill
         ]
-        (ActiveGame.getPlayerCountryAndTroopCounts { currentPlayerTurn = currentPlayerTurn, players = players }
-            |> List.map (viewPlayerTroopCount (ActiveGame.getCurrentPlayer currentPlayerTurn) players)
+        (Game.getPlayerCountryAndTroopCounts { currentPlayerTurn = currentPlayerTurn, players = players }
+            |> List.map (viewPlayerTroopCount (Game.getCurrentPlayer currentPlayerTurn) players)
         )
 
 
-viewPlayerCountryAndTroopCountsMobile : ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
+viewPlayerCountryAndTroopCountsMobile : Game.PlayerTurn -> Dict.Dict Int Game.Player -> Element.Element Msg
 viewPlayerCountryAndTroopCountsMobile currentPlayerTurn players =
     Element.wrappedRow
         [ Element.spacing 10
         , Element.width Element.fill
         ]
-        (ActiveGame.getPlayerCountryAndTroopCounts { currentPlayerTurn = currentPlayerTurn, players = players }
-            |> List.map (viewPlayerTroopCount (ActiveGame.getCurrentPlayer currentPlayerTurn) players)
+        (Game.getPlayerCountryAndTroopCounts { currentPlayerTurn = currentPlayerTurn, players = players }
+            |> List.map (viewPlayerTroopCount (Game.getCurrentPlayer currentPlayerTurn) players)
         )
 
 
-attackerInfo : ActiveGame.PlayerId -> ActiveGame.ActiveGame -> Dict.Dict Int TroopCount.TroopCount -> Element.Element Msg
+attackerInfo : Game.PlayerId -> Game.Game -> Dict.Dict Int TroopCount.TroopCount -> Element.Element Msg
 attackerInfo countyOwnerPlayerId activeGame attackerStrengthPerPlayer =
     Element.column
         [ Element.width Element.fill, Element.spacing 3 ]
@@ -469,11 +469,11 @@ attackerInfo countyOwnerPlayerId activeGame attackerStrengthPerPlayer =
             |> Dict.toList
             |> List.filter
                 (\( playerId, troopCount ) ->
-                    ActiveGame.PlayerId playerId /= countyOwnerPlayerId && troopCount /= TroopCount.noTroops
+                    Game.PlayerId playerId /= countyOwnerPlayerId && troopCount /= TroopCount.noTroops
                 )
             |> List.map
                 (\( playerId, troopCount ) ->
-                    case ActiveGame.getPlayer (ActiveGame.PlayerId playerId) activeGame.players of
+                    case Game.getPlayer (Game.PlayerId playerId) activeGame.players of
                         Just player ->
                             Element.row
                                 [ Element.width Element.fill
@@ -493,13 +493,13 @@ attackerInfo countyOwnerPlayerId activeGame attackerStrengthPerPlayer =
         )
 
 
-viewCountryInfo : ActiveGame.ActiveGame -> CountryBorderHelperOutlineStatus -> Element.Element Msg
+viewCountryInfo : Game.Game -> CountryBorderHelperOutlineStatus -> Element.Element Msg
 viewCountryInfo activeGame countryBorderHelperOutlineStatus =
     case countryBorderHelperOutlineStatus of
         CountryBorderHelperOutlineActive countryToShowInfoForId ->
-            case ActiveGame.findCountryOwner countryToShowInfoForId activeGame.players of
+            case Game.findCountryOwner countryToShowInfoForId activeGame.players of
                 Just playerId ->
-                    case ActiveGame.getPlayer playerId activeGame.players of
+                    case Game.getPlayer playerId activeGame.players of
                         Just player ->
                             Element.column
                                 [ Element.width Element.fill, Element.spacing 5 ]
@@ -521,7 +521,7 @@ viewCountryInfo activeGame countryBorderHelperOutlineStatus =
                                     [ Element.el [] (Element.text "Defense")
                                     , Element.el
                                         [ Element.alignRight ]
-                                        (ActiveGame.getCountryDefenseStrength activeGame.map activeGame.players countryToShowInfoForId |> TroopCount.toString |> Element.text)
+                                        (Game.getCountryDefenseStrength activeGame.map activeGame.players countryToShowInfoForId |> TroopCount.toString |> Element.text)
                                     ]
                                 , Element.column
                                     [ Element.width Element.fill
@@ -535,7 +535,7 @@ viewCountryInfo activeGame countryBorderHelperOutlineStatus =
                                     [ Element.el
                                         [ Element.width Element.fill ]
                                         (Element.text "Opponent attack")
-                                    , ActiveGame.getAttackStrengthPerPlayer activeGame.map activeGame.players countryToShowInfoForId
+                                    , Game.getAttackStrengthPerPlayer activeGame.map activeGame.players countryToShowInfoForId
                                         |> attackerInfo playerId activeGame
                                     ]
                                 ]
@@ -551,9 +551,9 @@ viewCountryInfo activeGame countryBorderHelperOutlineStatus =
 
 
 viewPlayerTroopCount :
-    ActiveGame.PlayerId
-    -> Dict.Dict Int ActiveGame.Player
-    -> { playerId : ActiveGame.PlayerId, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
+    Game.PlayerId
+    -> Dict.Dict Int Game.Player
+    -> { playerId : Game.PlayerId, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
     -> Element.Element Msg
 viewPlayerTroopCount currentPlayerId players status =
     let
@@ -564,7 +564,7 @@ viewPlayerTroopCount currentPlayerId players status =
             else
                 Colors.darkGray |> ViewHelpers.colorToElementColor
     in
-    case ActiveGame.getPlayer status.playerId players of
+    case Game.getPlayer status.playerId players of
         Just player ->
             Element.column
                 ([ Element.spacing 1
@@ -614,7 +614,7 @@ viewPlayerTroopCount currentPlayerId players status =
             Element.none
 
 
-playerAndTroopCountBorder : ActiveGame.PlayerId -> ActiveGame.PlayerId -> List (Element.Attribute Msg)
+playerAndTroopCountBorder : Game.PlayerId -> Game.PlayerId -> List (Element.Attribute Msg)
 playerAndTroopCountBorder currentPlayerId playerIdToDisplay =
     if currentPlayerId == playerIdToDisplay then
         [ Element.Border.solid
@@ -640,12 +640,12 @@ defaultLabelAttributes =
     ]
 
 
-viewConfigureTroopCountIfNecessary : ActiveGame.PlayerTurn -> Element.Element Msg
+viewConfigureTroopCountIfNecessary : Game.PlayerTurn -> Element.Element Msg
 viewConfigureTroopCountIfNecessary currentPlayerTurn =
     Element.el
         [ Element.width Element.fill
         ]
-        (case currentPlayerTurn |> ActiveGame.troopsToMove of
+        (case currentPlayerTurn |> Game.troopsToMove of
             Just numberOfTroopsToMove ->
                 Element.column
                     [ Element.width Element.fill
@@ -675,25 +675,25 @@ viewConfigureTroopCountIfNecessary currentPlayerTurn =
         )
 
 
-viewPlayerTurnStatus : Int -> Int -> ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
+viewPlayerTurnStatus : Int -> Int -> Game.PlayerTurn -> Dict.Dict Int Game.Player -> Element.Element Msg
 viewPlayerTurnStatus height fontSize playerTurn players =
     Element.el
         [ Element.width Element.fill
         , Element.height (Element.px height)
-        , Element.Background.color (ActiveGame.getPlayerColorFromPlayerTurn players playerTurn |> ViewHelpers.colorToElementColor)
+        , Element.Background.color (Game.getPlayerColorFromPlayerTurn players playerTurn |> ViewHelpers.colorToElementColor)
         , Element.padding 5
         ]
         (Element.el
             [ Element.width Element.fill ]
             (Element.paragraph [ Element.Font.size fontSize ]
                 [ Element.text
-                    (ActiveGame.playerTurnToString players playerTurn)
+                    (Game.playerTurnToString players playerTurn)
                 ]
             )
         )
 
 
-getWaterCollage : GameMap.GameMap -> Collage.Collage Msg
+getWaterCollage : Map.Map -> Collage.Collage Msg
 getWaterCollage gameMap =
     let
         background =
@@ -715,14 +715,14 @@ getWaterCollage gameMap =
     Collage.group [ backgroundBorder, backgroundWater ]
 
 
-getGameBoardHtml : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Element.Device -> Html.Html Msg
+getGameBoardHtml : Game.Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Device -> Html.Html Msg
 getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus device =
-    case ActiveGame.getCountriesToRender activeGame.map activeGame.players activeGame.currentPlayerTurn activeGame.neutralCountryTroops of
+    case Game.getCountriesToRender activeGame.map activeGame.players activeGame.currentPlayerTurn activeGame.neutralCountryTroops of
         Just countriesToRender ->
             let
                 waterCollage : Collage.Collage Msg
                 waterCollage =
-                    GameMap.getWaterCollage 100 activeGame.map.dimensions
+                    Map.getWaterCollage 100 activeGame.map.dimensions
 
                 countriesCollage =
                     countriesToRender
@@ -809,7 +809,7 @@ getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus 
             Html.div [] [ Html.text "Kaboom" ]
 
 
-countryHighlight : ActiveGame.CountryToRender -> Collage.Collage Msg
+countryHighlight : Game.CountryToRender -> Collage.Collage Msg
 countryHighlight countryToRender =
     let
         maybeCountryCanBeClickedHighlight =
@@ -831,7 +831,7 @@ countryHighlight countryToRender =
         |> Collage.group
 
 
-getEventHandlersForCountry : ActiveGame.CountryToRender -> Collage.Collage Msg
+getEventHandlersForCountry : Game.CountryToRender -> Collage.Collage Msg
 getEventHandlersForCountry countryToRender =
     countryToRender.polygonPoints
         |> Collage.polygon
@@ -841,7 +841,7 @@ getEventHandlersForCountry countryToRender =
         |> Collage.Events.onMouseLeave (\_ -> CountryMouseOut countryToRender.id)
 
 
-getPortCollage : ActiveGame.CountryToRender -> Collage.Collage Msg
+getPortCollage : Game.CountryToRender -> Collage.Collage Msg
 getPortCollage countryToRender =
     (case countryToRender.portSegments of
         Just portSegments ->
@@ -853,7 +853,7 @@ getPortCollage countryToRender =
         |> Collage.group
 
 
-countryHighlightCollage : Float -> ActiveGame.CountryToRender -> Collage.Collage Msg
+countryHighlightCollage : Float -> Game.CountryToRender -> Collage.Collage Msg
 countryHighlightCollage scale countryToRender =
     let
         ( centerX, centerY ) =
@@ -879,14 +879,14 @@ countryCanBeClickedColor =
     Colors.white
 
 
-getGrayedOutCountryCollage : ActiveGame.CountryToRender -> Collage.Collage Msg
+getGrayedOutCountryCollage : Game.CountryToRender -> Collage.Collage Msg
 getGrayedOutCountryCollage countryToRender =
     countryToRender.polygonPoints
         |> Collage.polygon
         |> Collage.filled (Colors.transparency 0.5 |> Collage.uniform)
 
 
-getTroopCountCollage : Int -> ActiveGame.CountryToRender -> Collage.Collage Msg
+getTroopCountCollage : Int -> Game.CountryToRender -> Collage.Collage Msg
 getTroopCountCollage fontSize countryToRender =
     if TroopCount.hasTroops countryToRender.troopCount then
         countryToRender.troopCount
@@ -901,7 +901,7 @@ getTroopCountCollage fontSize countryToRender =
         Collage.group []
 
 
-getCountryCollage : ActiveGame.CountryToRender -> Collage.Collage Msg
+getCountryCollage : Game.CountryToRender -> Collage.Collage Msg
 getCountryCollage countryToRender =
     let
         countryPolygon =
@@ -921,7 +921,7 @@ getCountryCollage countryToRender =
     Collage.group [ fill, border ]
 
 
-renderCapitolDots : ActiveGame.CountryToRender -> Collage.Collage Msg
+renderCapitolDots : Game.CountryToRender -> Collage.Collage Msg
 renderCapitolDots countryToRender =
     let
         ( capitolDot, capitolDotsCoords ) =
@@ -949,7 +949,7 @@ renderCapitolDots countryToRender =
         |> Collage.group
 
 
-getCountryInfoPolygonBorder : GameMap.GameMap -> ActiveGame.Players -> CountryBorderHelperOutlineStatus -> ActiveGame.CountryToRender -> Collage.Collage Msg
+getCountryInfoPolygonBorder : Map.Map -> Game.Players -> CountryBorderHelperOutlineStatus -> Game.CountryToRender -> Collage.Collage Msg
 getCountryInfoPolygonBorder gameMap players countryBorderHelperOutlineStatus countryToRender =
     case getCountryInfoStatus gameMap players countryBorderHelperOutlineStatus countryToRender.id of
         CountryInfoSelectedCountry ->
@@ -984,17 +984,17 @@ type CountryInfoStatus
     | NoInfo
 
 
-getCountryInfoStatus : GameMap.GameMap -> ActiveGame.Players -> CountryBorderHelperOutlineStatus -> GameMap.CountryId -> CountryInfoStatus
+getCountryInfoStatus : Map.Map -> Game.Players -> CountryBorderHelperOutlineStatus -> Map.CountryId -> CountryInfoStatus
 getCountryInfoStatus gameMap players countryBorderHelperOutlineStatus countryId =
     case countryBorderHelperOutlineStatus of
         CountryBorderHelperOutlineActive countryToShowInfoForId ->
             if countryToShowInfoForId == countryId then
                 CountryInfoSelectedCountry
 
-            else if ActiveGame.isCountryDefending gameMap players countryToShowInfoForId countryId then
+            else if Game.isCountryDefending gameMap players countryToShowInfoForId countryId then
                 CountryInfoDefending
 
-            else if ActiveGame.isCountryAttacking gameMap players countryToShowInfoForId countryId then
+            else if Game.isCountryAttacking gameMap players countryToShowInfoForId countryId then
                 CountryInfoAttacking
 
             else
@@ -1004,7 +1004,7 @@ getCountryInfoStatus gameMap players countryBorderHelperOutlineStatus countryId 
             NoInfo
 
 
-renderPort : Set.Set ( GameMap.ScaledPoint, GameMap.ScaledPoint ) -> Collage.Collage msg
+renderPort : Set.Set ( Map.ScaledPoint, Map.ScaledPoint ) -> Collage.Collage msg
 renderPort waterEdges =
     waterEdges
         |> Set.toList

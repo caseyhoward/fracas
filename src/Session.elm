@@ -1,16 +1,16 @@
 module Session exposing
     ( Session
     , WindowSize
-    , addActiveGame
+    , addGame
     , init
     , navKey
     , updateWindowSize
     )
 
-import ActiveGame
+import Game
 import Browser.Navigation
 import Dict
-import GameMap
+import Map
 import Maps.Big
 import ViewHelpers
 
@@ -25,8 +25,8 @@ type alias Session =
     { windowSize : Maybe WindowSize
     , navKey : Browser.Navigation.Key
 
-    -- , gameMaps : Dict.Dict String GameMap.GameMap
-    , activeGames : Dict.Dict String ActiveGame.ActiveGame
+    -- , gameMaps : Dict.Dict String Map.Map
+    , activeGames : Dict.Dict String Game.Game
     }
 
 
@@ -37,7 +37,7 @@ init key =
 
     -- , gameMaps =
     --     Dict.fromList
-    --         [ ( "1", GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare )
+    --         [ ( "1", Map.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare )
     --         ]
     , activeGames = Dict.empty
     }
@@ -53,6 +53,6 @@ updateWindowSize windowSize session =
     { session | windowSize = Just windowSize }
 
 
-addActiveGame : ActiveGame.Id -> ActiveGame.ActiveGame -> Session -> Session
-addActiveGame (ActiveGame.Id id) activeGame session =
+addGame : Game.Id -> Game.Game -> Session -> Session
+addGame (Game.Id id) activeGame session =
     { session | activeGames = Dict.insert id activeGame session.activeGames }

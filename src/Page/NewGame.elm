@@ -2,7 +2,7 @@ module Page.NewGame exposing (Model, Msg, init, subscriptions, toSession, update
 
 -- import Map
 
-import ActiveGame
+import Game
 import Browser.Dom
 import Browser.Events
 import Color
@@ -14,7 +14,7 @@ import Element.Border
 import Element.Font
 import Element.Input
 import FeatureFlags
-import GameMap
+import Map
 import Graphql.Http
 import Html
 import Html.Events
@@ -34,7 +34,7 @@ type alias NewGame =
     { numberOfPlayers : String
     , error : Maybe String
     , selectedMapId : String
-    , maps : RemoteData.RemoteData (Graphql.Http.Error (List GameMap.GameMap)) (List GameMap.GameMap)
+    , maps : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map)
     }
 
 
@@ -60,7 +60,7 @@ init session =
                                     WindowResized 0 0
                         )
                         Browser.Dom.getViewport
-                    , GameMap.getAll GotMaps
+                    , Map.getAll GotMaps
                     ]
             )
 
@@ -98,8 +98,8 @@ toNewGame model =
 type Msg
     = NumberOfPlayersChanged String
     | StartGameClicked
-    | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List GameMap.GameMap)) (List GameMap.GameMap))
-    | GameCreated (RemoteData.RemoteData (Graphql.Http.Error ActiveGame.Id) ActiveGame.Id)
+    | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map))
+    | GameCreated (RemoteData.RemoteData (Graphql.Http.Error Game.Id) Game.Id)
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | NumberOfPlayersKeyPressed Int
     | WindowResized Int Int
@@ -148,7 +148,7 @@ update msg model =
                                 |> String.toInt
                                 |> Maybe.withDefault 6
                     in
-                    ( model, ActiveGame.create newGame.selectedMapId numberOfPlayers neutralCountryTroopCounts GameCreated )
+                    ( model, Game.create newGame.selectedMapId numberOfPlayers neutralCountryTroopCounts GameCreated )
 
                 NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
@@ -171,7 +171,7 @@ update msg model =
                 GameCreated gameIdResult ->
                     case gameIdResult of
                         RemoteData.Success gameId ->
-                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.Game gameId (ActiveGame.PlayerId 1)) )
+                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.Game gameId (Game.PlayerId 1)) )
 
                         RemoteData.NotAsked ->
                             ( model, Cmd.none )
@@ -195,7 +195,7 @@ startGame : Session.Session -> NewGame -> ( Model, Cmd Msg )
 startGame session newGame =
     case newGame.maps of
         RemoteData.Success maps ->
-            case maps |> List.filter (\map -> map.id == GameMap.Id newGame.selectedMapId) |> List.head of
+            case maps |> List.filter (\map -> map.id == Map.Id newGame.selectedMapId) |> List.head of
                 Just map ->
                     ( GeneratingRandomTroopCounts newGame session
                     , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
@@ -242,7 +242,7 @@ view model =
     }
 
 
-mapSelect : RemoteData.RemoteData (Graphql.Http.Error (List GameMap.GameMap)) (List GameMap.GameMap) -> String -> Element.Element Msg
+mapSelect : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map) -> String -> Element.Element Msg
 mapSelect mapsRemoteData selectedMapId =
     case mapsRemoteData of
         RemoteData.Success maps ->
@@ -258,7 +258,7 @@ mapSelect mapsRemoteData selectedMapId =
                         |> List.map
                             (\map ->
                                 Element.Input.optionWith
-                                    (map.id |> GameMap.idToString)
+                                    (map.id |> Map.idToString)
                                     (\optionState ->
                                         let
                                             border =
@@ -287,7 +287,7 @@ mapSelect mapsRemoteData selectedMapId =
                                             (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
                                             [ Element.el
                                                 [ Element.width (Element.px 50) ]
-                                                (GameMap.view 100 map.countries ( 100, 100 ) |> Element.html)
+                                                (Map.view 100 map.countries ( 100, 100 ) |> Element.html)
                                             , Element.text map.name
                                             ]
                                     )
