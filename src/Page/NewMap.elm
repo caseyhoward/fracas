@@ -108,8 +108,7 @@ view model =
                     , text = model.rawMap
                     , spellcheck = False
                     }
-
-                -- , Map.view model.mapPreview.countries model.mapPreview.dimensions |> Element.html |> Element.el [ Element.width Element.fill ]
+                , GameMap.view ViewHelpers.pixelsPerMapSquare model.mapPreview.countries model.mapPreview.dimensions |> Element.html |> Element.el [ Element.width Element.fill ]
                 , Element.Input.button
                     (ViewHelpers.defaultButtonAttributes
                         ++ [ Element.width (Element.px 120)

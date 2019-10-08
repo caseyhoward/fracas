@@ -25,7 +25,7 @@ module ActiveGame exposing
     , getPlayer
     , getPlayerColorFromPlayerTurn
     , getPlayerCountryAndTroopCounts
-    , getPlayerTurnStageFromPlayerTurn
+    , getPlayerTurnStageFromPlayerTurn,create
     , getTroopCount
     , getTroopCountForCountry
     , idToString
@@ -48,7 +48,8 @@ import Set
 import TroopCount
 import Url.Parser
 import ViewHelpers
-
+import RemoteData
+import Graphql.Http
 
 urlParser : Url.Parser.Parser (Id -> a) a
 urlParser =
@@ -109,6 +110,47 @@ type alias Player =
 
 type PlayerTurn
     = PlayerTurn PlayerTurnStage PlayerId
+
+
+create : String -> Int -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
+create selectedMapId numberOfPlayers toMsg =    
+    Debug.todo ""
+    -- let
+    --     newGameJson : GameJson
+    --     newGameJson =
+    --         { players =
+    --             List.range 1 numberOfPlayers
+    --                 |> List.map
+    --                     (\playerId ->
+    --                         let
+    --                             player : Player.Player
+    --                             player =
+    --                                 { id = Player.Id (String.fromInt playerId)
+    --                                 , name = ""
+    --                                 , color = String.fromInt playerId |> Player.Id |> getDefaultColor
+    --                                 , capitolId = Nothing
+    --                                 }
+    --                         in
+    --                         player
+    --                     )
+    --         , playerTurn = Player.Id "1"
+    --         , turnStatus = PlacingCapitol
+    --         }
+
+    --     newGameEncoded : Json.Encode.Value
+    --     newGameEncoded =
+    --         newGameJson |> encodeGameJson
+
+    --     input =
+    --         { newGame =
+    --             { mapId = selectedMapId
+    --             , gameJson = newGameEncoded |> Json.Encode.encode 0
+    --             }
+    --         }
+    -- in
+    -- Api.Mutation.createGame input (Api.Object.Game.id |> Graphql.SelectionSet.map Id)
+    --     |> Graphql.Http.mutationRequest "http://localhost:4000"
+    --     |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 errorToString : Error -> String
@@ -569,7 +611,7 @@ getPlayerCountryAndTroopCounts { players, currentPlayerTurn } =
         |> Dict.map
             (\playerId player ->
                 case player.capitolStatus of
-                    Capitol  _ ->
+                    Capitol _ ->
                         { playerId = PlayerId playerId
                         , countryCount = Dict.size player.countryTroopCounts
                         , troopCount = getTotalTroopCountForPlayer player
@@ -909,7 +951,7 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
                                     { currentPlayer
                                         | countryTroopCounts =
                                             updateTroopCount clickedCountryId neutralTroopCount currentPlayer.countryTroopCounts
-                                        , capitolStatus = Capitol clickedCountryId 
+                                        , capitolStatus = Capitol clickedCountryId
 
                                         -- , capitolStatus = Capitol clickedCountryId (GameMap.capitolDotsCoordinates clickedCountry.coordinates ViewHelpers.pixelsPerMapSquare)
                                     }
@@ -1397,10 +1439,6 @@ getPlayerName playerId players =
         |> Maybe.map .name
 
 
-
-
-
-
 isCountryOwnedByPlayer : PlayerId -> GameMap.CountryId -> Players -> Bool
 isCountryOwnedByPlayer playerId countryId players =
     case getPlayer playerId players of
@@ -1461,7 +1499,7 @@ nextPlayerCheckForDeadPlayers players currentPlayerId =
     case getPlayer nextPlayerId players of
         Just newCurrentPlayer ->
             case newCurrentPlayer |> .capitolStatus of
-                Capitol _  ->
+                Capitol _ ->
                     nextPlayerId
 
                 NoCapitol ->
@@ -1539,7 +1577,7 @@ updateForSuccessfulAttack activeGame =
                         |> List.foldl
                             (\player capitols ->
                                 case player.capitolStatus of
-                                    Capitol capitolId  ->
+                                    Capitol capitolId ->
                                         capitolId :: capitols
 
                                     NoCapitol ->

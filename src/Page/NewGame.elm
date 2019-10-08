@@ -1,5 +1,7 @@
 module Page.NewGame exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
+-- import Map
+
 import ActiveGame
 import Browser.Dom
 import Browser.Events
@@ -16,7 +18,6 @@ import Graphql.Http
 import Html
 import Html.Events
 import Json.Decode
-import Map
 import Player
 import Random
 import Random.Dict
@@ -31,10 +32,9 @@ import ViewHelpers
 
 type alias NewGame =
     { numberOfPlayers : String
-    , gameMapId : String
     , error : Maybe String
     , selectedMapId : String
-    , maps : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map)
+    , maps : RemoteData.RemoteData (Graphql.Http.Error (List GameMap.GameMap)) (List GameMap.GameMap)
     }
 
 
@@ -46,7 +46,7 @@ type Model
 
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    ( ConfiguringGame { numberOfPlayers = "2", gameMapId = "1", error = Nothing, maps = RemoteData.NotAsked, selectedMapId = "" } session, Cmd.none )
+    ( ConfiguringGame { numberOfPlayers = "2", error = Nothing, maps = RemoteData.NotAsked, selectedMapId = "" } session, Cmd.none )
         |> Tuple.mapSecond
             (\_ ->
                 Cmd.batch
@@ -60,7 +60,7 @@ init session =
                                     WindowResized 0 0
                         )
                         Browser.Dom.getViewport
-                    , Map.getAll GotMaps
+                    , GameMap.getAll GotMaps
                     ]
             )
 
@@ -98,8 +98,8 @@ toNewGame model =
 type Msg
     = NumberOfPlayersChanged String
     | StartGameClicked
-    | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map))
-    | GameCreated (RemoteData.RemoteData (Graphql.Http.Error Game.Id) Game.Id)
+    | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List GameMap.GameMap)) (List GameMap.GameMap))
+    | GameCreated (RemoteData.RemoteData (Graphql.Http.Error ActiveGame.Id) ActiveGame.Id)
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | NumberOfPlayersKeyPressed Int
     | WindowResized Int Int
@@ -149,7 +149,7 @@ update msg model =
                                 |> Maybe.withDefault 6
                     in
                     if FeatureFlags.isServerEnabled then
-                        ( model, Game.create newGame.selectedMapId numberOfPlayers GameCreated )
+                        ( model, ActiveGame.create newGame.selectedMapId numberOfPlayers GameCreated )
 
                     else
                         Debug.todo ""
@@ -182,17 +182,19 @@ update msg model =
                     ( model, Cmd.none )
 
                 GameCreated gameIdResult ->
-                    Debug.todo ""
+                    case gameIdResult of
+                        RemoteData.Success gameId ->
+                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.Game gameId (Player.Id "1")) )
 
-        -- case gameIdResult of
-        --     RemoteData.Success gameId ->
-        --         ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.Game gameId (Player.Id "1")) )
-        --     RemoteData.NotAsked ->
-        --         ( model, Cmd.none )
-        --     RemoteData.Loading ->
-        --         ( model, Cmd.none )
-        --     RemoteData.Failure error ->
-        --         ( ConfiguringGame { newGame | error = Just (ViewHelpers.errorToString error) } session, Cmd.none )
+                        RemoteData.NotAsked ->
+                            ( model, Cmd.none )
+
+                        RemoteData.Loading ->
+                            ( model, Cmd.none )
+
+                        RemoteData.Failure error ->
+                            ( ConfiguringGame { newGame | error = Just (ViewHelpers.errorToString error) } session, Cmd.none )
+
         Redirecting _ _ ->
             ( model, Cmd.none )
 
@@ -204,17 +206,19 @@ maximumNeutralCountryTroops =
 
 startGame : Session.Session -> NewGame -> ( Model, Cmd Msg )
 startGame session newGame =
-    Debug.todo ""
+    case newGame.maps of
+        RemoteData.Success maps ->
+            case maps |> Debug.log "maps" |> List.filter (\map -> map.id == GameMap.Id newGame.selectedMapId) |> List.head of
+                Just map ->
+                    ( GeneratingRandomTroopCounts newGame session
+                    , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
+                    )
 
+                Nothing ->
+                    ( ConfiguringGame { newGame | error = Just "Couldn't find game map" } session, Cmd.none )
 
-
--- case Dict.get newGame.gameMapId session.gameMaps of
---     Just gameMap ->
---         ( GeneratingRandomTroopCounts newGame session
---         , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys gameMap.countries))
---         )
---     Nothing ->
---         ( ConfiguringGame { newGame | error = Just "Couldn't find game map" } session, Cmd.none )
+        _ ->
+            ( ConfiguringGame { newGame | error = Just "This shouldn't happen" } session, Cmd.none )
 
 
 randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict String TroopCount.TroopCount)
@@ -251,7 +255,7 @@ view model =
     }
 
 
-mapSelect : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map) -> String -> Element.Element Msg
+mapSelect : RemoteData.RemoteData (Graphql.Http.Error (List GameMap.GameMap)) (List GameMap.GameMap) -> String -> Element.Element Msg
 mapSelect mapsRemoteData selectedMapId =
     case mapsRemoteData of
         RemoteData.Success maps ->
@@ -266,7 +270,7 @@ mapSelect mapsRemoteData selectedMapId =
                     maps
                         |> List.map
                             (\map ->
-                                Element.Input.option map.id (Element.text map.name)
+                                Element.Input.option (map.id |> GameMap.idToString) (Element.text map.name)
                             )
                 }
 

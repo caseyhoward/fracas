@@ -6,24 +6,25 @@ module GameMap exposing
     , Id(..)
     , NewMap
     , Point
-    ,  RawGameMap
-       -- , capitolDotsCoordinates
-
+    , RawGameMap
     , ScaledCountry
     , ScaledPoint
     , create
     , errorToString
     , get
+    , getAll
     , getCountriesThatCanReachCountryThroughWater
     , getCountry
     , getCountryIds
     , getMapDimensions
+    , idToString
     , isCountryNeighboringWater
     , parse
     , parseRawMap
     , scaleCountry
     , scaledCountries
     , updateCountry
+    , view
     )
 
 import Api.InputObject
@@ -35,13 +36,19 @@ import Api.Object.Dimensions
 import Api.Object.Map
 import Api.Object.Point
 import Api.Object.Segment
+import Api.Query
+import Collage
+import Collage.Render
+import Color
 import Dict
 import Graphql.Http
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html
+import Html.Attributes
 import Json.Encode
 import RemoteData
 import Set
+import ViewHelpers
 
 
 type alias GameMap =
@@ -135,6 +142,18 @@ type alias Point =
 
 type alias Segment =
     ( Point, Point )
+
+
+idToString : Id -> String
+idToString (Id id) =
+    id
+
+
+getAll : (RemoteData.RemoteData (Graphql.Http.Error (List GameMap)) (List GameMap) -> msg) -> Cmd msg
+getAll toMsg =
+    Api.Query.maps mapSelection
+        |> Graphql.Http.queryRequest "http://localhost:4000"
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 mapSelectionSet : SelectionSet MapSelectionSet ApiObject.Map
@@ -383,7 +402,7 @@ isCountryNeighboringWater countryId countries =
 
 
 parse : String -> String -> NewMap
-parse text name =
+parse name text =
     let
         map =
             parseRawMap text
@@ -457,13 +476,7 @@ parse text name =
     , bodiesOfWater =
         gameMapWithoutPolygons.bodiesOfWaterNeighborCountries
     , dimensions = gameMapWithoutPolygons.dimensions
-
-    --     ( (gameMapWithoutPolygons.dimensions |> Tuple.first) * scale
-    --     , (gameMapWithoutPolygons.dimensions |> Tuple.second) * scale
-    --     )
     , name = name
-
-    -- , id = Id "1"
     }
 
 
@@ -786,3 +799,94 @@ getEdgesForCountryForCoordinate allAreas ( x, y ) =
                     Set.insert ( adjacent, edge ) result
             )
             Set.empty
+
+
+view : Int -> Dict.Dict String Country -> ( Int, Int ) -> Html.Html msg
+view scale countries ( width, height ) =
+    let
+        scaledWidth =
+            width * scale
+
+        scaledHeight =
+            height * scale
+    in
+    Collage.group
+        [ getCountriesCollage scale countries
+        , getWaterCollage scale ( width, height )
+        ]
+        |> Collage.Render.svgExplicit
+            [ Html.Attributes.style "width" "100%"
+            , Html.Attributes.style "max-height" "100%"
+            , Html.Attributes.style "top" "0"
+            , Html.Attributes.style "left" "0"
+            , Html.Attributes.attribute "width" "0"
+            , Html.Attributes.attribute
+                "viewBox"
+                ((0 * scaledWidth |> String.fromInt)
+                    ++ " "
+                    ++ (-1 * scaledHeight |> String.fromInt)
+                    ++ " "
+                    ++ (1 * scaledWidth |> String.fromInt)
+                    ++ " "
+                    ++ (1 * scaledHeight |> String.fromInt)
+                )
+            ]
+
+
+getCountriesCollage : Int -> Dict.Dict String Country -> Collage.Collage msg
+getCountriesCollage scale countries =
+    countries
+        |> Dict.map
+            (\_ country ->
+                let
+                    countryPolygon =
+                        country |> scaleCountry scale |> .polygon |> Collage.polygon
+
+                    fill =
+                        countryPolygon
+                            |> Collage.filled (Collage.uniform Color.gray)
+
+                    border =
+                        countryPolygon
+                            |> Collage.outlined
+                                (Collage.solid 30.0
+                                    (Collage.uniform countryBorderColor)
+                                )
+                in
+                Collage.group [ fill, border ]
+            )
+        |> Dict.values
+        |> Collage.group
+
+
+countryBorderColor : Color.Color
+countryBorderColor =
+    Color.rgb255 100 100 100
+
+
+getWaterCollage : Int -> ( Int, Int ) -> Collage.Collage msg
+getWaterCollage scale ( width, height ) =
+    let
+        scaledWidth =
+            width * scale |> toFloat
+
+        scaledHeight =
+            height * scale |> toFloat
+
+        background =
+            Collage.polygon
+                [ ( 0, 0 )
+                , ( 0, scaledHeight )
+                , ( scaledWidth, scaledHeight )
+                , ( scaledWidth, 0.0 )
+                ]
+
+        backgroundWater =
+            background
+                |> Collage.filled (Collage.uniform Color.blue)
+
+        backgroundBorder =
+            background
+                |> Collage.outlined (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 8.0) (Collage.uniform Color.black))
+    in
+    Collage.group [ backgroundBorder, backgroundWater ]
