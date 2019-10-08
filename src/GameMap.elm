@@ -22,7 +22,7 @@ module GameMap exposing
     , parse
     , parseRawMap
     , scaleCountry
-    , scaledCountries
+    , scaledCountries, getWaterCollage
     , updateCountry
     , view
     )

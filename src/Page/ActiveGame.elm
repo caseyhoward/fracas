@@ -79,41 +79,6 @@ init session activeGameId playerId =
 
 
 
--- ( { activeGame = RemoteData.NotAsked
---   , error = Nothing
---   , session = session
---   , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
---   , showAvailableMoves = False
---   }
--- , ActiveGame.get activeGameId GotGame
--- )
--- case Dict.get activeGameId session.activeGames of
---     Just activeGame ->
---         ( { activeGame = activeGame
---           , error = Nothing
---           , session = session
---           , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
---           , showAvailableMoves = False
---           }
---         , Cmd.none
---         )
---     Nothing ->
---         --  This is a hack for when someone refreshes to redirect back
---         Debug.todo "s"
--- ( { session = session
---   , activeGame =
---         { currentPlayerTurn = ActiveGame.PlayerTurn ActiveGame.CapitolPlacement (ActiveGame.PlayerId 1)
---         , map = GameMap.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare
---         , players = Dict.empty
---         , neutralCountryTroops = Dict.empty
---         , numberOfPlayers = 0
---         }
---   , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
---   , error = Nothing
---   , showAvailableMoves = False
---   }
--- , Route.replaceUrl (Session.navKey session) Route.ConfiguringGame
--- )
 ---- UPDATE ----
 
 
@@ -757,7 +722,7 @@ getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus 
             let
                 waterCollage : Collage.Collage Msg
                 waterCollage =
-                    getWaterCollage activeGame.map
+                    GameMap.getWaterCollage 100 activeGame.map.dimensions
 
                 countriesCollage =
                     countriesToRender

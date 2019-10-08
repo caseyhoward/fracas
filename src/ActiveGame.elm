@@ -534,30 +534,17 @@ getCountriesToRender gameMap players currentPlayerTurn neutralCountryTroops =
                         getPlayer countryOwnerId players
                             |> Maybe.map
                                 (\countryOwner ->
-                                    let
-                                        polygon : List GameMap.ScaledPoint
-                                        polygon =
-                                            country.polygon
 
-                                        center : GameMap.ScaledPoint
-                                        center =
-                                            country.center
-
-                                        scaledCountry : GameMap.ScaledCountry
-                                        scaledCountry =
-                                            country
-                                    in
-                                    -- Debug.todo ""
                                     { id = GameMap.CountryId countryId
                                     , troopCount = troopCount
-                                    , center = scaledCountry.center
-                                    , polygonPoints = scaledCountry.polygon
+                                    , center = country.center
+                                    , polygonPoints = country.polygon
                                     , color = countryOwner.color
                                     , capitolDots =
                                         case countryOwner.capitolStatus of
                                             Capitol (GameMap.CountryId capitolId) ->
                                                 if capitolId == countryId then
-                                                    Just scaledCountry.coordinates
+                                                    Just country.coordinates
 
                                                 else
                                                     Nothing
@@ -571,7 +558,7 @@ getCountriesToRender gameMap players currentPlayerTurn neutralCountryTroops =
                                             |> Maybe.andThen
                                                 (\hasPort ->
                                                     if hasPort then
-                                                        Just scaledCountry.waterEdges
+                                                        Just country.waterEdges
 
                                                     else
                                                         Nothing
