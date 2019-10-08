@@ -151,7 +151,7 @@ update msg model =
                                 |> Maybe.withDefault 6
                     in
                     if FeatureFlags.isServerEnabled then
-                        ( model, ActiveGame.create newGame.selectedMapId numberOfPlayers GameCreated )
+                        ( model, ActiveGame.create newGame.selectedMapId numberOfPlayers neutralCountryTroopCounts GameCreated )
 
                     else
                         Debug.todo ""
@@ -210,7 +210,7 @@ startGame : Session.Session -> NewGame -> ( Model, Cmd Msg )
 startGame session newGame =
     case newGame.maps of
         RemoteData.Success maps ->
-            case maps |> Debug.log "maps" |> List.filter (\map -> map.id == GameMap.Id newGame.selectedMapId) |> List.head of
+            case maps |> List.filter (\map -> map.id == GameMap.Id newGame.selectedMapId) |> List.head of
                 Just map ->
                     ( GeneratingRandomTroopCounts newGame session
                     , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
@@ -294,6 +294,8 @@ mapSelect mapsRemoteData selectedMapId =
                                                         [ Element.Border.color (Colors.blue |> Colors.toElementColor)
                                                         , Element.Border.solid
                                                         , Element.Border.width 2
+                                                        , Element.Background.color (Colors.lightBlue |> Colors.toElementColor)
+                                                        , Element.Font.color (Colors.white |> Colors.toElementColor)
                                                         ]
                                         in
                                         Element.row
@@ -349,7 +351,7 @@ startGameButton =
                , Element.centerX
                , Element.moveDown 30
                , Element.Font.size 30
-               , Element.Font.color (Color.white |> ViewHelpers.colorToElementColor)
+               , Element.Font.color (Colors.white |> ViewHelpers.colorToElementColor)
                ]
         )
         { onPress = Just StartGameClicked, label = ViewHelpers.centerText "Start Game" }
@@ -362,7 +364,7 @@ title =
         , Element.Font.bold
         , Element.Font.size 80
         , Element.centerX
-        , Element.Font.color (Color.darkBlue |> ViewHelpers.colorToElementColor)
+        , Element.Font.color (Colors.darkBlue |> ViewHelpers.colorToElementColor)
         ]
         (Element.text "Fracas")
 

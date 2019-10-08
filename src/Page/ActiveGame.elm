@@ -15,7 +15,7 @@ import Collage.Events
 import Collage.Layout
 import Collage.Render
 import Collage.Text
-import Color
+import Colors
 import Dict
 import Element
 import Element.Background
@@ -245,9 +245,9 @@ makeCountryHelperOutlinesActive model =
             model
 
 
-countryBorderColor : Color.Color
+countryBorderColor : Colors.Color
 countryBorderColor =
-    Color.rgb255 100 100 100
+    Colors.rgb255 100 100 100
 
 
 viewPlayingGameMobile : ActiveGame.ActiveGame -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
@@ -402,7 +402,7 @@ viewPassButtonIfNecessary currentPlayerTurn =
 
 playerAndTroopCountBorderColor : Element.Color
 playerAndTroopCountBorderColor =
-    Color.darkGray |> ViewHelpers.colorToElementColor
+    Colors.darkGray |> ViewHelpers.colorToElementColor
 
 
 viewPlayerCountryAndTroopCounts : ActiveGame.PlayerTurn -> Dict.Dict Int ActiveGame.Player -> Element.Element Msg
@@ -480,7 +480,7 @@ viewCountryInfo activeGame countryBorderHelperOutlineStatus =
                                     [ Element.width Element.fill
                                     , Element.Font.size 14
                                     , Element.padding 3
-                                    , Element.Border.color (Color.lightGreen |> ViewHelpers.colorToElementColor)
+                                    , Element.Border.color (Colors.lightGreen |> ViewHelpers.colorToElementColor)
                                     , Element.Border.solid
                                     , Element.Border.width 3
                                     ]
@@ -494,7 +494,7 @@ viewCountryInfo activeGame countryBorderHelperOutlineStatus =
                                     , Element.Font.size 14
                                     , Element.padding 3
                                     , Element.spacing 3
-                                    , Element.Border.color (Color.red |> ViewHelpers.colorToElementColor)
+                                    , Element.Border.color (Colors.red |> ViewHelpers.colorToElementColor)
                                     , Element.Border.solid
                                     , Element.Border.width 3
                                     ]
@@ -528,7 +528,7 @@ viewPlayerTroopCount currentPlayerId players status =
                 black
 
             else
-                Color.darkGray |> ViewHelpers.colorToElementColor
+                Colors.darkGray |> ViewHelpers.colorToElementColor
     in
     case ActiveGame.getPlayer status.playerId players of
         Just player ->
@@ -549,7 +549,7 @@ viewPlayerTroopCount currentPlayerId players status =
                     ]
                     (Element.text <| player.name)
                 , Element.column
-                    [ Element.Background.color (Color.lightGray |> ViewHelpers.colorToElementColor)
+                    [ Element.Background.color (Colors.lightGray |> ViewHelpers.colorToElementColor)
                     , Element.width Element.fill
                     ]
                     [ Element.row [ Element.spacing 20, Element.Font.size 16 ]
@@ -672,11 +672,11 @@ getWaterCollage gameMap =
 
         backgroundWater =
             background
-                |> Collage.filled (Collage.uniform Color.blue)
+                |> Collage.filled (Collage.uniform (Colors.blue  |> Colors.toColor))
 
         backgroundBorder =
             background
-                |> Collage.outlined (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 8.0) (Collage.uniform Color.black))
+                |> Collage.outlined (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 8.0) (Collage.uniform (Colors.black  |> Colors.toColor)))
     in
     Collage.group [ backgroundBorder, backgroundWater ]
 
@@ -801,7 +801,7 @@ getEventHandlersForCountry : ActiveGame.CountryToRender -> Collage.Collage Msg
 getEventHandlersForCountry countryToRender =
     countryToRender.polygonPoints
         |> Collage.polygon
-        |> Collage.filled (Color.rgba 0 0 0 0 |> Collage.uniform)
+        |> Collage.filled (Colors.transparency 0 |> Collage.uniform)
         |> Collage.Events.onMouseUp (\_ -> CountryMouseUp countryToRender.id)
         |> Collage.Events.onMouseDown (\_ -> CountryMouseDown countryToRender.id)
         |> Collage.Events.onMouseLeave (\_ -> CountryMouseOut countryToRender.id)
@@ -836,20 +836,20 @@ countryHighlightCollage scale countryToRender =
         |> Collage.polygon
         |> Collage.outlined
             (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 6.0)
-                (Collage.uniform countryCanBeClickedColor)
+                (Collage.uniform (countryCanBeClickedColor |> Colors.toColor))
             )
 
 
-countryCanBeClickedColor : Color.Color
+countryCanBeClickedColor : Colors.Color
 countryCanBeClickedColor =
-    Color.white
+    Colors.white
 
 
 getGrayedOutCountryCollage : ActiveGame.CountryToRender -> Collage.Collage Msg
 getGrayedOutCountryCollage countryToRender =
     countryToRender.polygonPoints
         |> Collage.polygon
-        |> Collage.filled (Color.rgba 0 0 0 0.5 |> Collage.uniform)
+        |> Collage.filled (Colors.transparency 0.5 |> Collage.uniform)
 
 
 getTroopCountCollage : Int -> ActiveGame.CountryToRender -> Collage.Collage Msg
@@ -858,7 +858,7 @@ getTroopCountCollage fontSize countryToRender =
         countryToRender.troopCount
             |> TroopCount.toString
             |> Collage.Text.fromString
-            |> Collage.Text.color Color.black
+            |> Collage.Text.color (Colors.black |> Colors.toColor)
             |> Collage.Text.size fontSize
             |> Collage.rendered
             |> Collage.shift countryToRender.center
@@ -875,13 +875,13 @@ getCountryCollage countryToRender =
 
         fill =
             countryPolygon
-                |> Collage.filled (Collage.uniform countryToRender.color)
+                |> Collage.filled (Collage.uniform (countryToRender.color |> Colors.toColor))
 
         border =
             countryPolygon
                 |> Collage.outlined
                     (Collage.solid 30.0
-                        (Collage.uniform countryBorderColor)
+                        (Collage.uniform (countryBorderColor |> Colors.toColor))
                     )
     in
     Collage.group [ fill, border ]
@@ -894,7 +894,7 @@ renderCapitolDots countryToRender =
             case countryToRender.capitolDots of
                 Just capitolDots ->
                     ( [ Collage.square (toFloat ViewHelpers.pixelsPerMapSquare / 10.0)
-                            |> Collage.filled (Collage.uniform Color.black)
+                            |> Collage.filled (Collage.uniform (Colors.black  |> Colors.toColor))
                       ]
                     , capitolDots
                     )
@@ -922,21 +922,21 @@ getCountryInfoPolygonBorder gameMap players countryBorderHelperOutlineStatus cou
             Collage.polygon countryToRender.polygonPoints
                 |> Collage.outlined
                     (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 6.0)
-                        (Collage.uniform Color.white)
+                        (Collage.uniform (Colors.white |> Colors.toColor))
                     )
 
         CountryInfoDefending ->
             Collage.polygon countryToRender.polygonPoints
                 |> Collage.outlined
                     (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 6.0)
-                        (Collage.uniform Color.green)
+                        (Collage.uniform (Colors.green  |> Colors.toColor))
                     )
 
         CountryInfoAttacking ->
             Collage.polygon countryToRender.polygonPoints
                 |> Collage.outlined
                     (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 6.0)
-                        (Collage.uniform Color.red)
+                        (Collage.uniform (Colors.red |> Colors.toColor))
                     )
 
         NoInfo ->
@@ -980,7 +980,7 @@ renderPort waterEdges =
                     |> Collage.traced
                         (Collage.broken [ ( 3, 10 ) ]
                             ((ViewHelpers.pixelsPerMapSquare |> toFloat) / 2.0)
-                            (Collage.uniform Color.gray)
+                            (Collage.uniform (Colors.gray |> Colors.toColor))
                         )
             )
         |> Collage.group

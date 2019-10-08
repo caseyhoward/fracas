@@ -80,42 +80,44 @@ type alias GameSelectionSet =
 
 create : String -> Int -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
 create selectedMapId numberOfPlayers toMsg =
-    let
-        newGameJson : GameJson
-        newGameJson =
-            { players =
-                List.range 1 numberOfPlayers
-                    |> List.map
-                        (\playerId ->
-                            let
-                                player : Player.Player
-                                player =
-                                    { id = Player.Id (String.fromInt playerId)
-                                    , name = ""
-                                    , color = String.fromInt playerId |> Player.Id |> getDefaultColor
-                                    , capitolId = Nothing
-                                    }
-                            in
-                            player
-                        )
-            , playerTurn = Player.Id "1"
-            , turnStatus = PlacingCapitol
-            }
+    Debug.todo ""
 
-        newGameEncoded : Json.Encode.Value
-        newGameEncoded =
-            newGameJson |> encodeGameJson
 
-        input =
-            { newGame =
-                { mapId = selectedMapId
-                , gameJson = newGameEncoded |> Json.Encode.encode 0
-                }
-            }
-    in
-    Api.Mutation.createGame input (Api.Object.Game.id |> Graphql.SelectionSet.map Id)
-        |> Graphql.Http.mutationRequest "http://localhost:4000"
-        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+-- let
+--     newGameJson : GameJson
+--     newGameJson =
+--         { players =
+--             List.range 1 numberOfPlayers
+--                 |> List.map
+--                     (\playerId ->
+--                         let
+--                             player : Player.Player
+--                             player =
+--                                 { id = Player.Id (String.fromInt playerId)
+--                                 , name = ""
+--                                 , color = String.fromInt playerId |> Player.Id |> getDefaultColor
+--                                 , capitolId = Nothing
+--                                 }
+--                         in
+--                         player
+--                     )
+--         , playerTurn = Player.Id "1"
+--         , turnStatus = PlacingCapitol
+--         }
+--     newGameEncoded : Json.Encode.Value
+--     newGameEncoded =
+--         newGameJson |> encodeGameJson
+--     input =
+--         { newGame =
+--             { mapId = selectedMapId
+--             , gameJson = newGameEncoded |> Json.Encode.encode 0
+--             }
+--         }
+-- in
+-- Api.Mutation.createGame input (Api.Object.Game.id |> Graphql.SelectionSet.map Id)
+--     |> Graphql.Http.mutationRequest "http://localhost:4000"
+--     |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 get : Id -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg

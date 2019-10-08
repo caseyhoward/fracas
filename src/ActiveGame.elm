@@ -12,6 +12,7 @@ module ActiveGame exposing
     , canCurrentPlayerPass
     , cancelMovingTroops
     , countryClicked
+    , create
     , errorToString
     , findCountryOwner
     , getAttackStrengthPerPlayer
@@ -25,7 +26,7 @@ module ActiveGame exposing
     , getPlayer
     , getPlayerColorFromPlayerTurn
     , getPlayerCountryAndTroopCounts
-    , getPlayerTurnStageFromPlayerTurn,create
+    , getPlayerTurnStageFromPlayerTurn
     , getTroopCount
     , getTroopCountForCountry
     , idToString
@@ -41,15 +42,22 @@ module ActiveGame exposing
     , urlParser
     )
 
-import Color
+-- import Color
+
+import Api.InputObject
+import Api.Mutation
+import Api.Object
+import Colors
 import Dict
 import GameMap
+import Graphql.Http
+import Graphql.SelectionSet
+import RemoteData
 import Set
 import TroopCount
 import Url.Parser
 import ViewHelpers
-import RemoteData
-import Graphql.Http
+
 
 urlParser : Url.Parser.Parser (Id -> a) a
 urlParser =
@@ -72,7 +80,7 @@ type alias ActiveGame =
 
 type alias CountryToRender =
     { id : GameMap.CountryId
-    , color : Color.Color
+    , color : Colors.Color
     , troopCount : TroopCount.TroopCount
     , center : GameMap.ScaledPoint
     , polygonPoints : List GameMap.ScaledPoint
@@ -103,7 +111,7 @@ type alias Player =
     { name : String
     , countryTroopCounts : Dict.Dict String TroopCount.TroopCount
     , capitolStatus : CapitolStatus
-    , color : Color.Color
+    , color : Colors.Color
     , ports : Set.Set String
     }
 
@@ -112,45 +120,109 @@ type PlayerTurn
     = PlayerTurn PlayerTurnStage PlayerId
 
 
-create : String -> Int -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
-create selectedMapId numberOfPlayers toMsg =    
-    Debug.todo ""
-    -- let
-    --     newGameJson : GameJson
-    --     newGameJson =
-    --         { players =
-    --             List.range 1 numberOfPlayers
-    --                 |> List.map
-    --                     (\playerId ->
-    --                         let
-    --                             player : Player.Player
-    --                             player =
-    --                                 { id = Player.Id (String.fromInt playerId)
-    --                                 , name = ""
-    --                                 , color = String.fromInt playerId |> Player.Id |> getDefaultColor
-    --                                 , capitolId = Nothing
-    --                                 }
-    --                         in
-    --                         player
-    --                     )
-    --         , playerTurn = Player.Id "1"
-    --         , turnStatus = PlacingCapitol
-    --         }
 
-    --     newGameEncoded : Json.Encode.Value
-    --     newGameEncoded =
-    --         newGameJson |> encodeGameJson
+-- start : Dict.Dict String GameMap.GameMap -> GameMap.Id -> Int -> Dict.Dict String TroopCount.TroopCount -> Result Error ActiveGame
+-- start gameMaps gameMapId numberOfPlayers neutralTroopCounts =
+--     case GameMap.get gameMapId gameMaps of
+--         Ok gameMap ->
+--             Ok
+--                 { map = gameMap
+--                 , players =
+--                     List.range 1 numberOfPlayers
+--                         |> List.map
+--                             (\playerId ->
+--                                 ( playerId
+--                                 , { countryTroopCounts = Dict.empty
+--                                   , name = "Player " ++ String.fromInt playerId
+--                                   , capitolStatus = NoCapitol
+--                                   , color = getDefaultColor (PlayerId playerId)
+--                                   , ports = Set.empty
+--                                   }
+--                                 )
+--                             )
+--                         |> Dict.fromList
+--                 , currentPlayerTurn = PlayerTurn CapitolPlacement (PlayerId 1)
+--                 , numberOfPlayers = numberOfPlayers
+--                 , neutralCountryTroops = neutralTroopCounts
+--                 }
+--         Err error ->
+--             error |> GameMap.errorToString |> Error |> Err
 
-    --     input =
-    --         { newGame =
-    --             { mapId = selectedMapId
-    --             , gameJson = newGameEncoded |> Json.Encode.encode 0
-    --             }
-    --         }
-    -- in
-    -- Api.Mutation.createGame input (Api.Object.Game.id |> Graphql.SelectionSet.map Id)
-    --     |> Graphql.Http.mutationRequest "http://localhost:4000"
-    --     |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+create : String -> Int -> Dict.Dict String TroopCount.TroopCount -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
+create selectedMapId numberOfPlayers neutralTroopCounts toMsg =
+    let
+        colorInput : Colors.Color -> Api.InputObject.ColorInput
+        colorInput color =
+            Debug.todo ""
+
+        troopCountsInput : Dict.Dict String TroopCount.TroopCount -> List Api.InputObject.CountryTroopCountsInput
+        troopCountsInput countryTroopCounts =
+            Debug.todo ""
+
+        playerTurn =
+            PlayerTurn CapitolPlacement (PlayerId 1)
+
+        playerTurnInput : Api.InputObject.PlayerTurnInput
+        playerTurnInput =
+            Debug.todo ""
+
+        players =
+            List.range 1 numberOfPlayers
+                |> List.map
+                    (\playerId ->
+                        { id = playerId |> String.fromInt
+                        , countryTroopCounts = Dict.empty
+                        , name = "Player " ++ String.fromInt playerId
+                        , capitolStatus = NoCapitol
+                        , color = getDefaultColor (PlayerId playerId)
+                        , ports = Set.empty
+                        }
+                    )
+
+        playersInput : List Api.InputObject.PlayerInput
+        playersInput =
+            players
+                |> List.map
+                    (\player ->
+                        let
+                            fields : Api.InputObject.PlayerInputRequiredFields
+                            fields =
+                                { id = player.id
+                                , countryTroopCounts = player.countryTroopCounts |> troopCountsInput
+                                , name = player.name
+                                , color = player.color |> colorInput
+                                , ports = []
+                                }
+                        in
+                        Api.InputObject.buildPlayerInput
+                            fields
+                            identity
+                    )
+
+        neutralCountryTroops : List Api.InputObject.CountryTroopCountsInput
+        neutralCountryTroops =
+            []
+
+        input : Api.Mutation.CreateGameRequiredArguments
+        input =
+            { newGame =
+                Api.InputObject.buildGameInput
+                    { mapId = selectedMapId
+                    , players = playersInput
+                    , neutralCountryTroops = neutralCountryTroops
+                    , numberOfPlayers = numberOfPlayers
+                    , playerTurn = playerTurnInput
+                    }
+            }
+
+        gameSelectionSet : Graphql.SelectionSet.SelectionSet decodesTo Api.Object.Game
+        gameSelectionSet =
+            Debug.todo ""
+    in
+    Api.Mutation.createGame input gameSelectionSet
+        |> Graphql.Http.mutationRequest "http://localhost:4000"
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 errorToString : Error -> String
@@ -593,14 +665,14 @@ getCountryHasPort (GameMap.CountryId countryId) players =
             )
 
 
-getDefaultColor : PlayerId -> Color.Color
+getDefaultColor : PlayerId -> Colors.Color
 getDefaultColor (PlayerId playerId) =
     case Dict.get playerId defaultPlayerColors of
         Just color ->
             color
 
         Nothing ->
-            Color.black
+            Colors.black
 
 
 getPlayerCountryAndTroopCounts :
@@ -652,7 +724,7 @@ getTroopCountForCountry countryId players =
         |> Maybe.andThen (\player -> getTroopCount countryId player.countryTroopCounts)
 
 
-getPlayerColorFromPlayerTurn : Players -> PlayerTurn -> Color.Color
+getPlayerColorFromPlayerTurn : Players -> PlayerTurn -> Colors.Color
 getPlayerColorFromPlayerTurn players playerTurn =
     case playerTurn of
         PlayerTurn _ playerId ->
@@ -661,7 +733,7 @@ getPlayerColorFromPlayerTurn players playerTurn =
                     (\player ->
                         player.color
                     )
-                |> Maybe.withDefault Color.black
+                |> Maybe.withDefault Colors.black
 
 
 getPlayerTurnStageFromPlayerTurn : PlayerTurn -> PlayerTurnStage
@@ -1147,15 +1219,15 @@ attemptToAttackCountry opponentPlayerId clickedCountryId activeGame =
             errorMessage |> Error |> Err
 
 
-defaultPlayerColors : Dict.Dict Int Color.Color
+defaultPlayerColors : Dict.Dict Int Colors.Color
 defaultPlayerColors =
     Dict.fromList
-        [ ( 1, Color.darkGreen )
-        , ( 3, Color.lightGreen )
-        , ( 2, Color.lightYellow )
-        , ( 5, Color.orange )
-        , ( 4, Color.brown )
-        , ( 6, Color.lightPurple )
+        [ ( 1, Colors.darkGreen )
+        , ( 3, Colors.lightGreen )
+        , ( 2, Colors.lightYellow )
+        , ( 5, Colors.orange )
+        , ( 4, Colors.brown )
+        , ( 6, Colors.lightPurple )
         ]
 
 
@@ -1509,9 +1581,9 @@ nextPlayerCheckForDeadPlayers players currentPlayerId =
             currentPlayerId
 
 
-neutralCountryColor : Color.Color
+neutralCountryColor : Colors.Color
 neutralCountryColor =
-    Color.gray
+    Colors.gray
 
 
 playerHasMoreThanOneCountry : Players -> PlayerId -> Bool

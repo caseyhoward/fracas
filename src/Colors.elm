@@ -19,7 +19,9 @@ module Colors exposing
     , darkYellow
     , decoder
     , encode
-    , gray
+    ,  gray
+       ,transparency
+
     , green
     , grey
     , lightBlue
@@ -35,6 +37,7 @@ module Colors exposing
     , orange
     , purple
     , red
+    , rgb255
     , toColor
     , toElementColor
     , white
@@ -59,6 +62,11 @@ toColor color =
     ElmColor.rgb255 color.red color.green color.blue
 
 
+transparency : Float -> ElmColor.Color
+transparency value =
+    ElmColor.rgba 0 0 0 value
+
+
 toElementColor : Color -> Element.Color
 toElementColor color =
     Element.rgb255 color.red color.green color.blue
@@ -79,6 +87,11 @@ decoder =
         (Json.Decode.field "red" Json.Decode.int)
         (Json.Decode.field "green" Json.Decode.int)
         (Json.Decode.field "blue" Json.Decode.int)
+
+
+rgb255 : Int -> Int -> Int -> Color
+rgb255 r g b =
+    Color r g b
 
 
 lightRed : Color

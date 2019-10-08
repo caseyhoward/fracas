@@ -38,12 +38,12 @@ capitol =
 
 
 {-| -}
-color : SelectionSet (Maybe String) Api.Object.Player
-color =
-    Object.selectionForField "(Maybe String)" "color" [] (Decode.string |> Decode.nullable)
+color : SelectionSet decodesTo Api.Object.Color -> SelectionSet decodesTo Api.Object.Player
+color object_ =
+    Object.selectionForCompositeField "color" [] object_ identity
 
 
 {-| -}
-ports : SelectionSet (Maybe (List (Maybe String))) Api.Object.Player
+ports : SelectionSet (List String) Api.Object.Player
 ports =
-    Object.selectionForField "(Maybe (List (Maybe String)))" "ports" [] (Decode.string |> Decode.nullable |> Decode.list |> Decode.nullable)
+    Object.selectionForField "(List String)" "ports" [] (Decode.string |> Decode.list)

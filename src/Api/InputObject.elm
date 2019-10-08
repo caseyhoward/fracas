@@ -4,6 +4,7 @@
 
 module Api.InputObject exposing (..)
 
+import Api.Enum.PlayerTurnStage
 import Api.Interface
 import Api.Object
 import Api.Scalar
@@ -42,6 +43,35 @@ encodeBodyOfWaterInput : BodyOfWaterInput -> Value
 encodeBodyOfWaterInput input =
     Encode.maybeObject
         [ ( "id", Encode.string input.id |> Just ), ( "neighboringCountries", (Encode.string |> Encode.list) input.neighboringCountries |> Just ) ]
+
+
+buildColorInput : ColorInputRequiredFields -> ColorInput
+buildColorInput required =
+    { red = required.red, green = required.green, blue = required.blue }
+
+
+type alias ColorInputRequiredFields =
+    { red : Int
+    , green : Int
+    , blue : Int
+    }
+
+
+{-| Type for the ColorInput input object.
+-}
+type alias ColorInput =
+    { red : Int
+    , green : Int
+    , blue : Int
+    }
+
+
+{-| Encode a ColorInput into a value that can be used as an argument.
+-}
+encodeColorInput : ColorInput -> Value
+encodeColorInput input =
+    Encode.maybeObject
+        [ ( "red", Encode.int input.red |> Just ), ( "green", Encode.int input.green |> Just ), ( "blue", Encode.int input.blue |> Just ) ]
 
 
 buildCountryInput : CountryInputRequiredFields -> CountryInput
@@ -90,6 +120,33 @@ encodeCountryInput (CountryInput input) =
         [ ( "id", Encode.string input.id |> Just ), ( "coordinates", (encodePointInput |> Encode.list) input.coordinates |> Just ), ( "polygon", (encodePointInput |> Encode.list) input.polygon |> Just ), ( "waterEdges", (encodeSegmentInput |> Encode.list) input.waterEdges |> Just ), ( "center", encodePointInput input.center |> Just ), ( "neighboringCountries", (Encode.string |> Encode.list) input.neighboringCountries |> Just ), ( "neighboringBodiesOfWater", (Encode.string |> Encode.list) input.neighboringBodiesOfWater |> Just ) ]
 
 
+buildCountryTroopCountsInput : CountryTroopCountsInputRequiredFields -> CountryTroopCountsInput
+buildCountryTroopCountsInput required =
+    { countryId = required.countryId, troopCount = required.troopCount }
+
+
+type alias CountryTroopCountsInputRequiredFields =
+    { countryId : String
+    , troopCount : Int
+    }
+
+
+{-| Type for the CountryTroopCountsInput input object.
+-}
+type alias CountryTroopCountsInput =
+    { countryId : String
+    , troopCount : Int
+    }
+
+
+{-| Encode a CountryTroopCountsInput into a value that can be used as an argument.
+-}
+encodeCountryTroopCountsInput : CountryTroopCountsInput -> Value
+encodeCountryTroopCountsInput input =
+    Encode.maybeObject
+        [ ( "countryId", Encode.string input.countryId |> Just ), ( "troopCount", Encode.int input.troopCount |> Just ) ]
+
+
 buildDimensionsInput : DimensionsInputRequiredFields -> DimensionsInput
 buildDimensionsInput required =
     { width = required.width, height = required.height }
@@ -119,29 +176,44 @@ encodeDimensionsInput input =
 
 buildGameInput : GameInputRequiredFields -> GameInput
 buildGameInput required =
-    { mapId = required.mapId, gameJson = required.gameJson }
+    GameInput { mapId = required.mapId, players = required.players, neutralCountryTroops = required.neutralCountryTroops, numberOfPlayers = required.numberOfPlayers, playerTurn = required.playerTurn }
 
 
 type alias GameInputRequiredFields =
     { mapId : String
-    , gameJson : String
+    , players : List PlayerInput
+    , neutralCountryTroops : List CountryTroopCountsInput
+    , numberOfPlayers : Int
+    , playerTurn : PlayerTurnInput
+    }
+
+
+{-| Type alias for the `GameInput` attributes. Note that this type
+needs to use the `GameInput` type (not just a plain type alias) because it has
+references to itself either directly (recursive) or indirectly (circular). See
+<https://github.com/dillonkearns/elm-graphql/issues/33>.
+-}
+type alias GameInputRaw =
+    { mapId : String
+    , players : List PlayerInput
+    , neutralCountryTroops : List CountryTroopCountsInput
+    , numberOfPlayers : Int
+    , playerTurn : PlayerTurnInput
     }
 
 
 {-| Type for the GameInput input object.
 -}
-type alias GameInput =
-    { mapId : String
-    , gameJson : String
-    }
+type GameInput
+    = GameInput GameInputRaw
 
 
 {-| Encode a GameInput into a value that can be used as an argument.
 -}
 encodeGameInput : GameInput -> Value
-encodeGameInput input =
+encodeGameInput (GameInput input) =
     Encode.maybeObject
-        [ ( "mapId", Encode.string input.mapId |> Just ), ( "gameJson", Encode.string input.gameJson |> Just ) ]
+        [ ( "mapId", Encode.string input.mapId |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "numberOfPlayers", Encode.int input.numberOfPlayers |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
 
 
 buildMapInput : MapInputRequiredFields -> MapInput
@@ -182,6 +254,76 @@ encodeMapInput : MapInput -> Value
 encodeMapInput (MapInput input) =
     Encode.maybeObject
         [ ( "name", Encode.string input.name |> Just ), ( "countries", (encodeCountryInput |> Encode.list) input.countries |> Just ), ( "bodiesOfWater", (encodeBodyOfWaterInput |> Encode.list) input.bodiesOfWater |> Just ), ( "dimensions", encodeDimensionsInput input.dimensions |> Just ) ]
+
+
+buildPlayerInput : PlayerInputRequiredFields -> (PlayerInputOptionalFields -> PlayerInputOptionalFields) -> PlayerInput
+buildPlayerInput required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { capitol = Absent }
+    in
+    { id = required.id, name = required.name, countryTroopCounts = required.countryTroopCounts, capitol = optionals.capitol, color = required.color, ports = required.ports }
+
+
+type alias PlayerInputRequiredFields =
+    { id : String
+    , name : String
+    , countryTroopCounts : List CountryTroopCountsInput
+    , color : ColorInput
+    , ports : List String
+    }
+
+
+type alias PlayerInputOptionalFields =
+    { capitol : OptionalArgument String }
+
+
+{-| Type for the PlayerInput input object.
+-}
+type alias PlayerInput =
+    { id : String
+    , name : String
+    , countryTroopCounts : List CountryTroopCountsInput
+    , capitol : OptionalArgument String
+    , color : ColorInput
+    , ports : List String
+    }
+
+
+{-| Encode a PlayerInput into a value that can be used as an argument.
+-}
+encodePlayerInput : PlayerInput -> Value
+encodePlayerInput input =
+    Encode.maybeObject
+        [ ( "id", Encode.string input.id |> Just ), ( "name", Encode.string input.name |> Just ), ( "countryTroopCounts", (encodeCountryTroopCountsInput |> Encode.list) input.countryTroopCounts |> Just ), ( "capitol", Encode.string |> Encode.optional input.capitol ), ( "color", encodeColorInput input.color |> Just ), ( "ports", (Encode.string |> Encode.list) input.ports |> Just ) ]
+
+
+buildPlayerTurnInput : PlayerTurnInputRequiredFields -> PlayerTurnInput
+buildPlayerTurnInput required =
+    { playerId = required.playerId, playerTurnStage = required.playerTurnStage }
+
+
+type alias PlayerTurnInputRequiredFields =
+    { playerId : Int
+    , playerTurnStage : Api.Enum.PlayerTurnStage.PlayerTurnStage
+    }
+
+
+{-| Type for the PlayerTurnInput input object.
+-}
+type alias PlayerTurnInput =
+    { playerId : Int
+    , playerTurnStage : Api.Enum.PlayerTurnStage.PlayerTurnStage
+    }
+
+
+{-| Encode a PlayerTurnInput into a value that can be used as an argument.
+-}
+encodePlayerTurnInput : PlayerTurnInput -> Value
+encodePlayerTurnInput input =
+    Encode.maybeObject
+        [ ( "playerId", Encode.int input.playerId |> Just ), ( "playerTurnStage", Encode.enum Api.Enum.PlayerTurnStage.toString input.playerTurnStage |> Just ) ]
 
 
 buildPointInput : PointInputRequiredFields -> PointInput

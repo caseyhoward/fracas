@@ -10,6 +10,7 @@ module ViewHelpers exposing
 
     )
 
+import Colors
 import Color
 import Element
 import Element.Background
@@ -24,9 +25,9 @@ centerText text =
     Element.el [ Element.centerX ] (Element.text text)
 
 
-colorToElementColor : Color.Color -> Element.Color
+colorToElementColor : Colors.Color -> Element.Color
 colorToElementColor color =
-    color |> Color.toRgba |> Element.fromRgb
+    color |> Colors.toColor |> Color.toRgba |> Element.fromRgb
 
 
 defaultButtonAttributes : List (Element.Attribute msg)

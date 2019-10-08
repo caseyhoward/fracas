@@ -9,6 +9,10 @@ type BodyOfWater
     = BodyOfWater
 
 
+type Color
+    = Color
+
+
 type Country
     = Country
 

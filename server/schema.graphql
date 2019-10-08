@@ -32,16 +32,13 @@ input SegmentInput {
   point2: PointInput!
 }
 
-# input PolygonInput {
-#   points: [PointInput!]!
-# }
-
 input PointInput {
   x: Int!
   y: Int!
 }
 
 ### MAP ###
+
 type Map {
   id: String!
   name: String!
@@ -70,10 +67,6 @@ type BodyOfWater {
   neighboringCountries: [String!]!
 }
 
-# type Polygon {
-#   points: [Point!]!
-# }
-
 type Point {
   x: Int!
   y: Int!
@@ -88,7 +81,35 @@ type Segment {
 
 input GameInput {
   mapId: String!
-  gameJson: String!
+  players: [PlayerInput!]!
+  neutralCountryTroops: [CountryTroopCountsInput!]!
+  numberOfPlayers: Int!
+  playerTurn: PlayerTurnInput!
+}
+
+input PlayerTurnInput {
+  playerId: Int!
+  playerTurnStage: PlayerTurnStage!
+}
+
+input PlayerInput {
+  id: String!
+  name: String!
+  countryTroopCounts: [CountryTroopCountsInput!]!
+  capitol: String
+  color: ColorInput!
+  ports: [String!]!
+}
+
+input ColorInput {
+  red: Int!
+  green: Int!
+  blue: Int!
+}
+
+input CountryTroopCountsInput {
+  countryId: String!
+  troopCount: Int!
 }
 
 type Game {
@@ -109,12 +130,18 @@ type PlayerTurn {
   playerTurnStage: PlayerTurnStage!
 }
 
+type Color {
+  red: Int!
+  green: Int!
+  blue: Int!
+}
+
 type Player {
   name: String!
   countryTroopCounts: [CountryTroopCounts!]!
   capitol: String
-  color: String
-  ports: [String]
+  color: Color!
+  ports: [String!]!
 }
 
 enum PlayerTurnStage {
