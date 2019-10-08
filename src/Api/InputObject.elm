@@ -305,7 +305,7 @@ buildPlayerTurnInput required =
 
 
 type alias PlayerTurnInputRequiredFields =
-    { playerId : Int
+    { playerId : String
     , playerTurnStage : Api.Enum.PlayerTurnStage.PlayerTurnStage
     }
 
@@ -313,7 +313,7 @@ type alias PlayerTurnInputRequiredFields =
 {-| Type for the PlayerTurnInput input object.
 -}
 type alias PlayerTurnInput =
-    { playerId : Int
+    { playerId : String
     , playerTurnStage : Api.Enum.PlayerTurnStage.PlayerTurnStage
     }
 
@@ -323,7 +323,7 @@ type alias PlayerTurnInput =
 encodePlayerTurnInput : PlayerTurnInput -> Value
 encodePlayerTurnInput input =
     Encode.maybeObject
-        [ ( "playerId", Encode.int input.playerId |> Just ), ( "playerTurnStage", Encode.enum Api.Enum.PlayerTurnStage.toString input.playerTurnStage |> Just ) ]
+        [ ( "playerId", Encode.string input.playerId |> Just ), ( "playerTurnStage", Encode.enum Api.Enum.PlayerTurnStage.toString input.playerTurnStage |> Just ) ]
 
 
 buildPointInput : PointInputRequiredFields -> PointInput

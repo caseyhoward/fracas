@@ -2,9 +2,8 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Api.Object.PlayerTurn exposing (..)
+module Api.Object.BodyOfWater exposing (..)
 
-import Api.Enum.PlayerTurnStage
 import Api.InputObject
 import Api.Interface
 import Api.Object
@@ -21,12 +20,12 @@ import Json.Decode as Decode
 
 
 {-| -}
-playerId : SelectionSet String Api.Object.PlayerTurn
-playerId =
-    Object.selectionForField "String" "playerId" [] Decode.string
+id : SelectionSet String Api.Object.BodyOfWater
+id =
+    Object.selectionForField "String" "id" [] Decode.string
 
 
 {-| -}
-playerTurnStage : SelectionSet Api.Enum.PlayerTurnStage.PlayerTurnStage Api.Object.PlayerTurn
-playerTurnStage =
-    Object.selectionForField "Enum.PlayerTurnStage.PlayerTurnStage" "playerTurnStage" [] Api.Enum.PlayerTurnStage.decoder
+neighboringCountries : SelectionSet (List String) Api.Object.BodyOfWater
+neighboringCountries =
+    Object.selectionForField "(List String)" "neighboringCountries" [] (Decode.string |> Decode.list)

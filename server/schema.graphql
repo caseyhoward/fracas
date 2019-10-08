@@ -88,7 +88,7 @@ input GameInput {
 }
 
 input PlayerTurnInput {
-  playerId: Int!
+  playerId: String!
   playerTurnStage: PlayerTurnStage!
 }
 
@@ -118,6 +118,7 @@ type Game {
   players: [Player!]!
   neutralCountryTroops: [CountryTroopCounts!]!
   numberOfPlayers: Int!
+  playerTurn: PlayerTurn!
 }
 
 type CountryTroopCounts {
@@ -126,7 +127,7 @@ type CountryTroopCounts {
 }
 
 type PlayerTurn {
-  playerId: Int!
+  playerId: String!
   playerTurnStage: PlayerTurnStage!
 }
 
@@ -137,6 +138,7 @@ type Color {
 }
 
 type Player {
+  id: String!
   name: String!
   countryTroopCounts: [CountryTroopCounts!]!
   capitol: String

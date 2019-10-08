@@ -24,9 +24,11 @@ import Element.Events
 import Element.Font
 import Element.Input
 import GameMap
+import Graphql.Http
 import Html
 import Html.Attributes
 import Maps.Big
+import RemoteData
 import Route
 import Session
 import Set
@@ -35,11 +37,25 @@ import TroopCount
 import ViewHelpers
 
 
-type alias Model =
+type Model
+    = GameLoading GameLoadingModel
+    | GameLoaded GameLoadedModel
+
+
+type alias GameLoadingModel =
+    { activeGame : RemoteData.RemoteData (Graphql.Http.Error ActiveGame.ActiveGame) ActiveGame.ActiveGame
+    , error : Maybe String
+    , session : Session.Session
+    , playerId : ActiveGame.PlayerId
+    }
+
+
+type alias GameLoadedModel =
     { activeGame : ActiveGame.ActiveGame
     , showAvailableMoves : Bool
     , session : Session.Session
     , error : Maybe String
+    , playerId : ActiveGame.PlayerId
     , countryBorderHelperOutlineStatus : CountryBorderHelperOutlineStatus
     }
 
@@ -50,25 +66,40 @@ type CountryBorderHelperOutlineStatus
     | CountryBorderHelperOutlineActive GameMap.CountryId
 
 
-init : Session.Session -> ActiveGame.Id -> ( Model, Cmd Msg )
-init session (ActiveGame.Id activeGameId) =
-    case Dict.get activeGameId session.activeGames of
-        Just activeGame ->
-            ( { activeGame = activeGame
-              , error = Nothing
-              , session = session
-              , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
-              , showAvailableMoves = False
-              }
-            , Cmd.none
-            )
-
-        Nothing ->
-            --  This is a hack for when someone refreshes to redirect back
-            Debug.todo "s"
+init : Session.Session -> ActiveGame.Id -> ActiveGame.PlayerId -> ( Model, Cmd Msg )
+init session activeGameId playerId =
+    ( GameLoading
+        { activeGame = RemoteData.NotAsked
+        , error = Nothing
+        , playerId = playerId
+        , session = session
+        }
+    , ActiveGame.get activeGameId GotGame
+    )
 
 
 
+-- ( { activeGame = RemoteData.NotAsked
+--   , error = Nothing
+--   , session = session
+--   , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
+--   , showAvailableMoves = False
+--   }
+-- , ActiveGame.get activeGameId GotGame
+-- )
+-- case Dict.get activeGameId session.activeGames of
+--     Just activeGame ->
+--         ( { activeGame = activeGame
+--           , error = Nothing
+--           , session = session
+--           , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
+--           , showAvailableMoves = False
+--           }
+--         , Cmd.none
+--         )
+--     Nothing ->
+--         --  This is a hack for when someone refreshes to redirect back
+--         Debug.todo "s"
 -- ( { session = session
 --   , activeGame =
 --         { currentPlayerTurn = ActiveGame.PlayerTurn ActiveGame.CapitolPlacement (ActiveGame.PlayerId 1)
@@ -90,6 +121,7 @@ type Msg
     = CountryMouseUp GameMap.CountryId
     | CountryMouseDown GameMap.CountryId
     | CountryMouseOut GameMap.CountryId
+    | GotGame (RemoteData.RemoteData (Graphql.Http.Error ActiveGame.ActiveGame) ActiveGame.ActiveGame)
     | MouseUp
     | Pass
     | UpdateNumberOfTroopsToMove String
@@ -101,45 +133,71 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        activeGame =
-            model.activeGame
-    in
-    case msg of
-        CountryMouseUp clickedCountryId ->
-            ( handleCountryMouseUpFromPlayer clickedCountryId model
-            , Cmd.none
-            )
+    case model of
+        GameLoading gameLoadingModel ->
+            case msg of
+                GotGame gameRemoteData ->
+                    case gameRemoteData of
+                        RemoteData.Success game ->
+                            ( GameLoaded
+                                { activeGame = game
+                                , showAvailableMoves = False
+                                , session = gameLoadingModel.session
+                                , error = Nothing
+                                , playerId = gameLoadingModel.playerId
+                                , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
+                                }
+                            , Cmd.none
+                            )
 
-        CountryMouseDown clickedCountryId ->
-            ( handleCountryMouseDown clickedCountryId model, Cmd.none )
+                        _ ->
+                            ( model, Cmd.none )
 
-        CountryMouseOut mouseOutCountryId ->
-            ( handleCountryMouseOut mouseOutCountryId model, Cmd.none )
+                WindowResized width height ->
+                    ( GameLoading { gameLoadingModel | session = gameLoadingModel.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
 
-        ShowAvailableMovesCheckboxToggled isChecked ->
-            ( { model | showAvailableMoves = isChecked }, Cmd.none )
+                _ ->
+                    ( model, Cmd.none )
 
-        MouseUp ->
-            ( stopShowingCountryHelperOutlines model, Cmd.none )
+        GameLoaded gameLoadedModel ->
+            case msg of
+                CountryMouseUp clickedCountryId ->
+                    ( handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel |> GameLoaded
+                    , Cmd.none
+                    )
 
-        Pass ->
-            ( updateModelWithActiveGameResult (ActiveGame.pass activeGame) model, Cmd.none )
+                CountryMouseDown clickedCountryId ->
+                    ( handleCountryMouseDown clickedCountryId gameLoadedModel |> GameLoaded, Cmd.none )
 
-        UpdateNumberOfTroopsToMove numberOfTroopsToMoveString ->
-            ( { model | activeGame = ActiveGame.updateNumberOfTroopsToMove numberOfTroopsToMoveString activeGame }, Cmd.none )
+                CountryMouseOut mouseOutCountryId ->
+                    ( handleCountryMouseOut mouseOutCountryId gameLoadedModel |> GameLoaded, Cmd.none )
 
-        CancelMovingTroops ->
-            ( { model | activeGame = ActiveGame.cancelMovingTroops activeGame }, Cmd.none )
+                ShowAvailableMovesCheckboxToggled isChecked ->
+                    ( GameLoaded { gameLoadedModel | showAvailableMoves = isChecked }, Cmd.none )
 
-        ShowCountryBorderHelper ->
-            ( makeCountryHelperOutlinesActive model, Cmd.none )
+                MouseUp ->
+                    ( stopShowingCountryHelperOutlines gameLoadedModel |> GameLoaded, Cmd.none )
 
-        WindowResized width height ->
-            ( { model | session = model.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
+                Pass ->
+                    ( updateModelWithActiveGameResult (ActiveGame.pass gameLoadedModel.activeGame) gameLoadedModel |> GameLoaded, Cmd.none )
+
+                UpdateNumberOfTroopsToMove numberOfTroopsToMoveString ->
+                    ( GameLoaded { gameLoadedModel | activeGame = ActiveGame.updateNumberOfTroopsToMove numberOfTroopsToMoveString gameLoadedModel.activeGame }, Cmd.none )
+
+                CancelMovingTroops ->
+                    ( GameLoaded { gameLoadedModel | activeGame = ActiveGame.cancelMovingTroops gameLoadedModel.activeGame }, Cmd.none )
+
+                ShowCountryBorderHelper ->
+                    ( makeCountryHelperOutlinesActive gameLoadedModel |> GameLoaded, Cmd.none )
+
+                WindowResized width height ->
+                    ( GameLoaded { gameLoadedModel | session = gameLoadedModel.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
+
+                GotGame _ ->
+                    ( model, Cmd.none )
 
 
-updateModelWithActiveGameResult : Result ActiveGame.Error ActiveGame.ActiveGame -> Model -> Model
+updateModelWithActiveGameResult : Result ActiveGame.Error ActiveGame.ActiveGame -> GameLoadedModel -> GameLoadedModel
 updateModelWithActiveGameResult result model =
     case result of
         Ok activeGame ->
@@ -149,7 +207,7 @@ updateModelWithActiveGameResult result model =
             { model | error = Just (ActiveGame.errorToString error) }
 
 
-handleCountryMouseUpFromPlayer : GameMap.CountryId -> Model -> Model
+handleCountryMouseUpFromPlayer : GameMap.CountryId -> GameLoadedModel -> GameLoadedModel
 handleCountryMouseUpFromPlayer clickedCountryId model =
     let
         updatedModel =
@@ -175,12 +233,12 @@ handleCountryMouseUpFromPlayer clickedCountryId model =
     { updatedModel | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
 
 
-handleCountryMouseDown : GameMap.CountryId -> Model -> Model
+handleCountryMouseDown : GameMap.CountryId -> GameLoadedModel -> GameLoadedModel
 handleCountryMouseDown countryId activeGame =
     { activeGame | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineWaitingForDelay countryId }
 
 
-handleCountryMouseOut : GameMap.CountryId -> Model -> Model
+handleCountryMouseOut : GameMap.CountryId -> GameLoadedModel -> GameLoadedModel
 handleCountryMouseOut mouseOutCountryId activeGame =
     case activeGame.countryBorderHelperOutlineStatus of
         CountryBorderHelperOutlineWaitingForDelay countryId ->
@@ -205,37 +263,48 @@ waitingToShowCountryHelperOutlines countryBorderHelperOutlineStatus =
 
 
 
+-- modelToSession model =
+--     case model of
+--         GameLoading gameLoading ->
+--             gameLoading.session
+--         GameLoaded gameLoaded ->
+--             gameLoaded.session
 ---- VIEW ----
 
 
 view : Model -> { title : String, content : Html.Html Msg }
 view model =
-    { content =
-        case model.session.windowSize of
-            Just windowSize ->
-                let
-                    device =
-                        Element.classifyDevice windowSize
-                in
-                case Element.classifyDevice windowSize |> .class of
-                    Element.Phone ->
-                        viewPlayingGameMobile model.activeGame model.showAvailableMoves model.countryBorderHelperOutlineStatus model.error device
+    case model of
+        GameLoading gameLoading ->
+            { title = "Fracas - Loading", content = Element.none |> Element.layout [] }
 
-                    _ ->
-                        viewPlayingGameDesktop model.activeGame model.showAvailableMoves model.countryBorderHelperOutlineStatus model.error device
+        GameLoaded gameLoaded ->
+            { content =
+                case gameLoaded.session.windowSize of
+                    Just windowSize ->
+                        let
+                            device =
+                                Element.classifyDevice windowSize
+                        in
+                        case Element.classifyDevice windowSize |> .class of
+                            Element.Phone ->
+                                viewPlayingGameMobile gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error device
 
-            Nothing ->
-                viewPlayingGameDesktop model.activeGame model.showAvailableMoves model.countryBorderHelperOutlineStatus model.error (Element.classifyDevice { width = 1920, height = 1080 })
-    , title = "Fracas"
-    }
+                            _ ->
+                                viewPlayingGameDesktop gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error device
+
+                    Nothing ->
+                        viewPlayingGameDesktop gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error (Element.classifyDevice { width = 1920, height = 1080 })
+            , title = "Fracas"
+            }
 
 
-stopShowingCountryHelperOutlines : Model -> Model
+stopShowingCountryHelperOutlines : GameLoadedModel -> GameLoadedModel
 stopShowingCountryHelperOutlines activeGame =
     { activeGame | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
 
 
-makeCountryHelperOutlinesActive : Model -> Model
+makeCountryHelperOutlinesActive : GameLoadedModel -> GameLoadedModel
 makeCountryHelperOutlinesActive model =
     case model.countryBorderHelperOutlineStatus of
         CountryBorderHelperOutlineWaitingForDelay countryId ->
@@ -672,11 +741,11 @@ getWaterCollage gameMap =
 
         backgroundWater =
             background
-                |> Collage.filled (Collage.uniform (Colors.blue  |> Colors.toColor))
+                |> Collage.filled (Collage.uniform (Colors.blue |> Colors.toColor))
 
         backgroundBorder =
             background
-                |> Collage.outlined (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 8.0) (Collage.uniform (Colors.black  |> Colors.toColor)))
+                |> Collage.outlined (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 8.0) (Collage.uniform (Colors.black |> Colors.toColor)))
     in
     Collage.group [ backgroundBorder, backgroundWater ]
 
@@ -894,7 +963,7 @@ renderCapitolDots countryToRender =
             case countryToRender.capitolDots of
                 Just capitolDots ->
                     ( [ Collage.square (toFloat ViewHelpers.pixelsPerMapSquare / 10.0)
-                            |> Collage.filled (Collage.uniform (Colors.black  |> Colors.toColor))
+                            |> Collage.filled (Collage.uniform (Colors.black |> Colors.toColor))
                       ]
                     , capitolDots
                     )
@@ -929,7 +998,7 @@ getCountryInfoPolygonBorder gameMap players countryBorderHelperOutlineStatus cou
             Collage.polygon countryToRender.polygonPoints
                 |> Collage.outlined
                     (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 6.0)
-                        (Collage.uniform (Colors.green  |> Colors.toColor))
+                        (Collage.uniform (Colors.green |> Colors.toColor))
                     )
 
         CountryInfoAttacking ->
@@ -997,16 +1066,26 @@ countryOutlineDelayMilliseconds =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    [ if waitingToShowCountryHelperOutlines model.countryBorderHelperOutlineStatus then
-        Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
+    case model of
+        GameLoaded gameLoadedModel ->
+            [ if waitingToShowCountryHelperOutlines gameLoadedModel.countryBorderHelperOutlineStatus then
+                Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
 
-      else
-        Sub.none
-    , Browser.Events.onResize (\x y -> WindowResized x y)
-    ]
-        |> Sub.batch
+              else
+                Sub.none
+            , Browser.Events.onResize (\x y -> WindowResized x y)
+            ]
+                |> Sub.batch
+
+        GameLoading gameLoadingModel ->
+            Browser.Events.onResize (\x y -> WindowResized x y)
 
 
 toSession : Model -> Session.Session
 toSession model =
-    model.session
+    case model of
+        GameLoaded gameLoadedModel ->
+            gameLoadedModel.session
+
+        GameLoading gameLoadingModel ->
+            gameLoadingModel.session

@@ -72,7 +72,7 @@ const resolvers = {
       try {
         const result = await database.query(
           "INSERT INTO games(map_id, game_json) VALUES ($1, $2) RETURNING *",
-          [parseInt(x.newGame.mapId, 10), x.newGame.gameJson]
+          [parseInt(x.newGame.mapId, 10), JSON.stringify(x.newGame)]
         );
         return gameToJson(result.rows[0]);
       } catch (error) {
@@ -119,14 +119,16 @@ interface Game {
 }
 
 function gameToJson(gameRow: any): Game {
+  console.log(JSON.stringify(gameRow));
+  const gameWithoutId = JSON.parse(gameRow.game_json);
   return {
-    id: gameRow.id,
-    mapId: gameRow.map_id,
-    gameJson: gameRow.game_json
+    ...gameWithoutId,
+    id: gameRow.id
   };
 }
 
 function mapToJson(mapRow: any): Map {
   const mapWithoutId = JSON.parse(mapRow.map_json);
+  console.log(JSON.stringify({ ...mapWithoutId, id: mapRow.id }));
   return { ...mapWithoutId, id: mapRow.id };
 }

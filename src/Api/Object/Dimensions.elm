@@ -2,9 +2,8 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Api.Object.PlayerTurn exposing (..)
+module Api.Object.Dimensions exposing (..)
 
-import Api.Enum.PlayerTurnStage
 import Api.InputObject
 import Api.Interface
 import Api.Object
@@ -21,12 +20,12 @@ import Json.Decode as Decode
 
 
 {-| -}
-playerId : SelectionSet String Api.Object.PlayerTurn
-playerId =
-    Object.selectionForField "String" "playerId" [] Decode.string
+width : SelectionSet Int Api.Object.Dimensions
+width =
+    Object.selectionForField "Int" "width" [] Decode.int
 
 
 {-| -}
-playerTurnStage : SelectionSet Api.Enum.PlayerTurnStage.PlayerTurnStage Api.Object.PlayerTurn
-playerTurnStage =
-    Object.selectionForField "Enum.PlayerTurnStage.PlayerTurnStage" "playerTurnStage" [] Api.Enum.PlayerTurnStage.decoder
+height : SelectionSet Int Api.Object.Dimensions
+height =
+    Object.selectionForField "Int" "height" [] Decode.int

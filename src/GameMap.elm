@@ -16,7 +16,7 @@ module GameMap exposing
     , getCountriesThatCanReachCountryThroughWater
     , getCountry
     , getCountryIds
-    , getMapDimensions
+    , getMapDimensions,mapSelection
     , idToString
     , isCountryNeighboringWater
     , parse

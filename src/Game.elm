@@ -198,74 +198,74 @@ type alias GameJson =
 
 decodeGameJson : String -> Result Json.Decode.Error GameJson
 decodeGameJson json =
-    let
-        decodeTurnStatus : Json.Decode.Decoder TurnStatus
-        decodeTurnStatus =
-            Json.Decode.andThen
-                (\value ->
-                    case value of
-                        "PlacingCapitol" ->
-                            Json.Decode.succeed PlacingCapitol
+    Debug.todo ""
 
-                        "Action" ->
-                            Json.Decode.succeed Action
 
-                        "MovingTroops" ->
-                            Json.Decode.succeed MovingTroops
 
-                        "PlacingReinforcements" ->
-                            Json.Decode.succeed PlacingReinforcements
-
-                        "GameOver" ->
-                            Json.Decode.succeed GameOver
-
-                        _ ->
-                            Json.Decode.fail "Unknown TurnStatus"
-                )
-                Json.Decode.string
-
-        decodePlayer : Json.Decode.Decoder Player.Player
-        decodePlayer =
-            Json.Decode.map4 Player.Player
-                (Json.Decode.field "id" Json.Decode.string |> Json.Decode.map Player.Id)
-                (Json.Decode.field "name" Json.Decode.string)
-                (Json.Decode.field "color" Colors.decoder)
-                (Json.Decode.field "capitolId" (Json.Decode.string |> Json.Decode.map Country.Id |> Json.Decode.nullable))
-
-        decoder : Json.Decode.Decoder GameJson
-        decoder =
-            Json.Decode.map3 GameJson
-                (Json.Decode.field "players" (Json.Decode.list decodePlayer))
-                (Json.Decode.field "playerTurn" (Json.Decode.string |> Json.Decode.map Player.Id))
-                (Json.Decode.field "turnStatus" decodeTurnStatus)
-    in
-    Json.Decode.decodeString decoder json
+--     let
+--         decodeTurnStatus : Json.Decode.Decoder TurnStatus
+--         decodeTurnStatus =
+--             Json.Decode.andThen
+--                 (\value ->
+--                     case value of
+--                         "PlacingCapitol" ->
+--                             Json.Decode.succeed PlacingCapitol
+--                         "Action" ->
+--                             Json.Decode.succeed Action
+--                         "MovingTroops" ->
+--                             Json.Decode.succeed MovingTroops
+--                         "PlacingReinforcements" ->
+--                             Json.Decode.succeed PlacingReinforcements
+--                         "GameOver" ->
+--                             Json.Decode.succeed GameOver
+--                         _ ->
+--                             Json.Decode.fail "Unknown TurnStatus"
+--                 )
+--                 Json.Decode.string
+--         decodePlayer : Json.Decode.Decoder Player.Player
+--         decodePlayer =
+--             Json.Decode.map4 Player.Player
+--                 (Json.Decode.field "id" Json.Decode.string |> Json.Decode.map Player.Id)
+--                 (Json.Decode.field "name" Json.Decode.string)
+--                 (Json.Decode.field "color" Colors.decoder)
+--                 (Json.Decode.field "capitolId" (Json.Decode.string |> Json.Decode.map Country.Id |> Json.Decode.nullable))
+--         decoder : Json.Decode.Decoder GameJson
+--         decoder =
+--             Json.Decode.map3 GameJson
+--                 (Json.Decode.field "players" (Json.Decode.list decodePlayer))
+--                 (Json.Decode.field "playerTurn" (Json.Decode.string |> Json.Decode.map Player.Id))
+--                 (Json.Decode.field "turnStatus" decodeTurnStatus)
+--     in
+--     Json.Decode.decodeString decoder json
 
 
 encodeGameJson : GameJson -> Json.Encode.Value
 encodeGameJson gameJson =
-    let
-        encodePlayer : Player.Player -> Json.Encode.Value
-        encodePlayer player =
-            Json.Encode.object
-                ([ ( "id", player.id |> encodePlayerId )
-                 , ( "name", player.name |> Json.Encode.string )
-                 , ( "color", player.color |> Colors.encode )
-                 ]
-                    ++ (case player.capitolId of
-                            Just capitolId ->
-                                [ ( "capitolId", capitolId |> encodeCountryId ) ]
+    Debug.todo ""
 
-                            Nothing ->
-                                [ ( "capitolId", Json.Encode.null ) ]
-                       )
-                )
-    in
-    Json.Encode.object
-        [ ( "players", gameJson.players |> Json.Encode.list encodePlayer )
-        , ( "playerTurn", gameJson.playerTurn |> encodePlayerId )
-        , ( "turnStatus", gameJson.turnStatus |> encodeTurnStatus )
-        ]
+
+
+-- let
+--     encodePlayer : Player.Player -> Json.Encode.Value
+--     encodePlayer player =
+--         Json.Encode.object
+--             ([ ( "id", player.id |> encodePlayerId )
+--              , ( "name", player.name |> Json.Encode.string )
+--              , ( "color", player.color |> Colors.encode )
+--              ]
+--                 ++ (case player.capitolId of
+--                         Just capitolId ->
+--                             [ ( "capitolId", capitolId |> encodeCountryId ) ]
+--                         Nothing ->
+--                             [ ( "capitolId", Json.Encode.null ) ]
+--                    )
+--             )
+-- in
+-- Json.Encode.object
+--     [ ( "players", gameJson.players |> Json.Encode.list encodePlayer )
+--     , ( "playerTurn", gameJson.playerTurn |> encodePlayerId )
+--     , ( "turnStatus", gameJson.turnStatus |> encodeTurnStatus )
+--     ]
 
 
 encodeCountryId : Country.Id -> Json.Encode.Value

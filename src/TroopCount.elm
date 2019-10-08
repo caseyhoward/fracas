@@ -11,13 +11,40 @@ module TroopCount exposing
     , random
     , subtractTroopCounts
     , toString
+    , troopCountsInput
+    , troopCountsSelection
     )
 
+import Api.InputObject
+import Api.Object
+import Api.Object.CountryTroopCounts
+import Dict
+import Graphql.SelectionSet exposing (SelectionSet)
 import Random
 
 
 type TroopCount
     = TroopCount Int
+
+
+toInt : TroopCount -> Int
+toInt (TroopCount troopCount) =
+    troopCount
+
+
+troopCountsInput : Dict.Dict String TroopCount -> List Api.InputObject.CountryTroopCountsInput
+troopCountsInput countryTroopCounts =
+    countryTroopCounts
+        |> Dict.map
+            (\countryId troopCount ->
+                { countryId = countryId, troopCount = troopCount |> toInt }
+            )
+        |> Dict.values
+
+
+troopCountsSelection : SelectionSet ( String, TroopCount ) Api.Object.CountryTroopCounts
+troopCountsSelection =
+    Graphql.SelectionSet.map2 (\countryId troopCount -> ( countryId, TroopCount troopCount )) Api.Object.CountryTroopCounts.countryId Api.Object.CountryTroopCounts.troopCount
 
 
 acrossWater : TroopCount -> TroopCount

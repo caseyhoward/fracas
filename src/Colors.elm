@@ -17,14 +17,12 @@ module Colors exposing
     , darkPurple
     , darkRed
     , darkYellow
-    , decoder
-    , encode
-    ,  gray
-       ,transparency
-
+    , gray
     , green
     , grey
-    , lightBlue
+    , input
+    , lightBlue,
+    selectionSet
     , lightBrown
     , lightCharcoal
     , lightGray
@@ -40,16 +38,18 @@ module Colors exposing
     , rgb255
     , toColor
     , toElementColor
+    , transparency
     , white
     , yellow
     )
 
+import Api.InputObject
 import Color as ElmColor
 import Element
-import Json.Decode
-import Json.Encode
+import Graphql.SelectionSet exposing (SelectionSet)
 
-
+import Api.Object.Color
+import Api.Object
 type alias Color =
     { red : Int
     , green : Int
@@ -67,26 +67,21 @@ transparency value =
     ElmColor.rgba 0 0 0 value
 
 
+selectionSet : SelectionSet Color Api.Object.Color
+selectionSet =
+    Graphql.SelectionSet.map3 Color
+    Api.Object.Color.red
+    Api.Object.Color.green
+    Api.Object.Color.blue
+
 toElementColor : Color -> Element.Color
 toElementColor color =
     Element.rgb255 color.red color.green color.blue
 
 
-encode : Color -> Json.Encode.Value
-encode color =
-    Json.Encode.object
-        [ ( "red", color.red |> Json.Encode.int )
-        , ( "green", color.green |> Json.Encode.int )
-        , ( "blue", color.blue |> Json.Encode.int )
-        ]
-
-
-decoder : Json.Decode.Decoder Color
-decoder =
-    Json.Decode.map3 Color
-        (Json.Decode.field "red" Json.Decode.int)
-        (Json.Decode.field "green" Json.Decode.int)
-        (Json.Decode.field "blue" Json.Decode.int)
+input : Color -> Api.InputObject.ColorInput
+input color =
+    color
 
 
 rgb255 : Int -> Int -> Int -> Color

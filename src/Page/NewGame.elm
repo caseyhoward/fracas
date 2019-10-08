@@ -150,21 +150,8 @@ update msg model =
                                 |> String.toInt
                                 |> Maybe.withDefault 6
                     in
-                    if FeatureFlags.isServerEnabled then
-                        ( model, ActiveGame.create newGame.selectedMapId numberOfPlayers neutralCountryTroopCounts GameCreated )
+                    ( model, ActiveGame.create newGame.selectedMapId numberOfPlayers neutralCountryTroopCounts GameCreated )
 
-                    else
-                        Debug.todo ""
-
-                -- case ActiveGame.start session.gameMaps (GameMap.Id newGame.selectedMapId) numberOfPlayers neutralCountryTroopCounts of
-                --     Ok activeGame ->
-                --         ( GeneratingRandomTroopCounts
-                --             newGame
-                --             (session |> Session.addActiveGame (ActiveGame.Id "123") activeGame)
-                --         , Route.pushUrl (Session.navKey session) (Route.ActiveGame (ActiveGame.Id "123"))
-                --         )
-                --     Err error ->
-                --         ( GeneratingRandomTroopCounts { newGame | error = Just (error |> ActiveGame.errorToString) } session, Cmd.none )
                 NumberOfPlayersChanged _ ->
                     ( model, Cmd.none )
 
@@ -186,7 +173,7 @@ update msg model =
                 GameCreated gameIdResult ->
                     case gameIdResult of
                         RemoteData.Success gameId ->
-                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.Game gameId (Player.Id "1")) )
+                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.Game gameId (ActiveGame.PlayerId 1)) )
 
                         RemoteData.NotAsked ->
                             ( model, Cmd.none )

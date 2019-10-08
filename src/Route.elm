@@ -26,7 +26,7 @@ type Route
     | ActiveGame ActiveGame.Id
     | EditMap Map.Id
     | NewMap
-    | Game ActiveGame.Id Player.Id
+    | Game ActiveGame.Id ActiveGame.PlayerId
 
 
 href : Route -> Attribute msg
@@ -58,11 +58,11 @@ parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
         , Parser.map ConfiguringGame (s "games" </> s "new")
-        , Parser.map Game (s "active-games" </> ActiveGame.urlParser </> Player.urlParser)
+        , Parser.map Game (s "active-games" </> ActiveGame.urlParser </> ActiveGame.playerUrlParser)
         , Parser.map ActiveGame (s "active-games" </> ActiveGame.urlParser)
 
         -- , Parser.map Game (s "games" </> Game.urlParser)
-        , Parser.map Game (s "games" </> ActiveGame.urlParser </> Player.urlParser)
+        , Parser.map Game (s "games" </> ActiveGame.urlParser </> ActiveGame.playerUrlParser)
         , Parser.map NewMap (s "maps" </> s "new")
         , Parser.map EditMap (s "maps" </> Map.urlParser)
         ]
@@ -83,7 +83,7 @@ routeToString page =
                     [ "maps", Map.idToString mapId ]
 
                 Game gameId playerId ->
-                    [ "games", ActiveGame.idToString gameId, Player.idToString playerId ]
+                    [ "games", ActiveGame.idToString gameId, ActiveGame.playerIdToString playerId ]
 
                 NewMap ->
                     [ "maps", "new" ]

@@ -20,6 +20,12 @@ import Json.Decode as Decode
 
 
 {-| -}
+id : SelectionSet String Api.Object.Player
+id =
+    Object.selectionForField "String" "id" [] Decode.string
+
+
+{-| -}
 name : SelectionSet String Api.Object.Player
 name =
     Object.selectionForField "String" "name" [] Decode.string
