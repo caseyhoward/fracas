@@ -1,13 +1,18 @@
 module Country exposing
-    ( Country
+    ( Area
+    , Country
     , Id(..)
     , Point
     , ScaledCountry
+    , ScaledPoint
     , Segment
     , SelectionSet
-    , getCountriesCollage, scaledCountries
+    , countryInputs
+    , getCountriesCollage
     , getCountry
-    , getCountryIds, ScaledPoint
+    , getCountryIds
+    , getMedianCoordinates
+    , scaledCountries
     , selectionSet
     )
 
@@ -25,14 +30,8 @@ import Collage
 import Collage.Render
 import Color
 import Dict
-import Graphql.Http
 import Graphql.SelectionSet
-import Html
-import Html.Attributes
-import Json.Encode
-import RemoteData
 import Set
-import ViewHelpers
 
 
 type alias Point =
@@ -71,6 +70,10 @@ type Id
     = Id String
 
 
+type alias Area =
+    Set.Set ( Int, Int )
+
+
 getCountryIds : Dict.Dict String Country -> List Id
 getCountryIds countries =
     countries
@@ -81,32 +84,6 @@ getCountryIds countries =
 getCountry : Id -> Dict.Dict String Country -> Maybe Country
 getCountry (Id countryId) countries =
     Dict.get countryId countries
-
-
-scalePoint : Int -> Point -> ScaledPoint
-scalePoint scale ( x, y ) =
-    ( x * scale |> toFloat, y * scale |> toFloat )
-
-
-shiftPoint : Int -> ScaledPoint -> ScaledPoint
-shiftPoint scaleFactor ( x, y ) =
-    ( x + (0.5 * toFloat scaleFactor), y + (0.5 * toFloat scaleFactor) )
-
-
-scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> ( ScaledPoint, ScaledPoint )
-scaleEdge scale ( point1, point2 ) =
-    ( scalePoint scale point1, scalePoint scale point2 )
-
-
-scaleCountry : Int -> Country -> ScaledCountry
-scaleCountry scaleFactor country =
-    { coordinates = country.coordinates |> Set.map (scalePoint scaleFactor) |> Set.map (shiftPoint scaleFactor)
-    , polygon = country.polygon |> List.map (scalePoint scaleFactor)
-    , waterEdges = country.waterEdges |> Set.map (scaleEdge scaleFactor)
-    , center = country.center |> scalePoint scaleFactor |> shiftPoint scaleFactor
-    , neighboringCountries = country.neighboringCountries
-    , neighboringBodiesOfWater = country.neighboringBodiesOfWater
-    }
 
 
 scaledCountries : Int -> Dict.Dict String Country -> Dict.Dict String ScaledCountry
@@ -146,8 +123,35 @@ countryBorderColor =
     Color.rgb255 100 100 100
 
 
+scalePoint : Int -> Point -> ScaledPoint
+scalePoint scale ( x, y ) =
+    ( x * scale |> toFloat, y * scale |> toFloat )
 
----- SELECTION SETS ----
+
+shiftPoint : Int -> ScaledPoint -> ScaledPoint
+shiftPoint scaleFactor ( x, y ) =
+    ( x + (0.5 * toFloat scaleFactor), y + (0.5 * toFloat scaleFactor) )
+
+
+scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> ( ScaledPoint, ScaledPoint )
+scaleEdge scale ( point1, point2 ) =
+    ( scalePoint scale point1, scalePoint scale point2 )
+
+
+scaleCountry : Int -> Country -> ScaledCountry
+scaleCountry scaleFactor country =
+    { coordinates = country.coordinates |> Set.map (scalePoint scaleFactor) |> Set.map (shiftPoint scaleFactor)
+    , polygon = country.polygon |> List.map (scalePoint scaleFactor)
+    , waterEdges = country.waterEdges |> Set.map (scaleEdge scaleFactor)
+    , center = country.center |> scalePoint scaleFactor |> shiftPoint scaleFactor
+    , neighboringCountries = country.neighboringCountries
+    , neighboringBodiesOfWater = country.neighboringBodiesOfWater
+    }
+
+
+
+
+---- GRAPHQL ----
 
 
 type alias SelectionSet =
@@ -159,6 +163,79 @@ type alias SelectionSet =
     , neighboringCountries : Set.Set String
     , neighboringBodiesOfWater : Set.Set String
     }
+
+countryInputs : Dict.Dict String Country -> List Api.InputObject.CountryInput
+countryInputs countries =
+    countries
+        |> Dict.map
+            (\countryId country ->
+                let
+                    center : Api.InputObject.PointInput
+                    center =
+                        country.coordinates |> getMedianCoordinates |> pointToGraphql |> Api.InputObject.buildPointInput
+
+                    coordinates : List Api.InputObject.PointInput
+                    coordinates =
+                        country.coordinates |> Set.toList |> List.map pointToGraphql |> List.map Api.InputObject.buildPointInput
+
+                    polygon : List Api.InputObject.PointInput
+                    polygon =
+                        country.polygon |> List.map pointToGraphql |> List.map Api.InputObject.buildPointInput
+
+                    waterEdges : List Api.InputObject.SegmentInput
+                    waterEdges =
+                        country.waterEdges |> Set.toList |> List.map segmentToGraphql |> List.map Api.InputObject.buildSegmentInput
+
+                    neighboringCountries =
+                        country.neighboringCountries |> Set.toList
+                in
+                { id = countryId
+                , coordinates = coordinates
+                , polygon = polygon
+                , waterEdges = waterEdges
+                , center = center
+                , neighboringCountries = neighboringCountries
+                , neighboringBodiesOfWater = country.neighboringBodiesOfWater |> Set.toList
+                }
+                    |> Api.InputObject.buildCountryInput
+            )
+        |> Dict.values
+
+
+getMedianCoordinates : Area -> ( Int, Int )
+getMedianCoordinates area =
+    area
+        |> Set.foldl
+            (\( x, y ) ( xs, ys ) ->
+                ( x :: xs, y :: ys )
+            )
+            ( [], [] )
+        |> Tuple.mapBoth List.sort List.sort
+        |> Tuple.mapBoth
+            (\xs ->
+                xs
+                    |> List.drop (Set.size area // 2)
+                    |> List.head
+                    |> Maybe.withDefault 0
+            )
+            (\ys ->
+                ys
+                    |> List.drop (Set.size area // 2)
+                    |> List.head
+                    |> Maybe.withDefault 0
+            )
+
+
+selectionSet : Graphql.SelectionSet.SelectionSet SelectionSet ApiObject.Country
+selectionSet =
+    Graphql.SelectionSet.map7 SelectionSet
+        Api.Object.Country.id
+        (Api.Object.Country.coordinates coordinatesSelectionSet |> Graphql.SelectionSet.map Set.fromList)
+        (Api.Object.Country.polygon polygonSelectionSet)
+        (Api.Object.Country.waterEdges segmentSelection |> Graphql.SelectionSet.map Set.fromList)
+        (Api.Object.Country.center pointSelection)
+        (Api.Object.Country.neighboringCountries |> Graphql.SelectionSet.map Set.fromList)
+        (Api.Object.Country.neighboringBodiesOfWater |> Graphql.SelectionSet.map Set.fromList)
 
 
 segmentSelection : Graphql.SelectionSet.SelectionSet Segment ApiObject.Segment
@@ -189,13 +266,12 @@ polygonSelectionSet =
         Api.Object.Point.y
 
 
-selectionSet : Graphql.SelectionSet.SelectionSet SelectionSet ApiObject.Country
-selectionSet =
-    Graphql.SelectionSet.map7 SelectionSet
-        Api.Object.Country.id
-        (Api.Object.Country.coordinates coordinatesSelectionSet |> Graphql.SelectionSet.map Set.fromList)
-        (Api.Object.Country.polygon polygonSelectionSet)
-        (Api.Object.Country.waterEdges segmentSelection |> Graphql.SelectionSet.map Set.fromList)
-        (Api.Object.Country.center pointSelection)
-        (Api.Object.Country.neighboringCountries |> Graphql.SelectionSet.map Set.fromList)
-        (Api.Object.Country.neighboringBodiesOfWater |> Graphql.SelectionSet.map Set.fromList)
+pointToGraphql : ( Int, Int ) -> { x : Int, y : Int }
+pointToGraphql ( x, y ) =
+    { x = x, y = y }
+
+
+segmentToGraphql : ( ( Int, Int ), ( Int, Int ) ) -> { point1 : { x : Int, y : Int }, point2 : { x : Int, y : Int } }
+segmentToGraphql ( ( x1, y1 ), ( x2, y2 ) ) =
+    { point1 = { x = x1, y = y1 }, point2 = { x = x2, y = y2 } }
+

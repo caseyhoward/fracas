@@ -65,10 +65,6 @@ type Id
     = Id String
 
 
-type alias Area =
-    Set.Set ( Int, Int )
-
-
 type alias RawMap =
     Dict.Dict ( Int, Int ) String
 
@@ -133,55 +129,13 @@ mapSelection =
         |> Graphql.SelectionSet.map mapSelectionSetToMap
 
 
-pointToGraphql : ( Int, Int ) -> { x : Int, y : Int }
-pointToGraphql ( x, y ) =
-    { x = x, y = y }
-
-
-segmentToGraphql : ( ( Int, Int ), ( Int, Int ) ) -> { point1 : { x : Int, y : Int }, point2 : { x : Int, y : Int } }
-segmentToGraphql ( ( x1, y1 ), ( x2, y2 ) ) =
-    { point1 = { x = x1, y = y1 }, point2 = { x = x2, y = y2 } }
-
-
 create : NewMap -> (RemoteData.RemoteData (Graphql.Http.Error Map) Map -> msg) -> Cmd msg
 create newMap toMsg =
     let
         countryInputs : List Api.InputObject.CountryInput
         countryInputs =
             newMap.countries
-                |> Dict.map
-                    (\countryId country ->
-                        let
-                            center : Api.InputObject.PointInput
-                            center =
-                                country.coordinates |> getMedianCoordinates |> pointToGraphql |> Api.InputObject.buildPointInput
-
-                            coordinates : List Api.InputObject.PointInput
-                            coordinates =
-                                country.coordinates |> Set.toList |> List.map pointToGraphql |> List.map Api.InputObject.buildPointInput
-
-                            polygon : List Api.InputObject.PointInput
-                            polygon =
-                                country.polygon |> List.map pointToGraphql |> List.map Api.InputObject.buildPointInput
-
-                            waterEdges : List Api.InputObject.SegmentInput
-                            waterEdges =
-                                country.waterEdges |> Set.toList |> List.map segmentToGraphql |> List.map Api.InputObject.buildSegmentInput
-
-                            neighboringCountries =
-                                country.neighboringCountries |> Set.toList
-                        in
-                        { id = countryId
-                        , coordinates = coordinates
-                        , polygon = polygon
-                        , waterEdges = waterEdges
-                        , center = center
-                        , neighboringCountries = neighboringCountries
-                        , neighboringBodiesOfWater = country.neighboringBodiesOfWater |> Set.toList
-                        }
-                            |> Api.InputObject.buildCountryInput
-                    )
-                |> Dict.values
+                |> Country.countryInputs
 
         bodiesOfWater : List Api.InputObject.BodyOfWaterInput
         bodiesOfWater =
@@ -364,7 +318,7 @@ parse name text =
                     in
                     { country
                         | polygon = coordinatesToPolygon (edgesWithNeigborCoordinate |> Set.map Tuple.second)
-                        , center = getMedianCoordinates country.coordinates
+                        , center = Country.getMedianCoordinates country.coordinates
                         , waterEdges = edgesBorderingWater
                     }
                 )
@@ -523,30 +477,6 @@ updateBodyOfWater bodyOfWaterId coordinates mapDimensions rawMap bodyOfWaterNeig
     Set.union neighboringCountries bodyOfWaterNeighborCountries
 
 
-getMedianCoordinates : Area -> ( Int, Int )
-getMedianCoordinates area =
-    area
-        |> Set.foldl
-            (\( x, y ) ( xs, ys ) ->
-                ( x :: xs, y :: ys )
-            )
-            ( [], [] )
-        |> Tuple.mapBoth List.sort List.sort
-        |> Tuple.mapBoth
-            (\xs ->
-                xs
-                    |> List.drop (Set.size area // 2)
-                    |> List.head
-                    |> Maybe.withDefault 0
-            )
-            (\ys ->
-                ys
-                    |> List.drop (Set.size area // 2)
-                    |> List.head
-                    |> Maybe.withDefault 0
-            )
-
-
 getNeighborCoordinates : ( Int, Int ) -> ( Int, Int ) -> Set.Set ( Int, Int )
 getNeighborCoordinates ( x, y ) ( width, height ) =
     [ ( -1, 0 ), ( 1, 0 ), ( 0, -1 ), ( 0, 1 ) ]
@@ -613,7 +543,7 @@ recursiveStuff borderSegments currentPoint result =
             currentPoint :: result
 
 
-getEdgesForArea : Area -> Set.Set ( ( Int, Int ), Country.Segment )
+getEdgesForArea : Country.Area -> Set.Set ( ( Int, Int ), Country.Segment )
 getEdgesForArea area =
     area
         |> Set.foldl

@@ -918,35 +918,6 @@ playerTurnToString players (PlayerTurn playerTurnStage playerId) =
             ""
 
 
-
--- start : Dict.Dict String Map.Map -> Map.Id -> Int -> Dict.Dict String TroopCount.TroopCount -> Result Error Game
--- start gameMaps gameMapId numberOfPlayers neutralTroopCounts =
---     case Map.get gameMapId gameMaps of
---         Ok gameMap ->
---             Ok
---                 { map = gameMap
---                 , players =
---                     List.range 1 numberOfPlayers
---                         |> List.map
---                             (\playerId ->
---                                 ( playerId
---                                 , { countryTroopCounts = Dict.empty
---                                   , name = "Player " ++ String.fromInt playerId
---                                   , capitolStatus = NoCapitol
---                                   , color = getDefaultColor (PlayerId playerId)
---                                   , ports = Set.empty
---                                   }
---                                 )
---                             )
---                         |> Dict.fromList
---                 , currentPlayerTurn = PlayerTurn CapitolPlacement (PlayerId 1)
---                 , numberOfPlayers = numberOfPlayers
---                 , neutralCountryTroops = neutralTroopCounts
---                 }
---         Err error ->
---             error |> Map.errorToString |> Error |> Err
-
-
 troopsToMove : PlayerTurn -> Maybe String
 troopsToMove currentPlayerTurn =
     case currentPlayerTurn of
@@ -1043,7 +1014,7 @@ attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString a
         OccupiedByCurrentPlayer playerCountryToTroopCount ->
             case String.toInt numberOfTroopsToMoveString of
                 Just numberOfTroopsToMove ->
-                    if isCountryReachableFromOtherCountry fromCountryId clickedCountryId (getCurrentPlayer activeGame.currentPlayerTurn) activeGame.map.countries activeGame.players then
+                    if isCountryReachableFromOtherCountry fromCountryId clickedCountryId activeGame.map.countries activeGame.players then
                         let
                             fromCountryTroopCount =
                                 case getPlayer (getCurrentPlayer activeGame.currentPlayerTurn) activeGame.players of
@@ -1161,9 +1132,6 @@ attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace activeGame 
 
         Unoccupied ->
             "You must put troops in your own country" |> Error |> Err
-
-
-
 
 
 attemptToBuildPort : PlayerId -> Country.Id -> Game -> Result Error Game
@@ -1382,7 +1350,7 @@ canAnnexCountry gameMap playerId players countryIdToAnnex =
             player.countryTroopCounts
                 |> Dict.foldl
                     (\playerCountryId _ isReachable ->
-                        isReachable || isCountryReachableFromOtherCountry (Country.Id playerCountryId) countryIdToAnnex playerId gameMap.countries players
+                        isReachable || isCountryReachableFromOtherCountry (Country.Id playerCountryId) countryIdToAnnex gameMap.countries players
                     )
                     False
 
@@ -1488,7 +1456,7 @@ getCountryCanBeClicked currentPlayerTurn players gameMap countryId =
                             False
 
                 TroopMovementFromSelected fromCountryId _ ->
-                    if isCountryReachableFromOtherCountry fromCountryId countryId (getCurrentPlayer currentPlayerTurn) gameMap.countries players then
+                    if isCountryReachableFromOtherCountry fromCountryId countryId gameMap.countries players then
                         case getPlayer (getCurrentPlayer currentPlayerTurn) players of
                             Just currentPlayer ->
                                 case getTroopCount countryId currentPlayer.countryTroopCounts of
@@ -1609,8 +1577,8 @@ isCountryOwnedByPlayer playerId countryId players =
             False
 
 
-isCountryReachableFromOtherCountry : Country.Id -> Country.Id -> PlayerId -> Dict.Dict String Country.Country -> Players -> Bool
-isCountryReachableFromOtherCountry fromCountryId toCountryId playerId countries players =
+isCountryReachableFromOtherCountry : Country.Id -> Country.Id -> Dict.Dict String Country.Country -> Players -> Bool
+isCountryReachableFromOtherCountry fromCountryId toCountryId countries players =
     case Country.getCountry fromCountryId countries of
         Just fromCountry ->
             case toCountryId of
