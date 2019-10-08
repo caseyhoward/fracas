@@ -1,8 +1,8 @@
 module Game exposing
-    ( Game
-    , CapitolStatus(..)
+    ( CapitolStatus(..)
     , CountryToRender
     , Error
+    , Game
     , Id(..)
     , Player
     , PlayerId(..)
@@ -57,10 +57,10 @@ import Api.Object.PlayerTurn
 import Api.Query
 import Colors
 import Dict
-import Map
 import Graphql.Http
 import Graphql.Operation
 import Graphql.SelectionSet exposing (SelectionSet)
+import Map
 import RemoteData
 import Set
 import TroopCount
@@ -522,19 +522,13 @@ getCountriesToRender gameMap players currentPlayerTurn neutralCountryTroops =
                     countryOwnerAndTroopCount =
                         findCountryOwnerAndTroopCount (Map.CountryId countryId) players
 
-                    -- shift =
-                    --     \_ ->
-                    --         case country.center of
-                    --             ( medianX, medianY ) ->
-                    --                 ( medianX * ViewHelpers.pixelsPerMapSquare, medianY * ViewHelpers.pixelsPerMapSquare )
-                    -- ( (toFloat medianX + 0.5) * toFloat ViewHelpers.pixelsPerMapSquare, (toFloat medianY + 0.5) * toFloat ViewHelpers.pixelsPerMapSquare )
+      
                 in
                 case countryOwnerAndTroopCount of
                     Just ( countryOwnerId, troopCount ) ->
                         getPlayer countryOwnerId players
                             |> Maybe.map
                                 (\countryOwner ->
-
                                     { id = Map.CountryId countryId
                                     , troopCount = troopCount
                                     , center = country.center

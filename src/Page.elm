@@ -10,7 +10,6 @@ import Html
 type Page
     = Game
     | NewGame
-    | EditMap
     | NewMap
 
 

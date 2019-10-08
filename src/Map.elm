@@ -732,6 +732,9 @@ scalePoint : Int -> Point -> ScaledPoint
 scalePoint scale ( x, y ) =
     ( x * scale |> toFloat, y * scale |> toFloat )
 
+shiftPoint : Int -> ScaledPoint -> ScaledPoint
+shiftPoint scaleFactor (x, y) =
+    (x + (0.5 * toFloat scaleFactor), y + (0.5 * toFloat scaleFactor))
 
 scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> ( ScaledPoint, ScaledPoint )
 scaleEdge scale ( point1, point2 ) =
@@ -740,10 +743,11 @@ scaleEdge scale ( point1, point2 ) =
 
 scaleCountry : Int -> Country -> ScaledCountry
 scaleCountry scaleFactor country =
-    { coordinates = country.coordinates |> Set.map (scalePoint scaleFactor)
+
+    { coordinates = country.coordinates |> Set.map (scalePoint scaleFactor) |> Set.map (shiftPoint scaleFactor)
     , polygon = country.polygon |> List.map (scalePoint scaleFactor)
     , waterEdges = country.waterEdges |> Set.map (scaleEdge scaleFactor)
-    , center = country.center |> scalePoint scaleFactor
+    , center = country.center |> scalePoint scaleFactor |> shiftPoint scaleFactor
     , neighboringCountries = country.neighboringCountries
     , neighboringBodiesOfWater = country.neighboringBodiesOfWater
     }
@@ -751,6 +755,7 @@ scaleCountry scaleFactor country =
 
 scaledCountries : Int -> Dict.Dict String Country -> Dict.Dict String ScaledCountry
 scaledCountries scaleFactor countries =
+
     countries
         |> Dict.map (\_ country -> scaleCountry scaleFactor country)
 
