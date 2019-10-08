@@ -2,10 +2,8 @@ module Page.NewGame exposing (Model, Msg, init, subscriptions, toSession, update
 
 -- import Map
 
-import Game
 import Browser.Dom
 import Browser.Events
-import Color
 import Colors
 import Dict
 import Element
@@ -13,12 +11,12 @@ import Element.Background
 import Element.Border
 import Element.Font
 import Element.Input
-import FeatureFlags
-import Map
+import Game
 import Graphql.Http
 import Html
 import Html.Events
 import Json.Decode
+import Map
 import Random
 import Random.Dict
 import Random.List
