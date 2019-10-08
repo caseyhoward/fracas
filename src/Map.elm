@@ -1,28 +1,20 @@
 module Map exposing
-    ( BorderSegment
-    , Country
-    , CountryId(..)
+    ( Id(..)
     , Map
-    , Id(..)
     , NewMap
-    , Point
     , RawMap
-    , ScaledCountry
-    , ScaledPoint
     , create
     , errorToString
     , get
     , getAll
     , getCountriesThatCanReachCountryThroughWater
-    , getCountry
-    , getCountryIds
-    , getMapDimensions,mapSelection
+    , getMapDimensions
+    , getWaterCollage
     , idToString
     , isCountryNeighboringWater
+    , mapSelection
     , parse
     , parseRawMap
-    , scaleCountry
-    , scaledCountries, getWaterCollage
     , updateCountry
     , view
     )
@@ -40,6 +32,7 @@ import Api.Query
 import Collage
 import Collage.Render
 import Color
+import Country
 import Dict
 import Graphql.Http
 import Graphql.SelectionSet exposing (SelectionSet)
@@ -54,7 +47,7 @@ import ViewHelpers
 type alias Map =
     { id : Id
     , name : String
-    , countries : Dict.Dict String Country
+    , countries : Dict.Dict String Country.Country
     , bodiesOfWater : Dict.Dict String (Set.Set String)
     , dimensions : ( Int, Int )
     }
@@ -62,42 +55,14 @@ type alias Map =
 
 type alias NewMap =
     { name : String
-    , countries : Dict.Dict String Country
+    , countries : Dict.Dict String Country.Country
     , bodiesOfWater : Dict.Dict String (Set.Set String)
     , dimensions : ( Int, Int )
     }
 
 
-type CountryId
-    = CountryId String
-
-
 type Id
     = Id String
-
-
-type alias Country =
-    { coordinates : Set.Set Point -- Only needed for making the capitol dots
-    , polygon : List Point
-    , waterEdges : Set.Set ( Point, Point )
-    , center : Point
-    , neighboringCountries : Set.Set String
-    , neighboringBodiesOfWater : Set.Set String
-    }
-
-
-type alias ScaledCountry =
-    { coordinates : Set.Set ScaledPoint -- Only needed for making the capitol dots
-    , polygon : List ScaledPoint
-    , waterEdges : Set.Set ( ScaledPoint, ScaledPoint )
-    , center : ScaledPoint
-    , neighboringCountries : Set.Set String
-    , neighboringBodiesOfWater : Set.Set String
-    }
-
-
-type alias ScaledPoint =
-    ( Float, Float )
 
 
 type alias Area =
@@ -108,10 +73,6 @@ type alias RawMap =
     Dict.Dict ( Int, Int ) String
 
 
-type alias BorderSegment =
-    ( Point, Point )
-
-
 type Error
     = Error String
 
@@ -119,29 +80,10 @@ type Error
 type alias MapSelectionSet =
     { id : String
     , name : String
-    , countries : List CountrySelectionSet
+    , countries : List Country.SelectionSet
     , bodiesOfWater : List ( String, Set.Set String )
     , dimensions : ( Int, Int )
     }
-
-
-type alias CountrySelectionSet =
-    { id : String
-    , coordinates : Set.Set Point -- Only needed for making the capitol dots
-    , polygon : List Point
-    , waterEdges : Set.Set ( Point, Point )
-    , center : Point
-    , neighboringCountries : Set.Set String
-    , neighboringBodiesOfWater : Set.Set String
-    }
-
-
-type alias Point =
-    ( Int, Int )
-
-
-type alias Segment =
-    ( Point, Point )
 
 
 idToString : Id -> String
@@ -159,41 +101,6 @@ getAll toMsg =
 mapSelectionSet : SelectionSet MapSelectionSet ApiObject.Map
 mapSelectionSet =
     let
-        segmentSelection : SelectionSet Segment ApiObject.Segment
-        segmentSelection =
-            Graphql.SelectionSet.map2 Tuple.pair
-                (Api.Object.Segment.point1 pointSelection)
-                (Api.Object.Segment.point2 pointSelection)
-
-        pointSelection : SelectionSet Point ApiObject.Point
-        pointSelection =
-            Graphql.SelectionSet.map2 Tuple.pair
-                Api.Object.Point.x
-                Api.Object.Point.y
-
-        coordinatesSelectionSet : SelectionSet Point ApiObject.Point
-        coordinatesSelectionSet =
-            Graphql.SelectionSet.map2 Tuple.pair
-                Api.Object.Point.x
-                Api.Object.Point.y
-
-        polygonSelectionSet : SelectionSet Point ApiObject.Point
-        polygonSelectionSet =
-            Graphql.SelectionSet.map2 Tuple.pair
-                Api.Object.Point.x
-                Api.Object.Point.y
-
-        countrySelection : SelectionSet CountrySelectionSet ApiObject.Country
-        countrySelection =
-            Graphql.SelectionSet.map7 CountrySelectionSet
-                Api.Object.Country.id
-                (Api.Object.Country.coordinates coordinatesSelectionSet |> Graphql.SelectionSet.map Set.fromList)
-                (Api.Object.Country.polygon polygonSelectionSet)
-                (Api.Object.Country.waterEdges segmentSelection |> Graphql.SelectionSet.map Set.fromList)
-                (Api.Object.Country.center pointSelection)
-                (Api.Object.Country.neighboringCountries |> Graphql.SelectionSet.map Set.fromList)
-                (Api.Object.Country.neighboringBodiesOfWater |> Graphql.SelectionSet.map Set.fromList)
-
         bodyOfWaterSelection : SelectionSet ( String, Set.Set String ) ApiObject.BodyOfWater
         bodyOfWaterSelection =
             Graphql.SelectionSet.map2
@@ -215,7 +122,7 @@ mapSelectionSet =
     Graphql.SelectionSet.map5 MapSelectionSet
         Api.Object.Map.id
         Api.Object.Map.name
-        (Api.Object.Map.countries countrySelection)
+        (Api.Object.Map.countries Country.selectionSet)
         (Api.Object.Map.bodiesOfWater bodyOfWaterSelection)
         (Api.Object.Map.dimensions dimensionsSelection)
 
@@ -311,7 +218,7 @@ create newMap toMsg =
 mapSelectionSetToMap : MapSelectionSet -> Map
 mapSelectionSetToMap selectionSet =
     let
-        countrySelectionSetsToCountries : List CountrySelectionSet -> Dict.Dict String Country
+        countrySelectionSetsToCountries : List Country.SelectionSet -> Dict.Dict String Country.Country
         countrySelectionSetsToCountries countrySelectionSets =
             countrySelectionSets
                 |> List.map
@@ -355,11 +262,11 @@ get (Id id) gameMaps =
             Error "Game map not found" |> Err
 
 
-getCountriesThatCanReachCountryThroughWater : Map -> CountryId -> List CountryId
+getCountriesThatCanReachCountryThroughWater : Map -> Country.Id -> List Country.Id
 getCountriesThatCanReachCountryThroughWater gameMap countryId =
     let
         neighboringBodiesOfWater =
-            case getCountry countryId gameMap.countries of
+            case Country.getCountry countryId gameMap.countries of
                 Just countryBeingAttacked ->
                     countryBeingAttacked.neighboringBodiesOfWater
 
@@ -372,7 +279,7 @@ getCountriesThatCanReachCountryThroughWater gameMap countryId =
             (\bodyOfWaterId countries ->
                 case Dict.get bodyOfWaterId gameMap.bodiesOfWater of
                     Just countryIdsNeighboringWater ->
-                        (countryIdsNeighboringWater |> Set.toList |> List.map CountryId) ++ countries
+                        (countryIdsNeighboringWater |> Set.toList |> List.map Country.Id) ++ countries
 
                     _ ->
                         countries
@@ -380,21 +287,9 @@ getCountriesThatCanReachCountryThroughWater gameMap countryId =
             []
 
 
-getCountry : CountryId -> Dict.Dict String Country -> Maybe Country
-getCountry (CountryId countryId) countries =
-    Dict.get countryId countries
-
-
-getCountryIds : Dict.Dict String Country -> List CountryId
-getCountryIds countries =
-    countries
-        |> Dict.keys
-        |> List.map CountryId
-
-
-isCountryNeighboringWater : CountryId -> Dict.Dict String Country -> Maybe Bool
+isCountryNeighboringWater : Country.Id -> Dict.Dict String Country.Country -> Maybe Bool
 isCountryNeighboringWater countryId countries =
-    getCountry countryId countries
+    Country.getCountry countryId countries
         |> Maybe.map
             (\country ->
                 Set.size country.neighboringBodiesOfWater > 0
@@ -480,8 +375,8 @@ parse name text =
     }
 
 
-updateCountry : CountryId -> Country -> Dict.Dict String Country -> Dict.Dict String Country
-updateCountry (CountryId countryId) country countries =
+updateCountry : Country.Id -> Country.Country -> Dict.Dict String Country.Country -> Dict.Dict String Country.Country
+updateCountry (Country.Id countryId) country countries =
     Dict.insert countryId country countries
 
 
@@ -568,7 +463,7 @@ getMapDimensions map =
             ( 0, 0 )
 
 
-updateCountryWhileParsing : String -> ( Int, Int ) -> ( Int, Int ) -> RawMap -> Country -> Country
+updateCountryWhileParsing : String -> ( Int, Int ) -> ( Int, Int ) -> RawMap -> Country.Country -> Country.Country
 updateCountryWhileParsing countryId coordinates mapDimensions rawMap country =
     let
         ( neighboringCountries, neighboringBodiesOfWater ) =
@@ -678,7 +573,7 @@ isCountry areaId =
     String.length areaId < 4
 
 
-coordinatesToPolygon : Set.Set ( Point, Point ) -> List Point
+coordinatesToPolygon : Set.Set ( Country.Point, Country.Point ) -> List Country.Point
 coordinatesToPolygon edges =
     case edges |> Set.toList of
         ( point1, point2 ) :: _ ->
@@ -688,7 +583,7 @@ coordinatesToPolygon edges =
             []
 
 
-recursiveStuff : Set.Set BorderSegment -> Point -> List Point -> List Point
+recursiveStuff : Set.Set Country.Segment -> Country.Point -> List Country.Point -> List Country.Point
 recursiveStuff borderSegments currentPoint result =
     let
         maybeSegment =
@@ -718,7 +613,7 @@ recursiveStuff borderSegments currentPoint result =
             currentPoint :: result
 
 
-getEdgesForArea : Area -> Set.Set ( ( Int, Int ), BorderSegment )
+getEdgesForArea : Area -> Set.Set ( ( Int, Int ), Country.Segment )
 getEdgesForArea area =
     area
         |> Set.foldl
@@ -728,39 +623,7 @@ getEdgesForArea area =
             Set.empty
 
 
-scalePoint : Int -> Point -> ScaledPoint
-scalePoint scale ( x, y ) =
-    ( x * scale |> toFloat, y * scale |> toFloat )
-
-shiftPoint : Int -> ScaledPoint -> ScaledPoint
-shiftPoint scaleFactor (x, y) =
-    (x + (0.5 * toFloat scaleFactor), y + (0.5 * toFloat scaleFactor))
-
-scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> ( ScaledPoint, ScaledPoint )
-scaleEdge scale ( point1, point2 ) =
-    ( scalePoint scale point1, scalePoint scale point2 )
-
-
-scaleCountry : Int -> Country -> ScaledCountry
-scaleCountry scaleFactor country =
-
-    { coordinates = country.coordinates |> Set.map (scalePoint scaleFactor) |> Set.map (shiftPoint scaleFactor)
-    , polygon = country.polygon |> List.map (scalePoint scaleFactor)
-    , waterEdges = country.waterEdges |> Set.map (scaleEdge scaleFactor)
-    , center = country.center |> scalePoint scaleFactor |> shiftPoint scaleFactor
-    , neighboringCountries = country.neighboringCountries
-    , neighboringBodiesOfWater = country.neighboringBodiesOfWater
-    }
-
-
-scaledCountries : Int -> Dict.Dict String Country -> Dict.Dict String ScaledCountry
-scaledCountries scaleFactor countries =
-
-    countries
-        |> Dict.map (\_ country -> scaleCountry scaleFactor country)
-
-
-getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Set.Set ( ( Int, Int ), BorderSegment )
+getEdgesForCountryForCoordinate : Set.Set ( Int, Int ) -> ( Int, Int ) -> Set.Set ( ( Int, Int ), Country.Segment )
 getEdgesForCountryForCoordinate allAreas ( x, y ) =
     let
         left =
@@ -806,7 +669,7 @@ getEdgesForCountryForCoordinate allAreas ( x, y ) =
             Set.empty
 
 
-view : Int -> Dict.Dict String Country -> ( Int, Int ) -> Html.Html msg
+view : Int -> Dict.Dict String Country.Country -> ( Int, Int ) -> Html.Html msg
 view scale countries ( width, height ) =
     let
         scaledWidth =
@@ -816,7 +679,7 @@ view scale countries ( width, height ) =
             height * scale
     in
     Collage.group
-        [ getCountriesCollage scale countries
+        [ Country.getCountriesCollage scale countries
         , getWaterCollage scale ( width, height )
         ]
         |> Collage.Render.svgExplicit
@@ -836,37 +699,6 @@ view scale countries ( width, height ) =
                     ++ (1 * scaledHeight |> String.fromInt)
                 )
             ]
-
-
-getCountriesCollage : Int -> Dict.Dict String Country -> Collage.Collage msg
-getCountriesCollage scale countries =
-    countries
-        |> Dict.map
-            (\_ country ->
-                let
-                    countryPolygon =
-                        country |> scaleCountry scale |> .polygon |> Collage.polygon
-
-                    fill =
-                        countryPolygon
-                            |> Collage.filled (Collage.uniform Color.gray)
-
-                    border =
-                        countryPolygon
-                            |> Collage.outlined
-                                (Collage.solid 30.0
-                                    (Collage.uniform countryBorderColor)
-                                )
-                in
-                Collage.group [ fill, border ]
-            )
-        |> Dict.values
-        |> Collage.group
-
-
-countryBorderColor : Color.Color
-countryBorderColor =
-    Color.rgb255 100 100 100
 
 
 getWaterCollage : Int -> ( Int, Int ) -> Collage.Collage msg

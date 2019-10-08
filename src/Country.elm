@@ -1,206 +1,201 @@
 module Country exposing
     ( Country
-    , CountryProperties
     , Id(..)
     , Point
-    , Polygon
+    , ScaledCountry
     , Segment
-    , coastal
-    , decoder
-    , encode
-    , getScaledCountryPolygon
-    , landlocked
+    , SelectionSet
+    , getCountriesCollage, scaledCountries
+    , getCountry
+    , getCountryIds, ScaledPoint
+    , selectionSet
     )
 
-import Json.Decode
+import Api.InputObject
+import Api.Mutation
+import Api.Object as ApiObject
+import Api.Object.BodyOfWater
+import Api.Object.Country
+import Api.Object.Dimensions
+import Api.Object.Map
+import Api.Object.Point
+import Api.Object.Segment
+import Api.Query
+import Collage
+import Collage.Render
+import Color
+import Dict
+import Graphql.Http
+import Graphql.SelectionSet
+import Html
+import Html.Attributes
 import Json.Encode
+import RemoteData
 import Set
-
-
-type Id
-    = Id String
-
-
-type Country
-    = CoastalCountry CountryProperties (Set.Set Segment)
-    | LandLockedCountry CountryProperties
-
-
-type alias CountryProperties =
-    { id : Id
-    , polygon : Polygon
-    , points : Set.Set Point
-    }
-
-
-type alias Polygon =
-    List Point
-
-
-type alias Segment =
-    ( Point, Point )
+import ViewHelpers
 
 
 type alias Point =
     ( Int, Int )
 
 
-
----- CONSTRUCTORS ----
-
-
-landlocked : CountryProperties -> Country
-landlocked countryProperties =
-    LandLockedCountry countryProperties
+type alias Segment =
+    ( Point, Point )
 
 
-coastal : CountryProperties -> Set.Set Segment -> Country
-coastal countryProperties waterEdges =
-    CoastalCountry countryProperties waterEdges
+type alias Country =
+    { coordinates : Set.Set Point -- Only needed for making the capitol dots
+    , polygon : List Point
+    , waterEdges : Set.Set ( Point, Point )
+    , center : Point
+    , neighboringCountries : Set.Set String
+    , neighboringBodiesOfWater : Set.Set String
+    }
 
 
-
----- DECODER ----
-
-
-decoder : Json.Decode.Decoder Country
-decoder =
-    Json.Decode.map4
-        (\id polygon points waterEdges ->
-            let
-                countryProperties : CountryProperties
-                countryProperties =
-                    { id = id
-                    , polygon = polygon
-                    , points = points
-                    }
-            in
-            case Set.size waterEdges of
-                0 ->
-                    LandLockedCountry countryProperties
-
-                _ ->
-                    CoastalCountry countryProperties waterEdges
-        )
-        (Json.Decode.field "id" (Json.Decode.map Id Json.Decode.string))
-        (Json.Decode.field "polygon" decodePolygon)
-        (Json.Decode.field "points" decodePoints)
-        (Json.Decode.field "waterEdges" decodeWaterEdges)
+type alias ScaledCountry =
+    { coordinates : Set.Set ScaledPoint -- Only needed for making the capitol dots
+    , polygon : List ScaledPoint
+    , waterEdges : Set.Set ( ScaledPoint, ScaledPoint )
+    , center : ScaledPoint
+    , neighboringCountries : Set.Set String
+    , neighboringBodiesOfWater : Set.Set String
+    }
 
 
-decodePolygon : Json.Decode.Decoder Polygon
-decodePolygon =
-    Json.Decode.list decodePoint
+type alias ScaledPoint =
+    ( Float, Float )
 
 
-decodePoint : Json.Decode.Decoder Point
-decodePoint =
-    Json.Decode.andThen
-        (\values ->
-            case values of
-                x :: y :: _ ->
-                    Json.Decode.succeed ( x, y )
-
-                _ ->
-                    Json.Decode.fail "Error decoding point"
-        )
-        (Json.Decode.list Json.Decode.int)
+type Id
+    = Id String
 
 
-decodeWaterEdges : Json.Decode.Decoder (Set.Set Segment)
-decodeWaterEdges =
-    Json.Decode.list decodeSegment
-        |> Json.Decode.map Set.fromList
+getCountryIds : Dict.Dict String Country -> List Id
+getCountryIds countries =
+    countries
+        |> Dict.keys
+        |> List.map Id
 
 
-decodePoints : Json.Decode.Decoder (Set.Set Point)
-decodePoints =
-    Json.Decode.list decodePoint
-        |> Json.Decode.map Set.fromList
+getCountry : Id -> Dict.Dict String Country -> Maybe Country
+getCountry (Id countryId) countries =
+    Dict.get countryId countries
 
 
-decodeSegment : Json.Decode.Decoder Segment
-decodeSegment =
-    Json.Decode.list decodePoint
-        |> Json.Decode.andThen
-            (\points ->
-                case points of
-                    point1 :: point2 :: _ ->
-                        Json.Decode.succeed ( point1, point2 )
-
-                    _ ->
-                        Json.Decode.fail "Error decoding segment"
-            )
-
-
-
----- ENCODE ----
-
-
-encode : Country -> Json.Encode.Value
-encode country =
-    case country of
-        CoastalCountry countryProperties waterEdges ->
-            Json.Encode.object
-                (encodeCountryProperties countryProperties ++ [ ( "waterEdges", waterEdges |> Json.Encode.set encodeSegment ) ])
-
-        LandLockedCountry countryProperties ->
-            Json.Encode.object
-                (encodeCountryProperties countryProperties ++ [ ( "waterEdges", Set.empty |> Json.Encode.set encodeSegment ) ])
-
-
-encodeCountryProperties : CountryProperties -> List ( String, Json.Encode.Value )
-encodeCountryProperties countryProperties =
-    [ ( "id", encodeCountryId countryProperties.id )
-    , ( "polygon", encodePolygon countryProperties.polygon )
-    , ( "points", Json.Encode.set encodePoint countryProperties.points )
-    ]
-
-
-encodeCountryId : Id -> Json.Encode.Value
-encodeCountryId (Id countryId) =
-    Json.Encode.string countryId
-
-
-encodePoint : Point -> Json.Encode.Value
-encodePoint point =
-    Json.Encode.list Json.Encode.int [ point |> Tuple.first, point |> Tuple.second ]
-
-
-encodePolygon : Polygon -> Json.Encode.Value
-encodePolygon polygon =
-    Json.Encode.list encodePoint polygon
-
-
-encodeSegment : Segment -> Json.Encode.Value
-encodeSegment segment =
-    Json.Encode.list
-        (\point ->
-            Json.Encode.list Json.Encode.int [ point |> Tuple.first, point |> Tuple.second ]
-        )
-        [ segment |> Tuple.first, segment |> Tuple.second ]
-
-
-scalePolygon : Float -> Polygon -> List ( Float, Float )
-scalePolygon scale polygon =
-    polygon |> List.map (scalePoint scale)
-
-
-scalePoint : Float -> Point -> ( Float, Float )
+scalePoint : Int -> Point -> ScaledPoint
 scalePoint scale ( x, y ) =
-    ( toFloat x * scale, toFloat y * scale )
+    ( x * scale |> toFloat, y * scale |> toFloat )
 
 
-getCountryPolygon : Country -> Polygon
-getCountryPolygon country =
-    case country of
-        LandLockedCountry countryProperties ->
-            countryProperties.polygon
-
-        CoastalCountry countryProperties _ ->
-            countryProperties.polygon
+shiftPoint : Int -> ScaledPoint -> ScaledPoint
+shiftPoint scaleFactor ( x, y ) =
+    ( x + (0.5 * toFloat scaleFactor), y + (0.5 * toFloat scaleFactor) )
 
 
-getScaledCountryPolygon : Float -> Country -> List ( Float, Float )
-getScaledCountryPolygon scale country =
-    country |> getCountryPolygon |> scalePolygon scale
+scaleEdge : Int -> ( ( Int, Int ), ( Int, Int ) ) -> ( ScaledPoint, ScaledPoint )
+scaleEdge scale ( point1, point2 ) =
+    ( scalePoint scale point1, scalePoint scale point2 )
+
+
+scaleCountry : Int -> Country -> ScaledCountry
+scaleCountry scaleFactor country =
+    { coordinates = country.coordinates |> Set.map (scalePoint scaleFactor) |> Set.map (shiftPoint scaleFactor)
+    , polygon = country.polygon |> List.map (scalePoint scaleFactor)
+    , waterEdges = country.waterEdges |> Set.map (scaleEdge scaleFactor)
+    , center = country.center |> scalePoint scaleFactor |> shiftPoint scaleFactor
+    , neighboringCountries = country.neighboringCountries
+    , neighboringBodiesOfWater = country.neighboringBodiesOfWater
+    }
+
+
+scaledCountries : Int -> Dict.Dict String Country -> Dict.Dict String ScaledCountry
+scaledCountries scaleFactor countries =
+    countries
+        |> Dict.map (\_ country -> scaleCountry scaleFactor country)
+
+
+getCountriesCollage : Int -> Dict.Dict String Country -> Collage.Collage msg
+getCountriesCollage scale countries =
+    countries
+        |> Dict.map
+            (\_ country ->
+                let
+                    countryPolygon =
+                        country |> scaleCountry scale |> .polygon |> Collage.polygon
+
+                    fill =
+                        countryPolygon
+                            |> Collage.filled (Collage.uniform Color.gray)
+
+                    border =
+                        countryPolygon
+                            |> Collage.outlined
+                                (Collage.solid 30.0
+                                    (Collage.uniform countryBorderColor)
+                                )
+                in
+                Collage.group [ fill, border ]
+            )
+        |> Dict.values
+        |> Collage.group
+
+
+countryBorderColor : Color.Color
+countryBorderColor =
+    Color.rgb255 100 100 100
+
+
+
+---- SELECTION SETS ----
+
+
+type alias SelectionSet =
+    { id : String
+    , coordinates : Set.Set Point -- Only needed for making the capitol dots
+    , polygon : List Point
+    , waterEdges : Set.Set ( Point, Point )
+    , center : Point
+    , neighboringCountries : Set.Set String
+    , neighboringBodiesOfWater : Set.Set String
+    }
+
+
+segmentSelection : Graphql.SelectionSet.SelectionSet Segment ApiObject.Segment
+segmentSelection =
+    Graphql.SelectionSet.map2 Tuple.pair
+        (Api.Object.Segment.point1 pointSelection)
+        (Api.Object.Segment.point2 pointSelection)
+
+
+pointSelection : Graphql.SelectionSet.SelectionSet Point ApiObject.Point
+pointSelection =
+    Graphql.SelectionSet.map2 Tuple.pair
+        Api.Object.Point.x
+        Api.Object.Point.y
+
+
+coordinatesSelectionSet : Graphql.SelectionSet.SelectionSet Point ApiObject.Point
+coordinatesSelectionSet =
+    Graphql.SelectionSet.map2 Tuple.pair
+        Api.Object.Point.x
+        Api.Object.Point.y
+
+
+polygonSelectionSet : Graphql.SelectionSet.SelectionSet Point ApiObject.Point
+polygonSelectionSet =
+    Graphql.SelectionSet.map2 Tuple.pair
+        Api.Object.Point.x
+        Api.Object.Point.y
+
+
+selectionSet : Graphql.SelectionSet.SelectionSet SelectionSet ApiObject.Country
+selectionSet =
+    Graphql.SelectionSet.map7 SelectionSet
+        Api.Object.Country.id
+        (Api.Object.Country.coordinates coordinatesSelectionSet |> Graphql.SelectionSet.map Set.fromList)
+        (Api.Object.Country.polygon polygonSelectionSet)
+        (Api.Object.Country.waterEdges segmentSelection |> Graphql.SelectionSet.map Set.fromList)
+        (Api.Object.Country.center pointSelection)
+        (Api.Object.Country.neighboringCountries |> Graphql.SelectionSet.map Set.fromList)
+        (Api.Object.Country.neighboringBodiesOfWater |> Graphql.SelectionSet.map Set.fromList)

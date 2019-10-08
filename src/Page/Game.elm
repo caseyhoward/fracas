@@ -8,7 +8,6 @@ module Page.Game exposing
     , view
     )
 
-import Game
 import Browser.Events
 import Collage
 import Collage.Events
@@ -16,6 +15,7 @@ import Collage.Layout
 import Collage.Render
 import Collage.Text
 import Colors
+import Country
 import Dict
 import Element
 import Element.Background
@@ -23,10 +23,11 @@ import Element.Border
 import Element.Events
 import Element.Font
 import Element.Input
-import Map
+import Game
 import Graphql.Http
 import Html
 import Html.Attributes
+import Map
 import Maps.Big
 import RemoteData
 import Route
@@ -61,9 +62,9 @@ type alias GameLoadedModel =
 
 
 type CountryBorderHelperOutlineStatus
-    = CountryBorderHelperOutlineWaitingForDelay Map.CountryId
+    = CountryBorderHelperOutlineWaitingForDelay Country.Id
     | CountryBorderHelperOutlineInactive
-    | CountryBorderHelperOutlineActive Map.CountryId
+    | CountryBorderHelperOutlineActive Country.Id
 
 
 init : Session.Session -> Game.Id -> Game.PlayerId -> ( Model, Cmd Msg )
@@ -83,9 +84,9 @@ init session activeGameId playerId =
 
 
 type Msg
-    = CountryMouseUp Map.CountryId
-    | CountryMouseDown Map.CountryId
-    | CountryMouseOut Map.CountryId
+    = CountryMouseUp Country.Id
+    | CountryMouseDown Country.Id
+    | CountryMouseOut Country.Id
     | GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game)
     | MouseUp
     | Pass
@@ -172,7 +173,7 @@ updateModelWithGameResult result model =
             { model | error = Just (Game.errorToString error) }
 
 
-handleCountryMouseUpFromPlayer : Map.CountryId -> GameLoadedModel -> GameLoadedModel
+handleCountryMouseUpFromPlayer : Country.Id -> GameLoadedModel -> GameLoadedModel
 handleCountryMouseUpFromPlayer clickedCountryId model =
     let
         updatedModel =
@@ -198,12 +199,12 @@ handleCountryMouseUpFromPlayer clickedCountryId model =
     { updatedModel | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
 
 
-handleCountryMouseDown : Map.CountryId -> GameLoadedModel -> GameLoadedModel
+handleCountryMouseDown : Country.Id -> GameLoadedModel -> GameLoadedModel
 handleCountryMouseDown countryId activeGame =
     { activeGame | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineWaitingForDelay countryId }
 
 
-handleCountryMouseOut : Map.CountryId -> GameLoadedModel -> GameLoadedModel
+handleCountryMouseOut : Country.Id -> GameLoadedModel -> GameLoadedModel
 handleCountryMouseOut mouseOutCountryId activeGame =
     case activeGame.countryBorderHelperOutlineStatus of
         CountryBorderHelperOutlineWaitingForDelay countryId ->
@@ -984,7 +985,7 @@ type CountryInfoStatus
     | NoInfo
 
 
-getCountryInfoStatus : Map.Map -> Game.Players -> CountryBorderHelperOutlineStatus -> Map.CountryId -> CountryInfoStatus
+getCountryInfoStatus : Map.Map -> Game.Players -> CountryBorderHelperOutlineStatus -> Country.Id -> CountryInfoStatus
 getCountryInfoStatus gameMap players countryBorderHelperOutlineStatus countryId =
     case countryBorderHelperOutlineStatus of
         CountryBorderHelperOutlineActive countryToShowInfoForId ->
@@ -1004,7 +1005,7 @@ getCountryInfoStatus gameMap players countryBorderHelperOutlineStatus countryId 
             NoInfo
 
 
-renderPort : Set.Set ( Map.ScaledPoint, Map.ScaledPoint ) -> Collage.Collage msg
+renderPort : Set.Set ( Country.ScaledPoint, Country.ScaledPoint ) -> Collage.Collage msg
 renderPort waterEdges =
     waterEdges
         |> Set.toList

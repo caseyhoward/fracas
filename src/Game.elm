@@ -56,6 +56,7 @@ import Api.Object.Player
 import Api.Object.PlayerTurn
 import Api.Query
 import Colors
+import Country
 import Dict
 import Graphql.Http
 import Graphql.Operation
@@ -76,12 +77,6 @@ urlParser =
 idToString : Id -> String
 idToString (Id id) =
     id
-
-
-
--- playerIdToString : PlayerId -> String
--- playerIdToString (Id id) =
---     id
 
 
 playerUrlParser : Url.Parser.Parser (PlayerId -> a) a
@@ -109,15 +104,15 @@ type alias Game =
 
 
 type alias CountryToRender =
-    { id : Map.CountryId
+    { id : Country.Id
     , color : Colors.Color
     , troopCount : TroopCount.TroopCount
-    , center : Map.ScaledPoint
-    , polygonPoints : List Map.ScaledPoint
-    , capitolDots : Maybe (Set.Set Map.ScaledPoint)
+    , center : Country.ScaledPoint
+    , polygonPoints : List Country.ScaledPoint
+    , capitolDots : Maybe (Set.Set Country.ScaledPoint)
     , canBeClicked : Bool
     , isBeingMovedFrom : Bool
-    , portSegments : Maybe (Set.Set ( Map.ScaledPoint, Map.ScaledPoint ))
+    , portSegments : Maybe (Set.Set ( Country.ScaledPoint, Country.ScaledPoint ))
     }
 
 
@@ -264,7 +259,7 @@ get (Id id) toMsg =
                         capitol =
                             case maybeCapitol of
                                 Just countryId ->
-                                    Capitol (Map.CountryId countryId)
+                                    Capitol (Country.Id countryId)
 
                                 Nothing ->
                                     NoCapitol
@@ -340,7 +335,7 @@ errorToString (Error error) =
     error
 
 
-countryClicked : Map.CountryId -> Game -> Result Error Game
+countryClicked : Country.Id -> Game -> Result Error Game
 countryClicked clickedCountryId activeGame =
     case activeGame.currentPlayerTurn of
         PlayerTurn playerTurnStage currentPlayerId ->
@@ -364,7 +359,7 @@ countryClicked clickedCountryId activeGame =
                     Ok activeGame
 
 
-getAttackStrengthPerPlayer : Map.Map -> Players -> Map.CountryId -> Dict.Dict Int TroopCount.TroopCount
+getAttackStrengthPerPlayer : Map.Map -> Players -> Country.Id -> Dict.Dict Int TroopCount.TroopCount
 getAttackStrengthPerPlayer gameMap players countryId =
     getCountryAttackers gameMap players countryId
         |> Dict.map
@@ -390,19 +385,19 @@ getAttackStrengthPerPlayer gameMap players countryId =
             )
 
 
-getCountryAttackers : Map.Map -> Players -> Map.CountryId -> CountryAttackers
+getCountryAttackers : Map.Map -> Players -> Country.Id -> CountryAttackers
 getCountryAttackers gameMap players countryId =
     let
-        neighborCountriesByPlayer : List ( PlayerId, Map.CountryId )
+        neighborCountriesByPlayer : List ( PlayerId, Country.Id )
         neighborCountriesByPlayer =
-            case Map.getCountry countryId gameMap.countries of
+            case Country.getCountry countryId gameMap.countries of
                 Just country ->
                     country.neighboringCountries
                         |> Set.foldl
                             (\neighborCountry result ->
-                                case findCountryOwner (Map.CountryId neighborCountry) players of
+                                case findCountryOwner (Country.Id neighborCountry) players of
                                     Just neighborId ->
-                                        ( neighborId, Map.CountryId neighborCountry ) :: result
+                                        ( neighborId, Country.Id neighborCountry ) :: result
 
                                     Nothing ->
                                         result
@@ -412,7 +407,7 @@ getCountryAttackers gameMap players countryId =
                 Nothing ->
                     []
 
-        neighborCountryTroopCountsByPlayer : List ( PlayerId, Map.CountryId, TroopCount.TroopCount )
+        neighborCountryTroopCountsByPlayer : List ( PlayerId, Country.Id, TroopCount.TroopCount )
         neighborCountryTroopCountsByPlayer =
             neighborCountriesByPlayer
                 |> List.map
@@ -427,7 +422,7 @@ getCountryAttackers gameMap players countryId =
         neighboringCountryAttackers =
             neighborCountryTroopCountsByPlayer
                 |> List.foldl
-                    (\( PlayerId playerId, Map.CountryId neighborCountryId, troopCount ) result ->
+                    (\( PlayerId playerId, Country.Id neighborCountryId, troopCount ) result ->
                         case Dict.get playerId result of
                             Just troopCounts ->
                                 result |> Dict.insert playerId (Dict.insert neighborCountryId troopCount troopCounts)
@@ -441,20 +436,20 @@ getCountryAttackers gameMap players countryId =
                     )
                     Dict.empty
 
-        countriesReachableThroughWater : List Map.CountryId
+        countriesReachableThroughWater : List Country.Id
         countriesReachableThroughWater =
             Map.getCountriesThatCanReachCountryThroughWater gameMap countryId
 
-        attackerCountriesNeighoboringWater : List Map.CountryId
+        attackerCountriesNeighoboringWater : List Country.Id
         attackerCountriesNeighoboringWater =
             countriesReachableThroughWater
 
-        attackerCountriesNeighoboringWaterWithPort : List Map.CountryId
+        attackerCountriesNeighoboringWaterWithPort : List Country.Id
         attackerCountriesNeighoboringWaterWithPort =
             attackerCountriesNeighoboringWater
                 |> filterCountriesWithPort players
 
-        waterNeighborCountriesByPlayer : List ( PlayerId, Map.CountryId )
+        waterNeighborCountriesByPlayer : List ( PlayerId, Country.Id )
         waterNeighborCountriesByPlayer =
             attackerCountriesNeighoboringWaterWithPort
                 |> List.foldl
@@ -468,7 +463,7 @@ getCountryAttackers gameMap players countryId =
                     )
                     []
 
-        waterNeighborCountriesByPlayerTroopCounts : List ( PlayerId, Map.CountryId, TroopCount.TroopCount )
+        waterNeighborCountriesByPlayerTroopCounts : List ( PlayerId, Country.Id, TroopCount.TroopCount )
         waterNeighborCountriesByPlayerTroopCounts =
             waterNeighborCountriesByPlayer
                 |> List.map
@@ -485,7 +480,7 @@ getCountryAttackers gameMap players countryId =
         waterNeighborAttackers =
             waterNeighborCountriesByPlayerTroopCounts
                 |> List.foldl
-                    (\( PlayerId playerId, Map.CountryId neighborCountryId, troopCount ) result ->
+                    (\( PlayerId playerId, Country.Id neighborCountryId, troopCount ) result ->
                         case Dict.get playerId result of
                             Just troopCounts ->
                                 result |> Dict.insert playerId (Dict.insert neighborCountryId troopCount troopCounts)
@@ -515,28 +510,26 @@ getCountryAttackers gameMap players countryId =
 getCountriesToRender : Map.Map -> Players -> PlayerTurn -> Dict.Dict String TroopCount.TroopCount -> Maybe (List CountryToRender)
 getCountriesToRender gameMap players currentPlayerTurn neutralCountryTroops =
     gameMap.countries
-        |> Map.scaledCountries ViewHelpers.pixelsPerMapSquare
+        |> Country.scaledCountries ViewHelpers.pixelsPerMapSquare
         |> Dict.map
             (\countryId country ->
                 let
                     countryOwnerAndTroopCount =
-                        findCountryOwnerAndTroopCount (Map.CountryId countryId) players
-
-      
+                        findCountryOwnerAndTroopCount (Country.Id countryId) players
                 in
                 case countryOwnerAndTroopCount of
                     Just ( countryOwnerId, troopCount ) ->
                         getPlayer countryOwnerId players
                             |> Maybe.map
                                 (\countryOwner ->
-                                    { id = Map.CountryId countryId
+                                    { id = Country.Id countryId
                                     , troopCount = troopCount
                                     , center = country.center
                                     , polygonPoints = country.polygon
                                     , color = countryOwner.color
                                     , capitolDots =
                                         case countryOwner.capitolStatus of
-                                            Capitol (Map.CountryId capitolId) ->
+                                            Capitol (Country.Id capitolId) ->
                                                 if capitolId == countryId then
                                                     Just country.coordinates
 
@@ -545,10 +538,10 @@ getCountriesToRender gameMap players currentPlayerTurn neutralCountryTroops =
 
                                             NoCapitol ->
                                                 Nothing
-                                    , canBeClicked = getCountryCanBeClicked currentPlayerTurn players gameMap (Map.CountryId countryId)
-                                    , isBeingMovedFrom = getIsBeingMovedFrom currentPlayerTurn (Map.CountryId countryId)
+                                    , canBeClicked = getCountryCanBeClicked currentPlayerTurn players gameMap (Country.Id countryId)
+                                    , isBeingMovedFrom = getIsBeingMovedFrom currentPlayerTurn (Country.Id countryId)
                                     , portSegments =
-                                        getCountryHasPort (Map.CountryId countryId) players
+                                        getCountryHasPort (Country.Id countryId) players
                                             |> Maybe.andThen
                                                 (\hasPort ->
                                                     if hasPort then
@@ -562,13 +555,13 @@ getCountriesToRender gameMap players currentPlayerTurn neutralCountryTroops =
 
                     Nothing ->
                         Just
-                            { id = Map.CountryId countryId
-                            , troopCount = getTroopCount (Map.CountryId countryId) neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
+                            { id = Country.Id countryId
+                            , troopCount = getTroopCount (Country.Id countryId) neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
                             , center = country.center
                             , color = neutralCountryColor
                             , polygonPoints = country.polygon
                             , capitolDots = Nothing
-                            , canBeClicked = getCountryCanBeClicked currentPlayerTurn players gameMap (Map.CountryId countryId)
+                            , canBeClicked = getCountryCanBeClicked currentPlayerTurn players gameMap (Country.Id countryId)
                             , isBeingMovedFrom = False
                             , portSegments = Nothing
                             }
@@ -619,8 +612,8 @@ getCurrentPlayer currentPlayerTurn =
             playerId
 
 
-isCountryDefending : Map.Map -> Players -> Map.CountryId -> Map.CountryId -> Bool
-isCountryDefending gameMap players countryToDefend (Map.CountryId countryThatMightDefend) =
+isCountryDefending : Map.Map -> Players -> Country.Id -> Country.Id -> Bool
+isCountryDefending gameMap players countryToDefend (Country.Id countryThatMightDefend) =
     let
         countryDefense =
             getCountryDefenders players gameMap countryToDefend
@@ -631,8 +624,8 @@ isCountryDefending gameMap players countryToDefend (Map.CountryId countryThatMig
     defendingCountries |> Set.fromList |> Set.member countryThatMightDefend
 
 
-isCountryAttacking : Map.Map -> Players -> Map.CountryId -> Map.CountryId -> Bool
-isCountryAttacking gameMap players countryToDefend (Map.CountryId countryThatMightDefend) =
+isCountryAttacking : Map.Map -> Players -> Country.Id -> Country.Id -> Bool
+isCountryAttacking gameMap players countryToDefend (Country.Id countryThatMightDefend) =
     let
         countryAttackers =
             getCountryAttackers gameMap players countryToDefend
@@ -649,7 +642,7 @@ isCountryAttacking gameMap players countryToDefend (Map.CountryId countryThatMig
     attackingCountries |> Set.fromList |> Set.member countryThatMightDefend
 
 
-getCountryDefenders : Players -> Map.Map -> Map.CountryId -> CountryDefenders
+getCountryDefenders : Players -> Map.Map -> Country.Id -> CountryDefenders
 getCountryDefenders players gameMap countryId =
     let
         playerId : PlayerId
@@ -673,15 +666,15 @@ getCountryDefenders players gameMap countryId =
 
         neigboringCountryDefense : Dict.Dict String TroopCount.TroopCount
         neigboringCountryDefense =
-            case Map.getCountry countryId gameMap.countries of
+            case Country.getCountry countryId gameMap.countries of
                 Just countryBeingAttacked ->
                     countryBeingAttacked.neighboringCountries
                         |> Set.toList
-                        |> List.map (\id -> Map.CountryId id)
+                        |> List.map (\id -> Country.Id id)
                         |> List.foldl
-                            (\(Map.CountryId neighboringCountryId) defense ->
-                                if isCountryOwnedByPlayer playerId (Map.CountryId neighboringCountryId) players then
-                                    case getTroopCountForCountry (Map.CountryId neighboringCountryId) players of
+                            (\(Country.Id neighboringCountryId) defense ->
+                                if isCountryOwnedByPlayer playerId (Country.Id neighboringCountryId) players then
+                                    case getTroopCountForCountry (Country.Id neighboringCountryId) players of
                                         Just neighboringCountryTroopCount ->
                                             Dict.insert neighboringCountryId neighboringCountryTroopCount defense
 
@@ -701,7 +694,7 @@ getCountryDefenders players gameMap countryId =
             getDefenseThroughWater gameMap players countryId
                 |> Dict.filter
                     (\throughWaterCountryId _ ->
-                        case Map.getCountry countryId gameMap.countries of
+                        case Country.getCountry countryId gameMap.countries of
                             Just countryBeingAttacked ->
                                 not <| Set.member throughWaterCountryId countryBeingAttacked.neighboringCountries
 
@@ -716,7 +709,7 @@ getCountryDefenders players gameMap countryId =
     }
 
 
-getCountryDefenseStrength : Map.Map -> Players -> Map.CountryId -> TroopCount.TroopCount
+getCountryDefenseStrength : Map.Map -> Players -> Country.Id -> TroopCount.TroopCount
 getCountryDefenseStrength gameMap players countryId =
     let
         countryDefense =
@@ -737,15 +730,15 @@ getCountryDefenseStrength gameMap players countryId =
         |> TroopCount.addTroopCounts waterDefense
 
 
-findCountryOwner : Map.CountryId -> Players -> Maybe PlayerId
+findCountryOwner : Country.Id -> Players -> Maybe PlayerId
 findCountryOwner countryId players =
     findCountryOwnerAndTroopCount countryId players
         |> Maybe.map Tuple.first
 
 
-getCountryHasPort : Map.CountryId -> Players -> Maybe Bool
-getCountryHasPort (Map.CountryId countryId) players =
-    findCountryOwner (Map.CountryId countryId) players
+getCountryHasPort : Country.Id -> Players -> Maybe Bool
+getCountryHasPort (Country.Id countryId) players =
+    findCountryOwner (Country.Id countryId) players
         |> Maybe.andThen
             (\playerId ->
                 getPlayer playerId players
@@ -802,12 +795,12 @@ getPlayer (PlayerId playerId) players =
     Dict.get playerId players
 
 
-getTroopCount : Map.CountryId -> Dict.Dict String TroopCount.TroopCount -> Maybe TroopCount.TroopCount
-getTroopCount (Map.CountryId countryId) troopCounts =
+getTroopCount : Country.Id -> Dict.Dict String TroopCount.TroopCount -> Maybe TroopCount.TroopCount
+getTroopCount (Country.Id countryId) troopCounts =
     Dict.get countryId troopCounts
 
 
-getTroopCountForCountry : Map.CountryId -> Players -> Maybe TroopCount.TroopCount
+getTroopCountForCountry : Country.Id -> Players -> Maybe TroopCount.TroopCount
 getTroopCountForCountry countryId players =
     findCountryOwner countryId players
         |> Maybe.andThen (\playerId -> getPlayer playerId players)
@@ -843,7 +836,7 @@ isCapitolPlacementTurn currentPlayerTurn =
             False
 
 
-isCountryIdCapitol : PlayerId -> Map.CountryId -> Players -> Maybe Bool
+isCountryIdCapitol : PlayerId -> Country.Id -> Players -> Maybe Bool
 isCountryIdCapitol playerId countryId players =
     getPlayer playerId players
         |> Maybe.map
@@ -986,13 +979,13 @@ type PlayerTurnStage
     | TroopPlacement
     | AttackAnnexOrPort
     | TroopMovement
-    | TroopMovementFromSelected Map.CountryId String
+    | TroopMovementFromSelected Country.Id String
     | GameOver
 
 
 type CapitolStatus
     = NoCapitol
-    | Capitol Map.CountryId
+    | Capitol Country.Id
 
 
 type CountryStatus
@@ -1026,12 +1019,12 @@ type alias CountryAttackersForPlayer =
     }
 
 
-addPortForPlayer : Map.CountryId -> Player -> Player
-addPortForPlayer (Map.CountryId countryId) player =
+addPortForPlayer : Country.Id -> Player -> Player
+addPortForPlayer (Country.Id countryId) player =
     { player | ports = player.ports |> Set.insert countryId }
 
 
-attackAnnexOrPort : Map.CountryId -> PlayerId -> Game -> Result Error Game
+attackAnnexOrPort : Country.Id -> PlayerId -> Game -> Result Error Game
 attackAnnexOrPort clickedCountryId currentPlayerId activeGame =
     case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
         OccupiedByCurrentPlayer _ ->
@@ -1044,7 +1037,7 @@ attackAnnexOrPort clickedCountryId currentPlayerId activeGame =
             attemptToAnnexCountry currentPlayerId clickedCountryId activeGame
 
 
-attemptTroopMovement : Map.CountryId -> Map.CountryId -> String -> Game -> Result Error Game
+attemptTroopMovement : Country.Id -> Country.Id -> String -> Game -> Result Error Game
 attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString activeGame =
     case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
         OccupiedByCurrentPlayer playerCountryToTroopCount ->
@@ -1091,9 +1084,9 @@ attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString a
             "You must move troops to your own country" |> Error |> Err
 
 
-attemptToPlaceCapitol : Map.CountryId -> PlayerId -> Game -> Result Error Game
+attemptToPlaceCapitol : Country.Id -> PlayerId -> Game -> Result Error Game
 attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
-    case Map.getCountry clickedCountryId activeGame.map.countries of
+    case Country.getCountry clickedCountryId activeGame.map.countries of
         Just clickedCountry ->
             case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
                 OccupiedByCurrentPlayer _ ->
@@ -1149,7 +1142,7 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
             "Something bad happened" |> Error |> Err
 
 
-attemptTroopPlacement : Map.CountryId -> PlayerId -> TroopCount.TroopCount -> Game -> Result Error Game
+attemptTroopPlacement : Country.Id -> PlayerId -> TroopCount.TroopCount -> Game -> Result Error Game
 attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace activeGame =
     case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
         OccupiedByCurrentPlayer clickedCountryTroopCount ->
@@ -1171,10 +1164,9 @@ attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace activeGame 
 
 
 
--- TODO Make this return BuildPortResult instead
 
 
-attemptToBuildPort : PlayerId -> Map.CountryId -> Game -> Result Error Game
+attemptToBuildPort : PlayerId -> Country.Id -> Game -> Result Error Game
 attemptToBuildPort currentPlayerId clickedCountryId activeGame =
     case getTroopCountForCountry clickedCountryId activeGame.players of
         Just _ ->
@@ -1184,7 +1176,7 @@ attemptToBuildPort currentPlayerId clickedCountryId activeGame =
             "You can't build a port in a country you don't own" |> Error |> Err
 
 
-attackResult : Map.CountryId -> Map.Map -> Players -> PlayerTurn -> AttackResult
+attackResult : Country.Id -> Map.Map -> Players -> PlayerTurn -> AttackResult
 attackResult clickedCountryId gameMap players currentPlayerTurn =
     case findCountryOwner clickedCountryId players of
         Just opponentPlayerId ->
@@ -1240,7 +1232,7 @@ attackResult clickedCountryId gameMap players currentPlayerTurn =
             AttackResultError "Error finding owner"
 
 
-attemptSelectTroopMovementFromCountry : Map.CountryId -> PlayerId -> Game -> Result Error Game
+attemptSelectTroopMovementFromCountry : Country.Id -> PlayerId -> Game -> Result Error Game
 attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame =
     case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
         OccupiedByCurrentPlayer troopCount ->
@@ -1258,7 +1250,7 @@ attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGam
             "You must move troops from your own country" |> Error |> Err
 
 
-attemptToAnnexCountry : PlayerId -> Map.CountryId -> Game -> Result Error Game
+attemptToAnnexCountry : PlayerId -> Country.Id -> Game -> Result Error Game
 attemptToAnnexCountry currentPlayerId clickedCountryId activeGame =
     if canAnnexCountry activeGame.map currentPlayerId activeGame.players clickedCountryId then
         let
@@ -1281,7 +1273,7 @@ attemptToAnnexCountry currentPlayerId clickedCountryId activeGame =
         "You can't annex that country" |> Error |> Err
 
 
-attemptToAttackCountry : PlayerId -> Map.CountryId -> Game -> Result Error Game
+attemptToAttackCountry : PlayerId -> Country.Id -> Game -> Result Error Game
 attemptToAttackCountry opponentPlayerId clickedCountryId activeGame =
     case attackResult clickedCountryId activeGame.map activeGame.players activeGame.currentPlayerTurn of
         OpponentCountryLosesTroops remainingTroops ->
@@ -1321,7 +1313,7 @@ defaultPlayerColors =
         ]
 
 
-filterCountriesOwnedBy : Players -> PlayerId -> List Map.CountryId -> List Map.CountryId
+filterCountriesOwnedBy : Players -> PlayerId -> List Country.Id -> List Country.Id
 filterCountriesOwnedBy players playerId countryIds =
     let
         countriesOwnedByPlayer : Set.Set String
@@ -1334,9 +1326,9 @@ filterCountriesOwnedBy players playerId countryIds =
                     Set.empty
     in
     List.foldl
-        (\(Map.CountryId countryId) result ->
+        (\(Country.Id countryId) result ->
             if Set.member countryId countriesOwnedByPlayer then
-                Map.CountryId countryId :: result
+                Country.Id countryId :: result
 
             else
                 result
@@ -1345,7 +1337,7 @@ filterCountriesOwnedBy players playerId countryIds =
         countryIds
 
 
-buildPort : PlayerId -> Map.CountryId -> Game -> Result Error Game
+buildPort : PlayerId -> Country.Id -> Game -> Result Error Game
 buildPort playerId countryId activeGame =
     -- We already had to check that the player owned this country before so no need to do that here
     case Map.isCountryNeighboringWater countryId activeGame.map.countries of
@@ -1382,7 +1374,7 @@ buildPort playerId countryId activeGame =
             "Error checking if country borders water" |> Error |> Err
 
 
-canAnnexCountry : Map.Map -> PlayerId -> Players -> Map.CountryId -> Bool
+canAnnexCountry : Map.Map -> PlayerId -> Players -> Country.Id -> Bool
 canAnnexCountry gameMap playerId players countryIdToAnnex =
     -- We already know the country is unoccuppied from an earlier check so just make sure it is reachable from one of the current players countries
     case getPlayer playerId players of
@@ -1390,7 +1382,7 @@ canAnnexCountry gameMap playerId players countryIdToAnnex =
             player.countryTroopCounts
                 |> Dict.foldl
                     (\playerCountryId _ isReachable ->
-                        isReachable || isCountryReachableFromOtherCountry (Map.CountryId playerCountryId) countryIdToAnnex playerId gameMap.countries players
+                        isReachable || isCountryReachableFromOtherCountry (Country.Id playerCountryId) countryIdToAnnex playerId gameMap.countries players
                     )
                     False
 
@@ -1410,12 +1402,12 @@ destroyPlayer playerId activeGame =
             )
 
 
-destroyTroops : Map.CountryId -> Dict.Dict String TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount
-destroyTroops (Map.CountryId countryId) neutralTroopCounts =
+destroyTroops : Country.Id -> Dict.Dict String TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount
+destroyTroops (Country.Id countryId) neutralTroopCounts =
     Dict.remove countryId neutralTroopCounts
 
 
-filterCountriesWithPort : Players -> List Map.CountryId -> List Map.CountryId
+filterCountriesWithPort : Players -> List Country.Id -> List Country.Id
 filterCountriesWithPort players countries =
     countries
         |> List.filter
@@ -1429,8 +1421,8 @@ filterCountriesWithPort players countries =
             )
 
 
-findCountryOwnerAndTroopCount : Map.CountryId -> Players -> Maybe ( PlayerId, TroopCount.TroopCount )
-findCountryOwnerAndTroopCount (Map.CountryId countryId) players =
+findCountryOwnerAndTroopCount : Country.Id -> Players -> Maybe ( PlayerId, TroopCount.TroopCount )
+findCountryOwnerAndTroopCount (Country.Id countryId) players =
     players
         |> Dict.foldl
             (\playerId player result ->
@@ -1445,7 +1437,7 @@ findCountryOwnerAndTroopCount (Map.CountryId countryId) players =
             Nothing
 
 
-getCountryCanBeClicked : PlayerTurn -> Players -> Map.Map -> Map.CountryId -> Bool
+getCountryCanBeClicked : PlayerTurn -> Players -> Map.Map -> Country.Id -> Bool
 getCountryCanBeClicked currentPlayerTurn players gameMap countryId =
     case currentPlayerTurn of
         PlayerTurn playerTurnStatus currentPlayerId ->
@@ -1516,7 +1508,7 @@ getCountryCanBeClicked currentPlayerTurn players gameMap countryId =
                     False
 
 
-getCountryStatus : Map.CountryId -> Players -> PlayerTurn -> CountryStatus
+getCountryStatus : Country.Id -> Players -> PlayerTurn -> CountryStatus
 getCountryStatus countryId players currentPlayerTurn =
     case getPlayer (getCurrentPlayer currentPlayerTurn) players of
         Just currentPlayer ->
@@ -1549,21 +1541,21 @@ getCountryStatus countryId players currentPlayerTurn =
             Unoccupied
 
 
-getDefenseThroughWater : Map.Map -> Players -> Map.CountryId -> Dict.Dict String TroopCount.TroopCount
+getDefenseThroughWater : Map.Map -> Players -> Country.Id -> Dict.Dict String TroopCount.TroopCount
 getDefenseThroughWater gameMap players countryId =
     case findCountryOwner countryId players of
         Just playerId ->
             let
-                countriesReachableThroughWater : List Map.CountryId
+                countriesReachableThroughWater : List Country.Id
                 countriesReachableThroughWater =
                     Map.getCountriesThatCanReachCountryThroughWater gameMap countryId
 
-                defenderCountriesNeighboringWater : List Map.CountryId
+                defenderCountriesNeighboringWater : List Country.Id
                 defenderCountriesNeighboringWater =
                     countriesReachableThroughWater
                         |> filterCountriesOwnedBy players playerId
 
-                defenderCountriesNeighoboringWaterWithPort : List Map.CountryId
+                defenderCountriesNeighoboringWaterWithPort : List Country.Id
                 defenderCountriesNeighoboringWaterWithPort =
                     defenderCountriesNeighboringWater
                         |> filterCountriesWithPort players
@@ -1571,8 +1563,8 @@ getDefenseThroughWater gameMap players countryId =
             in
             defenderCountriesNeighoboringWaterWithPort
                 |> List.foldl
-                    (\(Map.CountryId countryWithPortId) result ->
-                        case getTroopCountForCountry (Map.CountryId countryWithPortId) players of
+                    (\(Country.Id countryWithPortId) result ->
+                        case getTroopCountForCountry (Country.Id countryWithPortId) players of
                             Just troopCount ->
                                 result |> Dict.insert countryWithPortId troopCount
 
@@ -1585,7 +1577,7 @@ getDefenseThroughWater gameMap players countryId =
             Dict.empty
 
 
-getIsBeingMovedFrom : PlayerTurn -> Map.CountryId -> Bool
+getIsBeingMovedFrom : PlayerTurn -> Country.Id -> Bool
 getIsBeingMovedFrom currentPlayerTurn countryId =
     case currentPlayerTurn of
         PlayerTurn (TroopMovementFromSelected fromCountryId _) _ ->
@@ -1601,7 +1593,7 @@ getPlayerName playerId players =
         |> Maybe.map .name
 
 
-isCountryOwnedByPlayer : PlayerId -> Map.CountryId -> Players -> Bool
+isCountryOwnedByPlayer : PlayerId -> Country.Id -> Players -> Bool
 isCountryOwnedByPlayer playerId countryId players =
     case getPlayer playerId players of
         Just currentPlayer ->
@@ -1617,17 +1609,17 @@ isCountryOwnedByPlayer playerId countryId players =
             False
 
 
-isCountryReachableFromOtherCountry : Map.CountryId -> Map.CountryId -> PlayerId -> Dict.Dict String Map.Country -> Players -> Bool
+isCountryReachableFromOtherCountry : Country.Id -> Country.Id -> PlayerId -> Dict.Dict String Country.Country -> Players -> Bool
 isCountryReachableFromOtherCountry fromCountryId toCountryId playerId countries players =
-    case Map.getCountry fromCountryId countries of
+    case Country.getCountry fromCountryId countries of
         Just fromCountry ->
             case toCountryId of
-                Map.CountryId toId ->
+                Country.Id toId ->
                     if Set.member toId fromCountry.neighboringCountries then
                         True
 
                     else if toCountryId /= fromCountryId then
-                        case ( getCountryHasPort fromCountryId players, Map.getCountry toCountryId countries ) of
+                        case ( getCountryHasPort fromCountryId players, Country.getCountry toCountryId countries ) of
                             ( Just hasPort, Just toCountry ) ->
                                 if hasPort then
                                     Set.size (Set.intersect fromCountry.neighboringBodiesOfWater toCountry.neighboringBodiesOfWater) > 0
@@ -1688,10 +1680,10 @@ playerTurnToPlayerId (PlayerTurn _ playerId) =
     playerId
 
 
-removePlayerCountry : Map.CountryId -> Game -> Result Error Game
-removePlayerCountry (Map.CountryId countryId) activeGame =
+removePlayerCountry : Country.Id -> Game -> Result Error Game
+removePlayerCountry (Country.Id countryId) activeGame =
     -- Make this return result with error if dict lookup fails
-    case findCountryOwner (Map.CountryId countryId) activeGame.players of
+    case findCountryOwner (Country.Id countryId) activeGame.players of
         Just playerId ->
             activeGame
                 |> updatePlayersWithPlayer playerId
@@ -1705,12 +1697,12 @@ removePlayerCountry (Map.CountryId countryId) activeGame =
             "Error finding country owner" |> Error |> Err
 
 
-removeTroopCount : Map.CountryId -> Dict.Dict String TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount
-removeTroopCount (Map.CountryId countryId) troopCounts =
+removeTroopCount : Country.Id -> Dict.Dict String TroopCount.TroopCount -> Dict.Dict String TroopCount.TroopCount
+removeTroopCount (Country.Id countryId) troopCounts =
     Dict.remove countryId troopCounts
 
 
-takeCountryFromOpponent : Map.CountryId -> Game -> Result Error Game
+takeCountryFromOpponent : Country.Id -> Game -> Result Error Game
 takeCountryFromOpponent countryId activeGame =
     activeGame
         |> removePlayerCountry countryId
@@ -1766,7 +1758,7 @@ updatePlayer (PlayerId playerId) player players =
     Dict.insert playerId player players
 
 
-updatePlayerTroopCountForCountry : PlayerId -> Map.CountryId -> TroopCount.TroopCount -> Game -> Result Error Game
+updatePlayerTroopCountForCountry : PlayerId -> Country.Id -> TroopCount.TroopCount -> Game -> Result Error Game
 updatePlayerTroopCountForCountry playerId countryId troops activeGame =
     -- Make this return result with error if dict lookup fails
     activeGame
@@ -1796,9 +1788,9 @@ updatePlayersWithPlayer playerId toUpdatedPlayer activeGame =
 
 
 updateTroopCount :
-    Map.CountryId
+    Country.Id
     -> TroopCount.TroopCount
     -> Dict.Dict String TroopCount.TroopCount
     -> Dict.Dict String TroopCount.TroopCount
-updateTroopCount (Map.CountryId countryId) troopCount troopCounts =
+updateTroopCount (Country.Id countryId) troopCount troopCounts =
     Dict.insert countryId troopCount troopCounts
