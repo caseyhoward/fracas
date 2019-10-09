@@ -54,7 +54,7 @@ parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
         , Parser.map ConfiguringGame (s "games" </> s "new")
-        , Parser.map Game (s "games" </> Game.urlParser </> Player.urlParser)
+        , Parser.map Game (s "games" </> Game.urlParser </> s "players" </> Player.urlParser)
         , Parser.map NewMap (s "maps" </> s "new")
         ]
 
@@ -68,7 +68,7 @@ routeToString page =
                     [ "games", "new" ]
 
                 Game gameId playerId ->
-                    [ "games", Game.idToString gameId, Player.idToString playerId ]
+                    [ "games", Game.idToString gameId, "players", Player.idToString playerId ]
 
                 NewMap ->
                     [ "maps", "new" ]

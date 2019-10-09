@@ -97,9 +97,7 @@ create selectedMapId numberOfPlayers neutralTroopCounts toMsg =
     let
         playerTurnInput : Api.InputObject.PlayerTurnInput
         playerTurnInput =
-            { playerId = "1"
-            , playerTurnStage = Api.Enum.PlayerTurnStage.CapitolPlacement
-            }
+            PlayerTurn.firstTurn |> PlayerTurn.input
 
         neutralCountryTroops : List Api.InputObject.CountryTroopCountsInput
         neutralCountryTroops =
@@ -138,7 +136,7 @@ save game toMsg =
                     , players = game.players |> Player.input
                     , neutralCountryTroops = game.neutralCountryTroops |> TroopCount.troopCountsInput
                     , numberOfPlayers = game.numberOfPlayers
-                    , playerTurn = game.currentPlayerTurn |> PlayerTurn.playerTurnInput
+                    , playerTurn = game.currentPlayerTurn |> PlayerTurn.input
                     }
             }
     in
@@ -212,6 +210,7 @@ countryClicked clickedCountryId userId activeGame =
 
                     PlayerTurn.GameOver ->
                         Ok activeGame
+
     else
         "Not your turn" |> Error |> Err
 
@@ -1227,7 +1226,7 @@ getDefenseThroughWater gameMap players countryId =
             let
                 countriesReachableThroughWater : List Country.Id
                 countriesReachableThroughWater =
-                    Map.getCountriesThatCanReachCountryThroughWater  gameMap.countries gameMap.bodiesOfWater  countryId
+                    Map.getCountriesThatCanReachCountryThroughWater gameMap.countries gameMap.bodiesOfWater countryId
 
                 defenderCountriesNeighboringWater : List Country.Id
                 defenderCountriesNeighboringWater =

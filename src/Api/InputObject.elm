@@ -343,9 +343,14 @@ encodePlayerInput input =
         [ ( "id", Encode.string input.id |> Just ), ( "name", Encode.string input.name |> Just ), ( "countryTroopCounts", (encodeCountryTroopCountsInput |> Encode.list) input.countryTroopCounts |> Just ), ( "capitol", Encode.string |> Encode.optional input.capitol ), ( "color", encodeColorInput input.color |> Just ), ( "ports", (Encode.string |> Encode.list) input.ports |> Just ) ]
 
 
-buildPlayerTurnInput : PlayerTurnInputRequiredFields -> PlayerTurnInput
-buildPlayerTurnInput required =
-    { playerId = required.playerId, playerTurnStage = required.playerTurnStage }
+buildPlayerTurnInput : PlayerTurnInputRequiredFields -> (PlayerTurnInputOptionalFields -> PlayerTurnInputOptionalFields) -> PlayerTurnInput
+buildPlayerTurnInput required fillOptionals =
+    let
+        optionals =
+            fillOptionals
+                { fromCountryId = Absent, troopCount = Absent }
+    in
+    { playerId = required.playerId, playerTurnStage = required.playerTurnStage, fromCountryId = optionals.fromCountryId, troopCount = optionals.troopCount }
 
 
 type alias PlayerTurnInputRequiredFields =
@@ -354,11 +359,19 @@ type alias PlayerTurnInputRequiredFields =
     }
 
 
+type alias PlayerTurnInputOptionalFields =
+    { fromCountryId : OptionalArgument String
+    , troopCount : OptionalArgument String
+    }
+
+
 {-| Type for the PlayerTurnInput input object.
 -}
 type alias PlayerTurnInput =
     { playerId : String
     , playerTurnStage : Api.Enum.PlayerTurnStage.PlayerTurnStage
+    , fromCountryId : OptionalArgument String
+    , troopCount : OptionalArgument String
     }
 
 
@@ -367,7 +380,7 @@ type alias PlayerTurnInput =
 encodePlayerTurnInput : PlayerTurnInput -> Value
 encodePlayerTurnInput input =
     Encode.maybeObject
-        [ ( "playerId", Encode.string input.playerId |> Just ), ( "playerTurnStage", Encode.enum Api.Enum.PlayerTurnStage.toString input.playerTurnStage |> Just ) ]
+        [ ( "playerId", Encode.string input.playerId |> Just ), ( "playerTurnStage", Encode.enum Api.Enum.PlayerTurnStage.toString input.playerTurnStage |> Just ), ( "fromCountryId", Encode.string |> Encode.optional input.fromCountryId ), ( "troopCount", Encode.string |> Encode.optional input.troopCount ) ]
 
 
 buildPointInput : PointInputRequiredFields -> PointInput

@@ -12,7 +12,6 @@ const resolvers = {
   Query: {
     map: async (_: any, x: { id: string }) => {
       try {
-        // console.log(x);
         const result = await database.query(
           "SELECT * FROM maps WHERE id = $1",
           [x.id]

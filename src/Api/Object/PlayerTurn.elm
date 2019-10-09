@@ -30,3 +30,15 @@ playerId =
 playerTurnStage : SelectionSet Api.Enum.PlayerTurnStage.PlayerTurnStage Api.Object.PlayerTurn
 playerTurnStage =
     Object.selectionForField "Enum.PlayerTurnStage.PlayerTurnStage" "playerTurnStage" [] Api.Enum.PlayerTurnStage.decoder
+
+
+{-| -}
+fromCountryId : SelectionSet (Maybe String) Api.Object.PlayerTurn
+fromCountryId =
+    Object.selectionForField "(Maybe String)" "fromCountryId" [] (Decode.string |> Decode.nullable)
+
+
+{-| -}
+troopCount : SelectionSet (Maybe String) Api.Object.PlayerTurn
+troopCount =
+    Object.selectionForField "(Maybe String)" "troopCount" [] (Decode.string |> Decode.nullable)

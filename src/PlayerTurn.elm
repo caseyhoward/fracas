@@ -2,11 +2,12 @@ module PlayerTurn exposing
     ( PlayerTurn(..)
     , PlayerTurnStage(..)
     , canCurrentPlayerPass
+    , firstTurn
     , getCurrentPlayer
     , getPlayerTurnStageFromPlayerTurn
+    , input
     , isCapitolPlacementTurn
     , isPlayerTurn
-    , playerTurnInput
     , selectionSet
     , toString
     , troopsToMove
@@ -17,6 +18,7 @@ import Api.InputObject
 import Api.Object
 import Api.Object.PlayerTurn
 import Country
+import Graphql.OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
 import Player
 import TroopCount
@@ -35,11 +37,28 @@ type PlayerTurnStage
     | GameOver
 
 
-playerTurnInput : PlayerTurn -> Api.InputObject.PlayerTurnInput
-playerTurnInput (PlayerTurn playerTurnStage (Player.Id playerId)) =
-    { playerId = playerId |> String.fromInt
-    , playerTurnStage = playerTurnStage |> playerTurnStageInput
-    }
+input : PlayerTurn -> Api.InputObject.PlayerTurnInput
+input (PlayerTurn playerTurnStage (Player.Id playerId)) =
+    Api.InputObject.buildPlayerTurnInput
+        { playerId = playerId |> String.fromInt
+        , playerTurnStage = playerTurnStage |> playerTurnStageInput
+        }
+        (\optional ->
+            case playerTurnStage of
+                TroopMovementFromSelected countryId troopCount ->
+                    { optional
+                        | fromCountryId = Graphql.OptionalArgument.Present (Country.idToString countryId)
+                        , troopCount = Graphql.OptionalArgument.Present troopCount
+                    }
+
+                _ ->
+                    optional
+        )
+
+
+firstTurn : PlayerTurn
+firstTurn =
+    PlayerTurn CapitolPlacement (Player.Id 1)
 
 
 getPlayerTurnStageFromPlayerTurn : PlayerTurn -> PlayerTurnStage
@@ -98,8 +117,8 @@ troopsToMove currentPlayerTurn =
 
 selectionSet : SelectionSet PlayerTurn Api.Object.PlayerTurn
 selectionSet =
-    Graphql.SelectionSet.map2
-        (\playerId playerTurnStage ->
+    Graphql.SelectionSet.map4
+        (\playerId playerTurnStage maybeFromCountryId maybeTroopCount ->
             PlayerTurn
                 (case playerTurnStage of
                     Api.Enum.PlayerTurnStage.CapitolPlacement ->
@@ -114,6 +133,14 @@ selectionSet =
                     Api.Enum.PlayerTurnStage.TroopMovement ->
                         TroopMovement
 
+                    Api.Enum.PlayerTurnStage.TroopMovementFromSelected ->
+                        case ( maybeFromCountryId, maybeTroopCount ) of
+                            ( Just fromCountryId, Just troopCount ) ->
+                                TroopMovementFromSelected (fromCountryId |> Country.Id) troopCount
+
+                            _ ->
+                                TroopMovementFromSelected ("-1" |> Country.Id) ""
+
                     Api.Enum.PlayerTurnStage.GameOver ->
                         GameOver
                 )
@@ -121,6 +148,8 @@ selectionSet =
         )
         Api.Object.PlayerTurn.playerId
         Api.Object.PlayerTurn.playerTurnStage
+        Api.Object.PlayerTurn.fromCountryId
+        Api.Object.PlayerTurn.troopCount
 
 
 playerTurnStageInput : PlayerTurnStage -> Api.Enum.PlayerTurnStage.PlayerTurnStage
@@ -139,9 +168,8 @@ playerTurnStageInput playerTurnStage =
             Api.Enum.PlayerTurnStage.TroopMovement
 
         TroopMovementFromSelected _ _ ->
-            Debug.todo ""
+            Api.Enum.PlayerTurnStage.TroopMovementFromSelected
 
-        -- Api.Enum.PlayerTurnStage.TroopMovement
         GameOver ->
             Api.Enum.PlayerTurnStage.GameOver
 

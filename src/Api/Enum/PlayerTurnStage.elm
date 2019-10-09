@@ -13,6 +13,7 @@ import Json.Decode as Decode exposing (Decoder)
   - TroopPlacement -
   - AttackAnnexOrPort -
   - TroopMovement -
+  - TroopMovementFromSelected -
   - GameOver -
 
 -}
@@ -21,12 +22,13 @@ type PlayerTurnStage
     | TroopPlacement
     | AttackAnnexOrPort
     | TroopMovement
+    | TroopMovementFromSelected
     | GameOver
 
 
 list : List PlayerTurnStage
 list =
-    [ CapitolPlacement, TroopPlacement, AttackAnnexOrPort, TroopMovement, GameOver ]
+    [ CapitolPlacement, TroopPlacement, AttackAnnexOrPort, TroopMovement, TroopMovementFromSelected, GameOver ]
 
 
 decoder : Decoder PlayerTurnStage
@@ -46,6 +48,9 @@ decoder =
 
                     "TroopMovement" ->
                         Decode.succeed TroopMovement
+
+                    "TroopMovementFromSelected" ->
+                        Decode.succeed TroopMovementFromSelected
 
                     "GameOver" ->
                         Decode.succeed GameOver
@@ -71,6 +76,9 @@ toString enum =
 
         TroopMovement ->
             "TroopMovement"
+
+        TroopMovementFromSelected ->
+            "TroopMovementFromSelected"
 
         GameOver ->
             "GameOver"
