@@ -6,6 +6,7 @@ module Player exposing
     , PlayerSelectionSet
     , Players
     , addPort
+    , availablePlayerColors
     , defaultNewPlayers
     , getPlayer
     , getPlayerName
@@ -13,7 +14,6 @@ module Player exposing
     , input
     , newPlayersInput
     , numberOfTroopsToPlace
-    , availablePlayerColors
     , playerSelection
     , playerSelectionSetsToPlayers
     , urlParser
@@ -93,14 +93,33 @@ availablePlayerColors players =
         takenColors =
             players |> Dict.values |> List.map .color
     in
-    [ Colors.darkGreen
-    , Colors.lightGreen
-    , Colors.lightYellow
-    , Colors.orange
+    [ Colors.lightBrown
     , Colors.brown
+    , Colors.darkBrown
+    , Colors.lightGreen
+    , Colors.green
+    , Colors.darkGreen
+    , Colors.lightBlue
+    -- , Colors.blue
+    -- , Colors.darkBlue
+    , Colors.lightGray
+    , Colors.gray
+    , Colors.darkGray
+    , Colors.charcoal
+    , Colors.darkCharcoal
+    , Colors.lightOrange
+    , Colors.orange
+    , Colors.darkOrange
     , Colors.lightPurple
+    , Colors.purple
+    , Colors.darkPurple
     , Colors.lightRed
-    , Colors.lightBrown
+    , Colors.red
+    , Colors.darkRed
+    , Colors.lightYellow
+    , Colors.darkYellow
+    , Colors.yellow
+    , Colors.white
     ]
         |> List.filter (\color -> not (List.member color takenColors))
 

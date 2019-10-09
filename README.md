@@ -22,3 +22,11 @@ Try the early terrible version [here](http://fracas.caseyhoward.net)
 - Log
 - Stats
 - Random map generator
+
+
+## Maps ideas
+
+- https://news.ycombinator.com/item?id=21099344
+- www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/
+- https://www.redblobgames.com/maps/mapgen2/
+- https://azgaar.github.io/Fantasy-Map-Generator/

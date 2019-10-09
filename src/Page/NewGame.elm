@@ -5,12 +5,15 @@ module Page.NewGame exposing (Model, Msg, init, subscriptions, toSession, update
 import Browser.Dom
 import Browser.Events
 import Colors
+import Country
 import Dict
 import Element
 import Element.Background
 import Element.Border
 import Element.Font
 import Element.Input
+import Element.Keyed
+import Element.Lazy
 import Game
 import Graphql.Http
 import Html
@@ -32,7 +35,7 @@ import ViewHelpers
 type alias NewGame =
     { players : Dict.Dict Int Player.NewPlayer
     , error : Maybe String
-    , selectedMapId : String
+    , selectedMapId : Maybe String
     , maps : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map)
     , configureColor : Maybe Int
     }
@@ -51,7 +54,7 @@ init session =
         , configureColor = Nothing
         , error = Nothing
         , maps = RemoteData.NotAsked
-        , selectedMapId = ""
+        , selectedMapId = Nothing
         }
         session
     , Cmd.none
@@ -154,10 +157,23 @@ update msg model =
                     ( ConfiguringGame newGame { session | windowSize = Just { width = width, height = height } }, Cmd.none )
 
                 GotMaps maps ->
-                    ( ConfiguringGame { newGame | maps = maps } session, Cmd.none )
+                    ( ConfiguringGame
+                        { newGame
+                            | maps = maps
+                            , selectedMapId =
+                                case maps of
+                                    RemoteData.Success allMaps ->
+                                        allMaps |> List.head |> Maybe.map .id |> Maybe.map Map.idToString
+
+                                    _ ->
+                                        Nothing
+                        }
+                        session
+                    , Cmd.none
+                    )
 
                 SelectMap mapId ->
-                    ( ConfiguringGame { newGame | selectedMapId = mapId } session, Cmd.none )
+                    ( ConfiguringGame { newGame | selectedMapId = Just mapId } session, Cmd.none )
 
                 GameCreated _ ->
                     ( model, Cmd.none )
@@ -173,7 +189,12 @@ update msg model =
         GeneratingRandomTroopCounts newGame session ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
-                    ( model, Game.create newGame.selectedMapId newGame.players neutralCountryTroopCounts GameCreated )
+                    case newGame.selectedMapId of
+                        Just mapId ->
+                            ( model, Game.create mapId newGame.players neutralCountryTroopCounts GameCreated )
+
+                        Nothing ->
+                            ( model, Cmd.none )
 
                 AddPlayer ->
                     ( model, Cmd.none )
@@ -226,14 +247,19 @@ startGame : Session.Session -> NewGame -> ( Model, Cmd Msg )
 startGame session newGame =
     case newGame.maps of
         RemoteData.Success maps ->
-            case maps |> List.filter (\map -> map.id == Map.Id newGame.selectedMapId) |> List.head of
-                Just map ->
-                    ( GeneratingRandomTroopCounts newGame session
-                    , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
-                    )
+            case newGame.selectedMapId of
+                Just mapId ->
+                    case maps |> List.filter (\map -> map.id == Map.Id mapId) |> List.head of
+                        Just map ->
+                            ( GeneratingRandomTroopCounts newGame session
+                            , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
+                            )
+
+                        Nothing ->
+                            ( ConfiguringGame { newGame | error = Just "Couldn't find game map" } session, Cmd.none )
 
                 Nothing ->
-                    ( ConfiguringGame { newGame | error = Just "Couldn't find game map" } session, Cmd.none )
+                    ( ConfiguringGame { newGame | error = Just "This shouldn't happen" } session, Cmd.none )
 
         _ ->
             ( ConfiguringGame { newGame | error = Just "This shouldn't happen" } session, Cmd.none )
@@ -256,19 +282,23 @@ view : Model -> { title : String, content : Html.Html Msg }
 view model =
     { title = ""
     , content =
-        Element.layout [ Element.width Element.fill, Element.centerX, Element.height Element.fill ]
+        Element.layout
+            [ Element.width Element.fill
+            , Element.centerX
+            , Element.height Element.fill
+            , Element.inFront (playerColorSelect (model |> toNewGame |> .players) (model |> toNewGame |> .configureColor))
+            ]
             (Element.column
                 [ Element.width Element.fill
                 , Element.height Element.fill
                 , Element.centerX
-                , Element.inFront (playerColorSelect (model |> toNewGame |> .players) (model |> toNewGame |> .configureColor))
                 ]
                 [ title
                 , Element.el [ Element.centerX ]
                     (Element.column
-                        [ Element.width Element.fill, Element.spacing 20 ]
+                        [ Element.width Element.fill, Element.spacing 50 ]
                         [ playerConfiguration (model |> toNewGame |> .players)
-                        , mapSelect (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId)
+                        , mapConfiguration (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId)
                         , startGameButton
                         ]
                     )
@@ -281,74 +311,43 @@ playerColorSelect : Dict.Dict Int Player.NewPlayer -> Maybe Int -> Element.Eleme
 playerColorSelect players maybePlayerId =
     case maybePlayerId of
         Just playerId ->
-            Element.el
-                [ Element.width Element.fill
-                , Element.height Element.fill
-                , Element.Background.color (Element.rgba255 0 0 0 0.8)
-                ]
-                (Element.wrappedRow [ Element.width (Element.px 200), Element.centerX, Element.centerY ]
-                    (players
-                        |> Player.availablePlayerColors
-                        |> List.map (\color -> colorButton color (ColorSelected playerId color))
-                    )
-                )
+            case Dict.get playerId players of
+                Just player ->
+                    Element.el
+                        [ Element.width Element.fill
+                        , Element.height Element.fill
+                        , Element.Background.color (Element.rgba255 0 0 0 0.8)
+                        ]
+                        (Element.column
+                            [ Element.padding 20
+                            , Element.centerX
+                            , Element.centerY
+                            , Element.Background.color (Colors.white |> Colors.toElementColor)
+                            , Element.spacing 20
+                            ]
+                            [ Element.text ("Select color for " ++ player.name)
+                            , Element.wrappedRow [ Element.width (Element.px 250) ]
+                                (players
+                                    |> Player.availablePlayerColors
+                                    |> List.map (\color -> colorButton color (ColorSelected playerId color))
+                                )
+                            ]
+                        )
+
+                Nothing ->
+                    Element.text "Error getting player"
 
         Nothing ->
             Element.none
 
 
-mapSelect : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map) -> String -> Element.Element Msg
-mapSelect mapsRemoteData selectedMapId =
+mapConfiguration : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map) -> Maybe String -> Element.Element Msg
+mapConfiguration mapsRemoteData selectedMapId =
     case mapsRemoteData of
         RemoteData.Success maps ->
-            Element.Input.radio
-                [ Element.padding 10
-                , Element.spacing 20
-                ]
-                { onChange = SelectMap
-                , selected = Just selectedMapId
-                , label = Element.Input.labelAbove [ Element.Font.bold ] (Element.text "Map")
-                , options =
-                    maps
-                        |> List.map
-                            (\map ->
-                                Element.Input.optionWith
-                                    (map.id |> Map.idToString)
-                                    (\optionState ->
-                                        let
-                                            border =
-                                                case optionState of
-                                                    Element.Input.Idle ->
-                                                        [ Element.Border.color (Colors.gray |> Colors.toElementColor)
-                                                        , Element.Border.solid
-                                                        , Element.Border.width 2
-                                                        ]
+            Element.Lazy.lazy2 mapSelect maps selectedMapId
 
-                                                    Element.Input.Focused ->
-                                                        [ Element.Border.color (Colors.white |> Colors.toElementColor)
-                                                        , Element.Border.solid
-                                                        , Element.Border.width 2
-                                                        ]
-
-                                                    Element.Input.Selected ->
-                                                        [ Element.Border.color (Colors.blue |> Colors.toElementColor)
-                                                        , Element.Border.solid
-                                                        , Element.Border.width 2
-                                                        , Element.Background.color (Colors.lightBlue |> Colors.toElementColor)
-                                                        , Element.Font.color (Colors.white |> Colors.toElementColor)
-                                                        ]
-                                        in
-                                        Element.row
-                                            (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
-                                            [ Element.el
-                                                [ Element.width (Element.px 50) ]
-                                                (Map.view 100 map.countries map.dimensions |> Element.html)
-                                            , Element.text map.name
-                                            ]
-                                    )
-                            )
-                }
-
+        -- mapSelect maps selectedMapId
         RemoteData.Loading ->
             Element.text "..."
 
@@ -357,6 +356,62 @@ mapSelect mapsRemoteData selectedMapId =
 
         RemoteData.NotAsked ->
             Element.text ""
+
+
+mapSelect : List Map.Map -> Maybe String -> Element.Element Msg
+mapSelect maps selectedMapId =
+    Element.Input.radio
+        [ Element.padding 10
+        , Element.spacing 20
+        ]
+        { onChange = SelectMap
+        , selected = selectedMapId
+        , label = Element.Input.labelAbove [ Element.Font.bold ] (Element.text "Map")
+        , options =
+            maps
+                |> List.map
+                    (\map ->
+                        Element.Input.optionWith
+                            (map.id |> Map.idToString)
+                            (\optionState ->
+                                let
+                                    border =
+                                        case optionState of
+                                            Element.Input.Idle ->
+                                                [ Element.Border.color (Colors.gray |> Colors.toElementColor)
+                                                , Element.Border.solid
+                                                , Element.Border.width 2
+                                                ]
+
+                                            Element.Input.Focused ->
+                                                [ Element.Border.color (Colors.white |> Colors.toElementColor)
+                                                , Element.Border.solid
+                                                , Element.Border.width 2
+                                                ]
+
+                                            Element.Input.Selected ->
+                                                [ Element.Border.color (Colors.blue |> Colors.toElementColor)
+                                                , Element.Border.solid
+                                                , Element.Border.width 2
+                                                , Element.Background.color (Colors.lightBlue |> Colors.toElementColor)
+                                                , Element.Font.color (Colors.white |> Colors.toElementColor)
+                                                ]
+                                in
+                                Element.row
+                                    (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
+                                    [ Element.el
+                                        [ Element.width (Element.px 50) ]
+                                        (Element.Lazy.lazy2 mapView map.countries map.dimensions)
+                                    , Element.text map.name
+                                    ]
+                            )
+                    )
+        }
+
+
+mapView : Country.Countries -> ( Int, Int ) -> Element.Element Msg
+mapView countries dimensions =
+    Map.view 100 countries dimensions |> Element.html
 
 
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Element.Element Msg

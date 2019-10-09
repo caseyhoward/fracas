@@ -118,7 +118,7 @@ create selectedMapId newPlayers neutralTroopCounts toMsg =
             Api.Object.Game.id |> Graphql.SelectionSet.map Id
     in
     Api.Mutation.createGame input gameSelectionSet
-        |> Graphql.Http.mutationRequest "http://localhost:4000"
+        |> Graphql.Http.mutationRequest "http://192.168.1.7:4000"
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
@@ -138,7 +138,7 @@ save game toMsg =
             }
     in
     Api.Mutation.saveGame input selectionSet
-        |> Graphql.Http.mutationRequest "http://localhost:4000"
+        |> Graphql.Http.mutationRequest "http://192.168.1.7:4000"
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
@@ -150,7 +150,7 @@ get (Id id) toMsg =
             Api.Query.game { id = id } selectionSet
     in
     query
-        |> Graphql.Http.queryRequest "http://localhost:4000"
+        |> Graphql.Http.queryRequest "http://192.168.1.7:4000"
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 

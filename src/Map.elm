@@ -87,7 +87,7 @@ idToString (Id id) =
 getAll : (RemoteData.RemoteData (Graphql.Http.Error (List Map)) (List Map) -> msg) -> Cmd msg
 getAll toMsg =
     Api.Query.maps mapSelection
-        |> Graphql.Http.queryRequest "http://localhost:4000"
+        |> Graphql.Http.queryRequest "http://192.168.1.7:4000"
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
@@ -162,7 +162,7 @@ create newMap toMsg =
             requiredFields |> Api.InputObject.buildMapInput
     in
     Api.Mutation.createMap { map = input } mapSelection
-        |> Graphql.Http.mutationRequest "http://localhost:4000"
+        |> Graphql.Http.mutationRequest "http://192.168.1.7:4000"
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
