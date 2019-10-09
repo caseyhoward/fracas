@@ -194,7 +194,7 @@ create selectedMapId numberOfPlayers neutralTroopCounts toMsg =
         input : Api.Mutation.CreateGameRequiredArguments
         input =
             { newGame =
-                Api.InputObject.buildGameInput
+                Api.InputObject.buildNewGameInput
                     { mapId = selectedMapId
                     , players = playersInput
                     , neutralCountryTroops = neutralCountryTroops

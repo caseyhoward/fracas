@@ -229,12 +229,6 @@ waitingToShowCountryHelperOutlines countryBorderHelperOutlineStatus =
 
 
 
--- modelToSession model =
---     case model of
---         GameLoading gameLoading ->
---             gameLoading.session
---         GameLoaded gameLoaded ->
---             gameLoaded.session
 ---- VIEW ----
 
 
@@ -1043,7 +1037,7 @@ subscriptions model =
             ]
                 |> Sub.batch
 
-        GameLoading gameLoadingModel ->
+        GameLoading _ ->
             Browser.Events.onResize (\x y -> WindowResized x y)
 
 

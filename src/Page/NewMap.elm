@@ -14,11 +14,11 @@ import Color
 import Element
 import Element.Background
 import Element.Input
-import Map
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import Html
 import Http
+import Map
 import RemoteData
 import Session
 import Tuple

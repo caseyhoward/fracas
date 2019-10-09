@@ -20,7 +20,7 @@ import Json.Decode as Decode exposing (Decoder)
 
 
 type alias CreateGameRequiredArguments =
-    { newGame : Api.InputObject.GameInput }
+    { newGame : Api.InputObject.NewGameInput }
 
 
 {-|
@@ -30,7 +30,21 @@ type alias CreateGameRequiredArguments =
 -}
 createGame : CreateGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
 createGame requiredArgs object_ =
-    Object.selectionForCompositeField "createGame" [ Argument.required "newGame" requiredArgs.newGame Api.InputObject.encodeGameInput ] object_ identity
+    Object.selectionForCompositeField "createGame" [ Argument.required "newGame" requiredArgs.newGame Api.InputObject.encodeNewGameInput ] object_ identity
+
+
+type alias SaveGameRequiredArguments =
+    { newGame : Api.InputObject.GameInput }
+
+
+{-|
+
+  - newGame -
+
+-}
+saveGame : SaveGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
+saveGame requiredArgs object_ =
+    Object.selectionForCompositeField "saveGame" [ Argument.required "newGame" requiredArgs.newGame Api.InputObject.encodeGameInput ] object_ identity
 
 
 type alias CreateMapRequiredArguments =
