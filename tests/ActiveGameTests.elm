@@ -1,6 +1,6 @@
-module ActiveGameTests exposing (..)
+module GameTests exposing (..)
 
-import ActiveGame
+import Game
 import Color
 import Dict
 import Expect
@@ -14,7 +14,7 @@ import Test exposing (..)
 
 all : Test
 all =
-    describe "ActiveGame"
+    describe "Game"
         [ test ".start" <|
             \_ ->
                 Expect.equal True True
