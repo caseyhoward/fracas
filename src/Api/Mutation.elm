@@ -34,17 +34,17 @@ createGame requiredArgs object_ =
 
 
 type alias SaveGameRequiredArguments =
-    { newGame : Api.InputObject.GameInput }
+    { game : Api.InputObject.GameInput }
 
 
 {-|
 
-  - newGame -
+  - game -
 
 -}
 saveGame : SaveGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
 saveGame requiredArgs object_ =
-    Object.selectionForCompositeField "saveGame" [ Argument.required "newGame" requiredArgs.newGame Api.InputObject.encodeGameInput ] object_ identity
+    Object.selectionForCompositeField "saveGame" [ Argument.required "game" requiredArgs.game Api.InputObject.encodeGameInput ] object_ identity
 
 
 type alias CreateMapRequiredArguments =

@@ -29,6 +29,7 @@ import Html
 import Html.Attributes
 import Map
 import Maps.Big
+import Player
 import RemoteData
 import Route
 import Session
@@ -41,13 +42,14 @@ import ViewHelpers
 type Model
     = GameLoading GameLoadingModel
     | GameLoaded GameLoadedModel
+    | GameSaving GameLoadedModel (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game)
 
 
 type alias GameLoadingModel =
     { activeGame : RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game
     , error : Maybe String
     , session : Session.Session
-    , playerId : Game.PlayerId
+    , playerId : Player.Id
     }
 
 
@@ -56,7 +58,7 @@ type alias GameLoadedModel =
     , showAvailableMoves : Bool
     , session : Session.Session
     , error : Maybe String
-    , playerId : Game.PlayerId
+    , playerId : Player.Id
     , countryBorderHelperOutlineStatus : CountryBorderHelperOutlineStatus
     }
 
@@ -67,7 +69,7 @@ type CountryBorderHelperOutlineStatus
     | CountryBorderHelperOutlineActive Country.Id
 
 
-init : Session.Session -> Game.Id -> Game.PlayerId -> ( Model, Cmd Msg )
+init : Session.Session -> Game.Id -> Player.Id -> ( Model, Cmd Msg )
 init session activeGameId playerId =
     ( GameLoading
         { activeGame = RemoteData.NotAsked
@@ -121,6 +123,22 @@ update msg model =
 
                 WindowResized width height ->
                     ( GameLoading { gameLoadingModel | session = gameLoadingModel.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        GameSaving gameLoadedModel savingGame ->
+            case msg of
+                GotGame gameRemoteData ->
+                    case gameRemoteData of
+                        RemoteData.Success game ->
+                            ( GameLoaded { gameLoadedModel | activeGame = game }, Cmd.none )
+
+                        _ ->
+                            ( model, Cmd.none )
+
+                WindowResized width height ->
+                    ( GameSaving { gameLoadedModel | session = gameLoadedModel.session |> Session.updateWindowSize { width = width, height = height } } savingGame, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -188,6 +206,7 @@ handleCountryMouseUpFromPlayer clickedCountryId model =
                     if clickedCountryId == countryToShowInfoForId then
                         case Game.countryClicked clickedCountryId model.activeGame of
                             Ok updatedGame ->
+                                -- Game.save updatedGame
                                 { model | activeGame = updatedGame }
 
                             Err error ->
@@ -197,6 +216,29 @@ handleCountryMouseUpFromPlayer clickedCountryId model =
                         model
     in
     { updatedModel | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
+
+
+
+-- handleCountryMouseUpFromPlayer : Country.Id -> GameLoadedModel -> GameLoadedModel
+-- handleCountryMouseUpFromPlayer clickedCountryId model =
+--     let
+--         updatedModel =
+--             case model.countryBorderHelperOutlineStatus of
+--                 CountryBorderHelperOutlineActive _ ->
+--                     model
+--                 CountryBorderHelperOutlineInactive ->
+--                     model
+--                 CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
+--                     if clickedCountryId == countryToShowInfoForId then
+--                         case Game.countryClicked clickedCountryId model.activeGame of
+--                             Ok updatedGame ->
+--                                 { model | activeGame = updatedGame }
+--                             Err error ->
+--                                 { model | error = Just (Game.errorToString error) }
+--                     else
+--                         model
+--     in
+--     { updatedModel | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
 
 
 handleCountryMouseDown : Country.Id -> GameLoadedModel -> GameLoadedModel
@@ -239,6 +281,26 @@ view model =
             { title = "Fracas - Loading", content = Element.none |> Element.layout [] }
 
         GameLoaded gameLoaded ->
+            { content =
+                case gameLoaded.session.windowSize of
+                    Just windowSize ->
+                        let
+                            device =
+                                Element.classifyDevice windowSize
+                        in
+                        case Element.classifyDevice windowSize |> .class of
+                            Element.Phone ->
+                                viewPlayingGameMobile gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error device
+
+                            _ ->
+                                viewPlayingGameDesktop gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error device
+
+                    Nothing ->
+                        viewPlayingGameDesktop gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error (Element.classifyDevice { width = 1920, height = 1080 })
+            , title = "Fracas"
+            }
+
+        GameSaving gameLoaded gameSaving ->
             { content =
                 case gameLoaded.session.windowSize of
                     Just windowSize ->
@@ -434,7 +496,7 @@ playerAndTroopCountBorderColor =
     Colors.darkGray |> ViewHelpers.colorToElementColor
 
 
-viewPlayerCountryAndTroopCounts : Game.PlayerTurn -> Dict.Dict Int Game.Player -> Element.Element Msg
+viewPlayerCountryAndTroopCounts : Game.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
 viewPlayerCountryAndTroopCounts currentPlayerTurn players =
     Element.column
         [ Element.spacing 10
@@ -445,7 +507,7 @@ viewPlayerCountryAndTroopCounts currentPlayerTurn players =
         )
 
 
-viewPlayerCountryAndTroopCountsMobile : Game.PlayerTurn -> Dict.Dict Int Game.Player -> Element.Element Msg
+viewPlayerCountryAndTroopCountsMobile : Game.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
 viewPlayerCountryAndTroopCountsMobile currentPlayerTurn players =
     Element.wrappedRow
         [ Element.spacing 10
@@ -456,7 +518,7 @@ viewPlayerCountryAndTroopCountsMobile currentPlayerTurn players =
         )
 
 
-attackerInfo : Game.PlayerId -> Game.Game -> Dict.Dict Int TroopCount.TroopCount -> Element.Element Msg
+attackerInfo : Player.Id -> Game.Game -> Dict.Dict Int TroopCount.TroopCount -> Element.Element Msg
 attackerInfo countyOwnerPlayerId activeGame attackerStrengthPerPlayer =
     Element.column
         [ Element.width Element.fill, Element.spacing 3 ]
@@ -464,11 +526,11 @@ attackerInfo countyOwnerPlayerId activeGame attackerStrengthPerPlayer =
             |> Dict.toList
             |> List.filter
                 (\( playerId, troopCount ) ->
-                    Game.PlayerId playerId /= countyOwnerPlayerId && troopCount /= TroopCount.noTroops
+                    Player.Id playerId /= countyOwnerPlayerId && troopCount /= TroopCount.noTroops
                 )
             |> List.map
                 (\( playerId, troopCount ) ->
-                    case Game.getPlayer (Game.PlayerId playerId) activeGame.players of
+                    case Game.getPlayer (Player.Id playerId) activeGame.players of
                         Just player ->
                             Element.row
                                 [ Element.width Element.fill
@@ -546,9 +608,9 @@ viewCountryInfo activeGame countryBorderHelperOutlineStatus =
 
 
 viewPlayerTroopCount :
-    Game.PlayerId
-    -> Dict.Dict Int Game.Player
-    -> { playerId : Game.PlayerId, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
+    Player.Id
+    -> Player.Players
+    -> { playerId : Player.Id, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
     -> Element.Element Msg
 viewPlayerTroopCount currentPlayerId players status =
     let
@@ -609,7 +671,7 @@ viewPlayerTroopCount currentPlayerId players status =
             Element.none
 
 
-playerAndTroopCountBorder : Game.PlayerId -> Game.PlayerId -> List (Element.Attribute Msg)
+playerAndTroopCountBorder : Player.Id -> Player.Id -> List (Element.Attribute Msg)
 playerAndTroopCountBorder currentPlayerId playerIdToDisplay =
     if currentPlayerId == playerIdToDisplay then
         [ Element.Border.solid
@@ -670,7 +732,7 @@ viewConfigureTroopCountIfNecessary currentPlayerTurn =
         )
 
 
-viewPlayerTurnStatus : Int -> Int -> Game.PlayerTurn -> Dict.Dict Int Game.Player -> Element.Element Msg
+viewPlayerTurnStatus : Int -> Int -> Game.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
 viewPlayerTurnStatus height fontSize playerTurn players =
     Element.el
         [ Element.width Element.fill
@@ -944,7 +1006,7 @@ renderCapitolDots countryToRender =
         |> Collage.group
 
 
-getCountryInfoPolygonBorder : Map.Map -> Game.Players -> CountryBorderHelperOutlineStatus -> Game.CountryToRender -> Collage.Collage Msg
+getCountryInfoPolygonBorder : Map.Map -> Player.Players -> CountryBorderHelperOutlineStatus -> Game.CountryToRender -> Collage.Collage Msg
 getCountryInfoPolygonBorder gameMap players countryBorderHelperOutlineStatus countryToRender =
     case getCountryInfoStatus gameMap players countryBorderHelperOutlineStatus countryToRender.id of
         CountryInfoSelectedCountry ->
@@ -979,7 +1041,7 @@ type CountryInfoStatus
     | NoInfo
 
 
-getCountryInfoStatus : Map.Map -> Game.Players -> CountryBorderHelperOutlineStatus -> Country.Id -> CountryInfoStatus
+getCountryInfoStatus : Map.Map -> Player.Players -> CountryBorderHelperOutlineStatus -> Country.Id -> CountryInfoStatus
 getCountryInfoStatus gameMap players countryBorderHelperOutlineStatus countryId =
     case countryBorderHelperOutlineStatus of
         CountryBorderHelperOutlineActive countryToShowInfoForId ->
@@ -1040,10 +1102,16 @@ subscriptions model =
         GameLoading _ ->
             Browser.Events.onResize (\x y -> WindowResized x y)
 
+        GameSaving _ _ ->
+            Browser.Events.onResize (\x y -> WindowResized x y)
+
 
 toSession : Model -> Session.Session
 toSession model =
     case model of
+        GameSaving gameLoadedModel _ ->
+            gameLoadedModel.session
+
         GameLoaded gameLoadedModel ->
             gameLoadedModel.session
 
