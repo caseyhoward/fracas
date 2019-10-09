@@ -9,19 +9,14 @@ module Page.NewMap exposing
     )
 
 import Browser.Events
-import Collage
-import Color
 import Element
 import Element.Background
 import Element.Input
 import Graphql.Http
-import Graphql.Http.GraphqlError
 import Html
-import Http
 import Map
 import RemoteData
 import Session
-import Tuple
 import ViewHelpers
 
 

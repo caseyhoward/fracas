@@ -79,6 +79,19 @@ const resolvers = {
         console.log(error);
         return error.toString();
       }
+    },
+
+    saveGame: async (_: any, x: { game: Game }): Promise<Game | string> => {
+      try {
+        const result = await database.query(
+          "UPDATE games SET game_json = $2 WHERE id = $1 RETURNING *",
+          [parseInt(x.game.id, 10), JSON.stringify(x.game)]
+        );
+        return gameToJson(result.rows[0]);
+      } catch (error) {
+        console.log(error);
+        return error.toString();
+      }
     }
   }
 };
@@ -109,13 +122,11 @@ interface NewMap {
 
 interface NewGame {
   mapId: string;
-  gameJson: string;
 }
 
 interface Game {
-  id: String;
+  id: string;
   mapId: string;
-  gameJson: string;
 }
 
 function gameToJson(gameRow: any): Game {

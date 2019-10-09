@@ -79,7 +79,16 @@ type Segment {
 
 ### GAME ###
 
+input NewGameInput {
+  mapId: String!
+  players: [PlayerInput!]!
+  neutralCountryTroops: [CountryTroopCountsInput!]!
+  numberOfPlayers: Int!
+  playerTurn: PlayerTurnInput!
+}
+
 input GameInput {
+  id: String!
   mapId: String!
   players: [PlayerInput!]!
   neutralCountryTroops: [CountryTroopCountsInput!]!
@@ -161,6 +170,7 @@ type Query {
 }
 
 type Mutation {
-  createGame(newGame: GameInput!): Game!
+  createGame(newGame: NewGameInput!): Game!
+  saveGame(game: GameInput!): Game!
   createMap(map: MapInput!): Map!
 }

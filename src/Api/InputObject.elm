@@ -174,27 +174,19 @@ encodeDimensionsInput input =
         [ ( "width", Encode.int input.width |> Just ), ( "height", Encode.int input.height |> Just ) ]
 
 
-buildGameInput : GameInputRequiredFields -> (GameInputOptionalFields -> GameInputOptionalFields) -> GameInput
-buildGameInput required fillOptionals =
-    let
-        optionals =
-            fillOptionals
-                { id = Absent }
-    in
-    GameInput { id = optionals.id, mapId = required.mapId, players = required.players, neutralCountryTroops = required.neutralCountryTroops, numberOfPlayers = required.numberOfPlayers, playerTurn = required.playerTurn }
+buildGameInput : GameInputRequiredFields -> GameInput
+buildGameInput required =
+    GameInput { id = required.id, mapId = required.mapId, players = required.players, neutralCountryTroops = required.neutralCountryTroops, numberOfPlayers = required.numberOfPlayers, playerTurn = required.playerTurn }
 
 
 type alias GameInputRequiredFields =
-    { mapId : String
+    { id : String
+    , mapId : String
     , players : List PlayerInput
     , neutralCountryTroops : List CountryTroopCountsInput
     , numberOfPlayers : Int
     , playerTurn : PlayerTurnInput
     }
-
-
-type alias GameInputOptionalFields =
-    { id : OptionalArgument String }
 
 
 {-| Type alias for the `GameInput` attributes. Note that this type
@@ -203,7 +195,7 @@ references to itself either directly (recursive) or indirectly (circular). See
 <https://github.com/dillonkearns/elm-graphql/issues/33>.
 -}
 type alias GameInputRaw =
-    { id : OptionalArgument String
+    { id : String
     , mapId : String
     , players : List PlayerInput
     , neutralCountryTroops : List CountryTroopCountsInput
@@ -223,7 +215,7 @@ type GameInput
 encodeGameInput : GameInput -> Value
 encodeGameInput (GameInput input) =
     Encode.maybeObject
-        [ ( "id", Encode.string |> Encode.optional input.id ), ( "mapId", Encode.string input.mapId |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "numberOfPlayers", Encode.int input.numberOfPlayers |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
+        [ ( "id", Encode.string input.id |> Just ), ( "mapId", Encode.string input.mapId |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "numberOfPlayers", Encode.int input.numberOfPlayers |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
 
 
 buildMapInput : MapInputRequiredFields -> MapInput

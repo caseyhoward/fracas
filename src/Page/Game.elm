@@ -30,6 +30,7 @@ import Html.Attributes
 import Map
 import Maps.Big
 import Player
+import PlayerTurn
 import RemoteData
 import Route
 import Session
@@ -469,13 +470,13 @@ viewShowAvailableMoves showAvailableMoves =
         ]
 
 
-viewPassButtonIfNecessary : Game.PlayerTurn -> Element.Element Msg
+viewPassButtonIfNecessary : PlayerTurn.PlayerTurn -> Element.Element Msg
 viewPassButtonIfNecessary currentPlayerTurn =
     Element.el
         [ Element.width Element.fill
         , Element.height (Element.px 50)
         ]
-        (if Game.canCurrentPlayerPass currentPlayerTurn then
+        (if PlayerTurn.canCurrentPlayerPass currentPlayerTurn then
             Element.Input.button
                 (ViewHelpers.defaultButtonAttributes
                     ++ [ Element.width (Element.px 120)
@@ -496,25 +497,25 @@ playerAndTroopCountBorderColor =
     Colors.darkGray |> ViewHelpers.colorToElementColor
 
 
-viewPlayerCountryAndTroopCounts : Game.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
+viewPlayerCountryAndTroopCounts : PlayerTurn.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
 viewPlayerCountryAndTroopCounts currentPlayerTurn players =
     Element.column
         [ Element.spacing 10
         , Element.width Element.fill
         ]
         (Game.getPlayerCountryAndTroopCounts { currentPlayerTurn = currentPlayerTurn, players = players }
-            |> List.map (viewPlayerTroopCount (Game.getCurrentPlayer currentPlayerTurn) players)
+            |> List.map (viewPlayerTroopCount (PlayerTurn.getCurrentPlayer currentPlayerTurn) players)
         )
 
 
-viewPlayerCountryAndTroopCountsMobile : Game.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
+viewPlayerCountryAndTroopCountsMobile : PlayerTurn.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
 viewPlayerCountryAndTroopCountsMobile currentPlayerTurn players =
     Element.wrappedRow
         [ Element.spacing 10
         , Element.width Element.fill
         ]
         (Game.getPlayerCountryAndTroopCounts { currentPlayerTurn = currentPlayerTurn, players = players }
-            |> List.map (viewPlayerTroopCount (Game.getCurrentPlayer currentPlayerTurn) players)
+            |> List.map (viewPlayerTroopCount (PlayerTurn.getCurrentPlayer currentPlayerTurn) players)
         )
 
 
@@ -530,7 +531,7 @@ attackerInfo countyOwnerPlayerId activeGame attackerStrengthPerPlayer =
                 )
             |> List.map
                 (\( playerId, troopCount ) ->
-                    case Game.getPlayer (Player.Id playerId) activeGame.players of
+                    case Player.getPlayer (Player.Id playerId) activeGame.players of
                         Just player ->
                             Element.row
                                 [ Element.width Element.fill
@@ -556,7 +557,7 @@ viewCountryInfo activeGame countryBorderHelperOutlineStatus =
         CountryBorderHelperOutlineActive countryToShowInfoForId ->
             case Game.findCountryOwner countryToShowInfoForId activeGame.players of
                 Just playerId ->
-                    case Game.getPlayer playerId activeGame.players of
+                    case Player.getPlayer playerId activeGame.players of
                         Just player ->
                             Element.column
                                 [ Element.width Element.fill, Element.spacing 5 ]
@@ -621,7 +622,7 @@ viewPlayerTroopCount currentPlayerId players status =
             else
                 Colors.darkGray |> ViewHelpers.colorToElementColor
     in
-    case Game.getPlayer status.playerId players of
+    case Player.getPlayer status.playerId players of
         Just player ->
             Element.column
                 ([ Element.spacing 1
@@ -697,12 +698,12 @@ defaultLabelAttributes =
     ]
 
 
-viewConfigureTroopCountIfNecessary : Game.PlayerTurn -> Element.Element Msg
+viewConfigureTroopCountIfNecessary : PlayerTurn.PlayerTurn -> Element.Element Msg
 viewConfigureTroopCountIfNecessary currentPlayerTurn =
     Element.el
         [ Element.width Element.fill
         ]
-        (case currentPlayerTurn |> Game.troopsToMove of
+        (case currentPlayerTurn |> PlayerTurn.troopsToMove of
             Just numberOfTroopsToMove ->
                 Element.column
                     [ Element.width Element.fill
@@ -732,7 +733,7 @@ viewConfigureTroopCountIfNecessary currentPlayerTurn =
         )
 
 
-viewPlayerTurnStatus : Int -> Int -> Game.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
+viewPlayerTurnStatus : Int -> Int -> PlayerTurn.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
 viewPlayerTurnStatus height fontSize playerTurn players =
     Element.el
         [ Element.width Element.fill
@@ -744,7 +745,7 @@ viewPlayerTurnStatus height fontSize playerTurn players =
             [ Element.width Element.fill ]
             (Element.paragraph [ Element.Font.size fontSize ]
                 [ Element.text
-                    (Game.playerTurnToString players playerTurn)
+                    (PlayerTurn.toString players playerTurn)
                 ]
             )
         )
