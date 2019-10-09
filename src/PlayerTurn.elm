@@ -58,7 +58,7 @@ input (PlayerTurn playerTurnStage (Player.Id playerId)) =
 
 firstTurn : PlayerTurn
 firstTurn =
-    PlayerTurn CapitolPlacement (Player.Id 1)
+    PlayerTurn CapitolPlacement (Player.Id 0)
 
 
 getPlayerTurnStageFromPlayerTurn : PlayerTurn -> PlayerTurnStage

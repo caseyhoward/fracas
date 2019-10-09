@@ -34,6 +34,7 @@ type alias NewGame =
     , error : Maybe String
     , selectedMapId : String
     , maps : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map)
+    , configureColor : Maybe Int
     }
 
 
@@ -45,7 +46,16 @@ type Model
 
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    ( ConfiguringGame { players = Player.defaultNewPlayers, error = Nothing, maps = RemoteData.NotAsked, selectedMapId = "" } session, Cmd.none )
+    ( ConfiguringGame
+        { players = Player.defaultNewPlayers
+        , configureColor = Nothing
+        , error = Nothing
+        , maps = RemoteData.NotAsked
+        , selectedMapId = ""
+        }
+        session
+    , Cmd.none
+    )
         |> Tuple.mapSecond
             (\_ ->
                 Cmd.batch
@@ -97,10 +107,11 @@ toNewGame model =
 type Msg
     = AddPlayer
     | StartGameClicked
+    | ColorSelected Int Colors.Color
+    | ChangeColorButtonClicked Int
     | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map))
     | GameCreated (RemoteData.RemoteData (Graphql.Http.Error Game.Id) Game.Id)
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
-    | NumberOfPlayersKeyPressed Int
     | WindowResized Int Int
     | SelectMap String
     | UpdatePlayerName Int String
@@ -114,15 +125,27 @@ update msg model =
                 AddPlayer ->
                     Debug.todo ""
 
+                ColorSelected playerId color ->
+                    case newGame.players |> Dict.get playerId of
+                        Just player ->
+                            ( ConfiguringGame
+                                { newGame
+                                    | players =
+                                        newGame.players |> Dict.insert playerId { player | color = color }
+                                    , configureColor = Nothing
+                                }
+                                session
+                            , Cmd.none
+                            )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
+                ChangeColorButtonClicked playerId ->
+                    ( ConfiguringGame { newGame | configureColor = Just playerId } session, Cmd.none )
+
                 StartGameClicked ->
                     startGame session newGame
-
-                NumberOfPlayersKeyPressed key ->
-                    if key == 13 then
-                        startGame session newGame
-
-                    else
-                        ( model, Cmd.none )
 
                 NeutralCountryTroopCountsGenerated _ ->
                     ( model, Cmd.none )
@@ -155,10 +178,13 @@ update msg model =
                 AddPlayer ->
                     ( model, Cmd.none )
 
-                StartGameClicked ->
+                ColorSelected _ _ ->
                     ( model, Cmd.none )
 
-                NumberOfPlayersKeyPressed _ ->
+                ChangeColorButtonClicked _ ->
+                    ( model, Cmd.none )
+
+                StartGameClicked ->
                     ( model, Cmd.none )
 
                 WindowResized width height ->
@@ -230,14 +256,18 @@ view : Model -> { title : String, content : Html.Html Msg }
 view model =
     { title = ""
     , content =
-        Element.layout [ Element.width Element.fill, Element.centerX ]
+        Element.layout [ Element.width Element.fill, Element.centerX, Element.height Element.fill ]
             (Element.column
-                [ Element.width Element.fill, Element.centerX ]
+                [ Element.width Element.fill
+                , Element.height Element.fill
+                , Element.centerX
+                , Element.inFront (playerColorSelect (model |> toNewGame |> .configureColor))
+                ]
                 [ title
                 , Element.el [ Element.centerX ]
                     (Element.column
                         [ Element.width Element.fill, Element.spacing 20 ]
-                        [ playerFields (model |> toNewGame |> .players)
+                        [ playerConfiguration (model |> toNewGame |> .players)
                         , mapSelect (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId)
                         , startGameButton
                         ]
@@ -245,6 +275,25 @@ view model =
                 ]
             )
     }
+
+
+playerColorSelect : Maybe Int -> Element.Element Msg
+playerColorSelect maybePlayerId =
+    case maybePlayerId of
+        Just playerId ->
+            Element.el
+                [ Element.width Element.fill
+                , Element.height Element.fill
+                , Element.Background.color (Element.rgba255 0 0 0 0.8)
+                ]
+                (Element.wrappedRow [ Element.width (Element.px 200), Element.centerX, Element.centerY ]
+                    (Player.playerColors
+                        |> List.map (\color -> colorButton color (ColorSelected playerId color))
+                    )
+                )
+
+        Nothing ->
+            Element.none
 
 
 mapSelect : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map) -> String -> Element.Element Msg
@@ -269,7 +318,7 @@ mapSelect mapsRemoteData selectedMapId =
                                             border =
                                                 case optionState of
                                                     Element.Input.Idle ->
-                                                        [ Element.Border.color (Colors.white |> Colors.toElementColor)
+                                                        [ Element.Border.color (Colors.gray |> Colors.toElementColor)
                                                         , Element.Border.solid
                                                         , Element.Border.width 2
                                                         ]
@@ -309,32 +358,42 @@ mapSelect mapsRemoteData selectedMapId =
             Element.text ""
 
 
-playerFields : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
-playerFields players =
-    Element.column [ Element.spacing 10 ]
+playerConfiguration : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
+playerConfiguration players =
+    Element.column [ Element.spacing 20 ]
         (Element.el [ Element.Font.bold ] (Element.text "Players")
             :: (players
-                    |> Dict.map
-                        (\playerId player ->
-                            Element.row []
-                                [ Element.Input.text
-                                    [ Element.width (Element.px 250)
-                                    ]
-                                    { onChange = UpdatePlayerName playerId
-                                    , text = player.name
-                                    , placeholder = Nothing
-                                    , label =
-                                        Element.Input.labelLeft
-                                            [ Element.centerY
-                                            , Element.paddingEach { top = 0, left = 0, right = 10, bottom = 0 }
-                                            ]
-                                            (Element.text "Name")
-                                    }
-                                ]
-                        )
+                    |> Dict.map playerFields
                     |> Dict.values
                )
         )
+
+
+playerFields : Int -> Player.NewPlayer -> Element.Element Msg
+playerFields playerId player =
+    Element.row []
+        [ Element.Input.text
+            [ Element.width (Element.px 250)
+            ]
+            { onChange = UpdatePlayerName playerId
+            , text = player.name
+            , placeholder = Nothing
+            , label = Element.Input.labelHidden "Name"
+            }
+        , colorButton player.color (ChangeColorButtonClicked playerId)
+        ]
+
+
+colorButton : Colors.Color -> Msg -> Element.Element Msg
+colorButton color message =
+    Element.Input.button
+        (ViewHelpers.defaultButtonAttributes
+            ++ [ Element.Background.color (color |> Colors.toElementColor)
+               , Element.height Element.fill
+               , Element.width (Element.px 50)
+               ]
+        )
+        { onPress = Just message, label = Element.text "" }
 
 
 startGameButton : Element.Element Msg

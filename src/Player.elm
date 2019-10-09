@@ -13,6 +13,7 @@ module Player exposing
     , input
     , newPlayersInput
     , numberOfTroopsToPlace
+    , playerColors
     , playerSelection
     , playerSelectionSetsToPlayers
     , urlParser
@@ -86,16 +87,17 @@ addPort (Country.Id countryId) player =
     { player | ports = player.ports |> Set.insert countryId }
 
 
-defaultPlayerColors : Dict.Dict Int Colors.Color
-defaultPlayerColors =
-    Dict.fromList
-        [ ( 1, Colors.darkGreen )
-        , ( 3, Colors.lightGreen )
-        , ( 2, Colors.lightYellow )
-        , ( 5, Colors.orange )
-        , ( 4, Colors.brown )
-        , ( 6, Colors.lightPurple )
-        ]
+playerColors : List Colors.Color
+playerColors =
+    [ Colors.darkGreen
+    , Colors.lightGreen
+    , Colors.lightYellow
+    , Colors.orange
+    , Colors.brown
+    , Colors.lightPurple
+    , Colors.lightRed
+    , Colors.lightBrown
+    ]
 
 
 getPlayer : Id -> Players -> Maybe Player
