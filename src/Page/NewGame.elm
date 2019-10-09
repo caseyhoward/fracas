@@ -261,7 +261,7 @@ view model =
                 [ Element.width Element.fill
                 , Element.height Element.fill
                 , Element.centerX
-                , Element.inFront (playerColorSelect (model |> toNewGame |> .configureColor))
+                , Element.inFront (playerColorSelect (model |> toNewGame |> .players) (model |> toNewGame |> .configureColor))
                 ]
                 [ title
                 , Element.el [ Element.centerX ]
@@ -277,8 +277,8 @@ view model =
     }
 
 
-playerColorSelect : Maybe Int -> Element.Element Msg
-playerColorSelect maybePlayerId =
+playerColorSelect : Dict.Dict Int Player.NewPlayer -> Maybe Int -> Element.Element Msg
+playerColorSelect players maybePlayerId =
     case maybePlayerId of
         Just playerId ->
             Element.el
@@ -287,7 +287,8 @@ playerColorSelect maybePlayerId =
                 , Element.Background.color (Element.rgba255 0 0 0 0.8)
                 ]
                 (Element.wrappedRow [ Element.width (Element.px 200), Element.centerX, Element.centerY ]
-                    (Player.playerColors
+                    (players
+                        |> Player.availablePlayerColors
                         |> List.map (\color -> colorButton color (ColorSelected playerId color))
                     )
                 )
