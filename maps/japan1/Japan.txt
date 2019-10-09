@@ -1,0 +1,5 @@
+The following is a map of Japan and nearby islands. It is divided by province, 
+with the exception of Hokkaido, which was divided into 8 regions. The names of
+the players (with the exception of 1) all have significane in Japanese history.
+Gameplay is resonable, albeit a little lopsided with respect to the strength of
+Hokkaido and the minor islands.
