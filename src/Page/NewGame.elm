@@ -286,7 +286,7 @@ mapSelect mapsRemoteData selectedMapId =
                                             (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
                                             [ Element.el
                                                 [ Element.width (Element.px 50) ]
-                                                (Map.view 100 map.countries ( 100, 100 ) |> Element.html)
+                                                (Map.view 100 map.countries map.dimensions |> Element.html)
                                             , Element.text map.name
                                             ]
                                     )

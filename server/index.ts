@@ -23,7 +23,6 @@ const resolvers = {
     },
     game: async (_: any, x: { id: string }) => {
       try {
-        console.log(x);
         const result = await database.query(
           "SELECT * FROM games WHERE id = $1",
           [x.id]
