@@ -8,6 +8,8 @@ async function getMap(id: string): Promise<Map> {
   return result.rows[0];
 }
 
+
+
 const resolvers = {
   Query: {
     map: async (_: any, x: { id: string }) => {

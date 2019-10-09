@@ -83,7 +83,6 @@ input NewGameInput {
   mapId: String!
   players: [PlayerInput!]!
   neutralCountryTroops: [CountryTroopCountsInput!]!
-  numberOfPlayers: Int!
   playerTurn: PlayerTurnInput!
 }
 
@@ -92,7 +91,6 @@ input GameInput {
   mapId: String!
   players: [PlayerInput!]!
   neutralCountryTroops: [CountryTroopCountsInput!]!
-  numberOfPlayers: Int!
   playerTurn: PlayerTurnInput!
 }
 
@@ -130,7 +128,6 @@ type Game {
   map: Map!
   players: [Player!]!
   neutralCountryTroops: [CountryTroopCounts!]!
-  numberOfPlayers: Int!
   playerTurn: PlayerTurn!
 }
 

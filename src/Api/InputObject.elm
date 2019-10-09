@@ -176,7 +176,7 @@ encodeDimensionsInput input =
 
 buildGameInput : GameInputRequiredFields -> GameInput
 buildGameInput required =
-    GameInput { id = required.id, mapId = required.mapId, players = required.players, neutralCountryTroops = required.neutralCountryTroops, numberOfPlayers = required.numberOfPlayers, playerTurn = required.playerTurn }
+    GameInput { id = required.id, mapId = required.mapId, players = required.players, neutralCountryTroops = required.neutralCountryTroops, playerTurn = required.playerTurn }
 
 
 type alias GameInputRequiredFields =
@@ -184,7 +184,6 @@ type alias GameInputRequiredFields =
     , mapId : String
     , players : List PlayerInput
     , neutralCountryTroops : List CountryTroopCountsInput
-    , numberOfPlayers : Int
     , playerTurn : PlayerTurnInput
     }
 
@@ -199,7 +198,6 @@ type alias GameInputRaw =
     , mapId : String
     , players : List PlayerInput
     , neutralCountryTroops : List CountryTroopCountsInput
-    , numberOfPlayers : Int
     , playerTurn : PlayerTurnInput
     }
 
@@ -215,7 +213,7 @@ type GameInput
 encodeGameInput : GameInput -> Value
 encodeGameInput (GameInput input) =
     Encode.maybeObject
-        [ ( "id", Encode.string input.id |> Just ), ( "mapId", Encode.string input.mapId |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "numberOfPlayers", Encode.int input.numberOfPlayers |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
+        [ ( "id", Encode.string input.id |> Just ), ( "mapId", Encode.string input.mapId |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
 
 
 buildMapInput : MapInputRequiredFields -> MapInput
@@ -260,14 +258,13 @@ encodeMapInput (MapInput input) =
 
 buildNewGameInput : NewGameInputRequiredFields -> NewGameInput
 buildNewGameInput required =
-    NewGameInput { mapId = required.mapId, players = required.players, neutralCountryTroops = required.neutralCountryTroops, numberOfPlayers = required.numberOfPlayers, playerTurn = required.playerTurn }
+    NewGameInput { mapId = required.mapId, players = required.players, neutralCountryTroops = required.neutralCountryTroops, playerTurn = required.playerTurn }
 
 
 type alias NewGameInputRequiredFields =
     { mapId : String
     , players : List PlayerInput
     , neutralCountryTroops : List CountryTroopCountsInput
-    , numberOfPlayers : Int
     , playerTurn : PlayerTurnInput
     }
 
@@ -281,7 +278,6 @@ type alias NewGameInputRaw =
     { mapId : String
     , players : List PlayerInput
     , neutralCountryTroops : List CountryTroopCountsInput
-    , numberOfPlayers : Int
     , playerTurn : PlayerTurnInput
     }
 
@@ -297,7 +293,7 @@ type NewGameInput
 encodeNewGameInput : NewGameInput -> Value
 encodeNewGameInput (NewGameInput input) =
     Encode.maybeObject
-        [ ( "mapId", Encode.string input.mapId |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "numberOfPlayers", Encode.int input.numberOfPlayers |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
+        [ ( "mapId", Encode.string input.mapId |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
 
 
 buildPlayerInput : PlayerInputRequiredFields -> (PlayerInputOptionalFields -> PlayerInputOptionalFields) -> PlayerInput

@@ -67,7 +67,6 @@ type alias Game =
     , map : Map.Map
     , players : Player.Players
     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
-    , numberOfPlayers : Int
     }
 
 
@@ -92,8 +91,8 @@ type Id
     = Id String
 
 
-create : String -> Int -> Dict.Dict String TroopCount.TroopCount -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
-create selectedMapId numberOfPlayers neutralTroopCounts toMsg =
+create : String -> Dict.Dict Int Player.NewPlayer -> Dict.Dict String TroopCount.TroopCount -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
+create selectedMapId newPlayers neutralTroopCounts toMsg =
     let
         playerTurnInput : Api.InputObject.PlayerTurnInput
         playerTurnInput =
@@ -108,9 +107,8 @@ create selectedMapId numberOfPlayers neutralTroopCounts toMsg =
             { newGame =
                 Api.InputObject.buildNewGameInput
                     { mapId = selectedMapId
-                    , players = Player.createDefaultPlayers numberOfPlayers |> Player.input
+                    , players = newPlayers |> Dict.values |> Player.newPlayersInput
                     , neutralCountryTroops = neutralCountryTroops
-                    , numberOfPlayers = numberOfPlayers
                     , playerTurn = playerTurnInput
                     }
             }
@@ -135,7 +133,6 @@ save game toMsg =
                     , mapId = game.map.id |> Map.idToString
                     , players = game.players |> Player.input
                     , neutralCountryTroops = game.neutralCountryTroops |> TroopCount.troopCountsInput
-                    , numberOfPlayers = game.numberOfPlayers
                     , playerTurn = game.currentPlayerTurn |> PlayerTurn.input
                     }
             }
@@ -159,8 +156,8 @@ get (Id id) toMsg =
 
 selectionSet : SelectionSet Game Api.Object.Game
 selectionSet =
-    Graphql.SelectionSet.map6
-        (\id2 map currentPlayerTurn players neutralCountryTroops numberOfPlayers ->
+    Graphql.SelectionSet.map5
+        (\id2 map currentPlayerTurn players neutralCountryTroops ->
             let
                 activeGame : Game
                 activeGame =
@@ -169,7 +166,6 @@ selectionSet =
                     , map = map
                     , players = players |> Player.playerSelectionSetsToPlayers
                     , neutralCountryTroops = neutralCountryTroops |> Dict.fromList
-                    , numberOfPlayers = numberOfPlayers
                     }
             in
             activeGame
@@ -179,7 +175,6 @@ selectionSet =
         (Api.Object.Game.playerTurn PlayerTurn.selectionSet)
         (Api.Object.Game.players Player.playerSelection)
         (Api.Object.Game.neutralCountryTroops TroopCount.troopCountsSelection)
-        Api.Object.Game.numberOfPlayers
 
 
 errorToString : Error -> String

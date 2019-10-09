@@ -44,12 +44,6 @@ neutralCountryTroops object_ =
 
 
 {-| -}
-numberOfPlayers : SelectionSet Int Api.Object.Game
-numberOfPlayers =
-    Object.selectionForField "Int" "numberOfPlayers" [] Decode.int
-
-
-{-| -}
 playerTurn : SelectionSet decodesTo Api.Object.PlayerTurn -> SelectionSet decodesTo Api.Object.Game
 playerTurn object_ =
     Object.selectionForCompositeField "playerTurn" [] object_ identity

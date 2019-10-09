@@ -30,7 +30,7 @@ import ViewHelpers
 
 
 type alias NewGame =
-    { numberOfPlayers : String
+    { players : Dict.Dict Int Player.NewPlayer
     , error : Maybe String
     , selectedMapId : String
     , maps : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map)
@@ -45,7 +45,7 @@ type Model
 
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    ( ConfiguringGame { numberOfPlayers = "2", error = Nothing, maps = RemoteData.NotAsked, selectedMapId = "" } session, Cmd.none )
+    ( ConfiguringGame { players = Player.defaultNewPlayers, error = Nothing, maps = RemoteData.NotAsked, selectedMapId = "" } session, Cmd.none )
         |> Tuple.mapSecond
             (\_ ->
                 Cmd.batch
@@ -95,7 +95,7 @@ toNewGame model =
 
 
 type Msg
-    = NumberOfPlayersChanged String
+    = AddPlayer
     | StartGameClicked
     | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map))
     | GameCreated (RemoteData.RemoteData (Graphql.Http.Error Game.Id) Game.Id)
@@ -103,6 +103,7 @@ type Msg
     | NumberOfPlayersKeyPressed Int
     | WindowResized Int Int
     | SelectMap String
+    | UpdatePlayerName Int String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -110,8 +111,8 @@ update msg model =
     case model of
         ConfiguringGame newGame session ->
             case msg of
-                NumberOfPlayersChanged numberOfPlayers ->
-                    ( ConfiguringGame { newGame | numberOfPlayers = numberOfPlayers } session, Cmd.none )
+                AddPlayer ->
+                    Debug.todo ""
 
                 StartGameClicked ->
                     startGame session newGame
@@ -138,18 +139,20 @@ update msg model =
                 GameCreated _ ->
                     ( model, Cmd.none )
 
+                UpdatePlayerName playerId name ->
+                    case newGame.players |> Dict.get playerId of
+                        Just player ->
+                            ( ConfiguringGame { newGame | players = newGame.players |> Dict.insert playerId { player | name = name } } session, Cmd.none )
+
+                        Nothing ->
+                            ( model, Cmd.none )
+
         GeneratingRandomTroopCounts newGame session ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
-                    let
-                        numberOfPlayers =
-                            newGame.numberOfPlayers
-                                |> String.toInt
-                                |> Maybe.withDefault 6
-                    in
-                    ( model, Game.create newGame.selectedMapId numberOfPlayers neutralCountryTroopCounts GameCreated )
+                    ( model, Game.create newGame.selectedMapId newGame.players neutralCountryTroopCounts GameCreated )
 
-                NumberOfPlayersChanged _ ->
+                AddPlayer ->
                     ( model, Cmd.none )
 
                 StartGameClicked ->
@@ -180,6 +183,9 @@ update msg model =
 
                         RemoteData.Failure error ->
                             ( ConfiguringGame { newGame | error = Just (ViewHelpers.errorToString error) } session, Cmd.none )
+
+                UpdatePlayerName _ _ ->
+                    ( model, Cmd.none )
 
         Redirecting _ _ ->
             ( model, Cmd.none )
@@ -231,7 +237,7 @@ view model =
                 , Element.el [ Element.centerX ]
                     (Element.column
                         [ Element.width Element.fill, Element.spacing 20 ]
-                        [ numberOfPlayersInput (model |> toNewGame |> .numberOfPlayers)
+                        [ playerFields (model |> toNewGame |> .players)
                         , mapSelect (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId)
                         , startGameButton
                         ]
@@ -251,7 +257,7 @@ mapSelect mapsRemoteData selectedMapId =
                 ]
                 { onChange = SelectMap
                 , selected = Just selectedMapId
-                , label = Element.Input.labelAbove [] (Element.text "Select map")
+                , label = Element.Input.labelAbove [ Element.Font.bold ] (Element.text "Map")
                 , options =
                     maps
                         |> List.map
@@ -303,26 +309,32 @@ mapSelect mapsRemoteData selectedMapId =
             Element.text ""
 
 
-numberOfPlayersInput : String -> Element.Element Msg
-numberOfPlayersInput numberOfPlayers =
-    Element.Input.text
-        [ Element.width (Element.px 50)
-        , Element.htmlAttribute
-            (Html.Events.on
-                "keyup"
-                (Json.Decode.map NumberOfPlayersKeyPressed Html.Events.keyCode)
-            )
-        ]
-        { onChange = NumberOfPlayersChanged
-        , text = numberOfPlayers
-        , placeholder = Nothing
-        , label =
-            Element.Input.labelLeft
-                [ Element.centerY
-                , Element.paddingEach { top = 0, left = 0, right = 10, bottom = 0 }
-                ]
-                (Element.text "Number of players")
-        }
+playerFields : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
+playerFields players =
+    Element.column [ Element.spacing 10 ]
+        (Element.el [ Element.Font.bold ] (Element.text "Players")
+            :: (players
+                    |> Dict.map
+                        (\playerId player ->
+                            Element.row []
+                                [ Element.Input.text
+                                    [ Element.width (Element.px 250)
+                                    ]
+                                    { onChange = UpdatePlayerName playerId
+                                    , text = player.name
+                                    , placeholder = Nothing
+                                    , label =
+                                        Element.Input.labelLeft
+                                            [ Element.centerY
+                                            , Element.paddingEach { top = 0, left = 0, right = 10, bottom = 0 }
+                                            ]
+                                            (Element.text "Name")
+                                    }
+                                ]
+                        )
+                    |> Dict.values
+               )
+        )
 
 
 startGameButton : Element.Element Msg

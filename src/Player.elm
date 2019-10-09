@@ -1,15 +1,17 @@
 module Player exposing
     ( CapitolStatus(..)
     , Id(..)
+    , NewPlayer
     , Player
     , PlayerSelectionSet
     , Players
     , addPort
-    , createDefaultPlayers
+    , defaultNewPlayers
     , getPlayer
     , getPlayerName
     , idToString
     , input
+    , newPlayersInput
     , numberOfTroopsToPlace
     , playerSelection
     , playerSelectionSetsToPlayers
@@ -36,6 +38,24 @@ type alias Player =
     , color : Colors.Color
     , ports : Set.Set String
     }
+
+
+type alias NewPlayer =
+    { name : String
+    , color : Colors.Color
+    }
+
+
+defaultNewPlayers : Dict.Dict Int NewPlayer
+defaultNewPlayers =
+    [ ( 0, { name = "Kevin", color = Colors.darkGreen } )
+    , ( 1, { name = "Denny", color = Colors.lightGreen } )
+    , ( 2, { name = "Jason", color = Colors.lightYellow } )
+    , ( 3, { name = "Nat", color = Colors.orange } )
+    , ( 4, { name = "Jim", color = Colors.brown } )
+    , ( 5, { name = "Lyle", color = Colors.lightPurple } )
+    ]
+        |> Dict.fromList
 
 
 type alias Players =
@@ -76,16 +96,6 @@ defaultPlayerColors =
         , ( 4, Colors.brown )
         , ( 6, Colors.lightPurple )
         ]
-
-
-getDefaultColor : Id -> Colors.Color
-getDefaultColor (Id playerId) =
-    case Dict.get playerId defaultPlayerColors of
-        Just color ->
-            color
-
-        Nothing ->
-            Colors.black
 
 
 getPlayer : Id -> Players -> Maybe Player
@@ -176,24 +186,20 @@ type alias PlayerSelectionSet =
     }
 
 
-createDefaultPlayers : Int -> Players
-createDefaultPlayers numberOfPlayers =
-    List.range 1 numberOfPlayers
-        |> List.map
-            (\playerId ->
-                let
-                    player : Player
-                    player =
-                        { countryTroopCounts = Dict.empty
-                        , name = "Player " ++ String.fromInt playerId
-                        , capitolStatus = NoCapitol
-                        , color = getDefaultColor (Id playerId)
-                        , ports = Set.empty
-                        }
-                in
-                ( playerId, player )
-            )
-        |> Dict.fromList
+newPlayerToPlayer : NewPlayer -> Player
+newPlayerToPlayer newPlayer =
+    -- Move to server
+    { countryTroopCounts = Dict.empty
+    , name = newPlayer.name
+    , capitolStatus = NoCapitol
+    , color = newPlayer.color
+    , ports = Set.empty
+    }
+
+
+newPlayersInput : List NewPlayer -> List Api.InputObject.PlayerInput
+newPlayersInput newPlayers =
+    newPlayers |> List.map newPlayerToPlayer |> List.indexedMap (\index player -> ( index, player )) |> Dict.fromList |> input
 
 
 input : Players -> List Api.InputObject.PlayerInput
