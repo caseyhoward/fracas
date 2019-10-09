@@ -164,5 +164,4 @@ toString players (PlayerTurn playerTurnStage playerId) =
                     playerName ++ " has won the game!!!"
 
         Nothing ->
-            -- TODO
             ""

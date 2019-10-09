@@ -16,7 +16,7 @@ module Game exposing
     , getCountryDefenseStrength
     , getCountryHasPort
     , getPlayerColorFromPlayerTurn
-    , getPlayerCountryAndTroopCounts, save
+    , getPlayerCountryAndTroopCounts
     , getTroopCount
     , getTroopCountForCountry
     , idToString
@@ -24,7 +24,7 @@ module Game exposing
     , isCountryDefending
     , isCountryIdCapitol
     , pass
-    , playerUrlParser
+    , save
     , updateNumberOfTroopsToMove
     , urlParser
     )
@@ -34,8 +34,6 @@ import Api.InputObject
 import Api.Mutation
 import Api.Object
 import Api.Object.Game
-import Api.Object.Player
-import Api.Object.PlayerTurn
 import Api.Query
 import Colors
 import Country
@@ -61,11 +59,6 @@ urlParser =
 idToString : Id -> String
 idToString (Id id) =
     id
-
-
-playerUrlParser : Url.Parser.Parser (Player.Id -> a) a
-playerUrlParser =
-    Url.Parser.custom "PLAYERID" (\playerId -> playerId |> String.toInt |> Maybe.map Player.Id)
 
 
 type alias Game =
@@ -133,7 +126,7 @@ create selectedMapId numberOfPlayers neutralTroopCounts toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-save : Game -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
+save : Game -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
 save game toMsg =
     let
         input : Api.Mutation.SaveGameRequiredArguments
@@ -148,54 +141,47 @@ save game toMsg =
                     , playerTurn = game.currentPlayerTurn |> PlayerTurn.playerTurnInput
                     }
             }
-
-        gameSelectionSet : Graphql.SelectionSet.SelectionSet Id Api.Object.Game
-        gameSelectionSet =
-            Api.Object.Game.id |> Graphql.SelectionSet.map Id
     in
-    Api.Mutation.saveGame input gameSelectionSet
+    Api.Mutation.saveGame input selectionSet
         |> Graphql.Http.mutationRequest "http://localhost:4000"
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
-
-
-
--- Debug.todo ""
 
 
 get : Id -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
 get (Id id) toMsg =
     let
-        gameSelectionSet : SelectionSet Game Api.Object.Game
-        gameSelectionSet =
-            Graphql.SelectionSet.map6
-                (\id2 map currentPlayerTurn players neutralCountryTroops numberOfPlayers ->
-                    let
-                        activeGame : Game
-                        activeGame =
-                            { id = Id id2
-                            , currentPlayerTurn = currentPlayerTurn
-                            , map = map
-                            , players = players |> Player.playerSelectionSetsToPlayers
-                            , neutralCountryTroops = neutralCountryTroops |> Dict.fromList
-                            , numberOfPlayers = numberOfPlayers
-                            }
-                    in
-                    activeGame
-                )
-                Api.Object.Game.id
-                (Api.Object.Game.map Map.mapSelection)
-                (Api.Object.Game.playerTurn PlayerTurn.selectionSet)
-                (Api.Object.Game.players Player.playerSelection)
-                (Api.Object.Game.neutralCountryTroops TroopCount.troopCountsSelection)
-                Api.Object.Game.numberOfPlayers
-
         query : SelectionSet Game Graphql.Operation.RootQuery
         query =
-            Api.Query.game { id = id } gameSelectionSet
+            Api.Query.game { id = id } selectionSet
     in
     query
         |> Graphql.Http.queryRequest "http://localhost:4000"
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+selectionSet : SelectionSet Game Api.Object.Game
+selectionSet =
+    Graphql.SelectionSet.map6
+        (\id2 map currentPlayerTurn players neutralCountryTroops numberOfPlayers ->
+            let
+                activeGame : Game
+                activeGame =
+                    { id = Id id2
+                    , currentPlayerTurn = currentPlayerTurn
+                    , map = map
+                    , players = players |> Player.playerSelectionSetsToPlayers
+                    , neutralCountryTroops = neutralCountryTroops |> Dict.fromList
+                    , numberOfPlayers = numberOfPlayers
+                    }
+            in
+            activeGame
+        )
+        Api.Object.Game.id
+        (Api.Object.Game.map Map.mapSelection)
+        (Api.Object.Game.playerTurn PlayerTurn.selectionSet)
+        (Api.Object.Game.players Player.playerSelection)
+        (Api.Object.Game.neutralCountryTroops TroopCount.troopCountsSelection)
+        Api.Object.Game.numberOfPlayers
 
 
 errorToString : Error -> String
@@ -306,7 +292,7 @@ getCountryAttackers gameMap players countryId =
 
         countriesReachableThroughWater : List Country.Id
         countriesReachableThroughWater =
-            Map.getCountriesThatCanReachCountryThroughWater gameMap countryId
+            Map.getCountriesThatCanReachCountryThroughWater gameMap.countries gameMap.bodiesOfWater countryId
 
         attackerCountriesNeighoboringWater : List Country.Id
         attackerCountriesNeighoboringWater =
@@ -340,7 +326,6 @@ getCountryAttackers gameMap players countryId =
                         , neighborCountryId
                         , getTroopCountForCountry neighborCountryId players
                             |> Maybe.withDefault TroopCount.noTroops
-                          -- TODO
                         )
                     )
 
@@ -546,7 +531,6 @@ getCountryDefenders players gameMap countryId =
 
                             Nothing ->
                                 True
-                     -- TODO
                     )
     in
     { neighboringCountryDefense = neigboringCountryDefense
@@ -798,60 +782,55 @@ attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString a
 
 attemptToPlaceCapitol : Country.Id -> Player.Id -> Game -> Result Error Game
 attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
-    case Country.getCountry clickedCountryId activeGame.map.countries of
-        Just clickedCountry ->
-            case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
-                OccupiedByCurrentPlayer _ ->
-                    "Error: Somehow you are placing a second capitol" |> Error |> Err
+    case getCountryStatus clickedCountryId activeGame.players activeGame.currentPlayerTurn of
+        OccupiedByCurrentPlayer _ ->
+            "Error: Somehow you are placing a second capitol" |> Error |> Err
 
-                OccupiedByOpponent _ ->
-                    "You must select an unoccuppied country" |> Error |> Err
+        OccupiedByOpponent _ ->
+            "You must select an unoccuppied country" |> Error |> Err
 
-                Unoccupied ->
-                    case Player.getPlayer currentPlayerId activeGame.players of
-                        Just currentPlayer ->
-                            let
-                                neutralTroopCount =
-                                    getTroopCount clickedCountryId activeGame.neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
+        Unoccupied ->
+            case Player.getPlayer currentPlayerId activeGame.players of
+                Just currentPlayer ->
+                    let
+                        neutralTroopCount =
+                            getTroopCount clickedCountryId activeGame.neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
 
-                                updatedPlayer =
-                                    { currentPlayer
-                                        | countryTroopCounts =
-                                            updateTroopCount clickedCountryId neutralTroopCount currentPlayer.countryTroopCounts
-                                        , capitolStatus = Player.Capitol clickedCountryId
+                        updatedPlayer =
+                            { currentPlayer
+                                | countryTroopCounts =
+                                    updateTroopCount clickedCountryId neutralTroopCount currentPlayer.countryTroopCounts
+                                , capitolStatus = Player.Capitol clickedCountryId
 
-                                        -- , capitolStatus = Capitol clickedCountryId (Map.capitolDotsCoordinates clickedCountry.coordinates ViewHelpers.pixelsPerMapSquare)
-                                    }
+                                -- , capitolStatus = Capitol clickedCountryId (Map.capitolDotsCoordinates clickedCountry.coordinates ViewHelpers.pixelsPerMapSquare)
+                            }
 
-                                updatedPlayers =
-                                    updatePlayer currentPlayerId updatedPlayer activeGame.players
+                        updatedPlayers =
+                            updatePlayer currentPlayerId updatedPlayer activeGame.players
 
-                                nextPlayerId =
-                                    case currentPlayerId of
-                                        Player.Id id ->
-                                            Player.Id (remainderBy (Dict.size updatedPlayers) id + 1)
+                        nextPlayerId =
+                            case currentPlayerId of
+                                Player.Id id ->
+                                    Player.Id (remainderBy (Dict.size updatedPlayers) id + 1)
 
-                                nextPlayerTurn =
-                                    case currentPlayerId of
-                                        Player.Id id ->
-                                            if id == Dict.size updatedPlayers then
-                                                PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement nextPlayerId
+                        nextPlayerTurn =
+                            case currentPlayerId of
+                                Player.Id id ->
+                                    if id == Dict.size updatedPlayers then
+                                        PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement nextPlayerId
 
-                                            else
-                                                PlayerTurn.PlayerTurn PlayerTurn.CapitolPlacement nextPlayerId
-                            in
-                            Ok
-                                { activeGame
-                                    | players = updatedPlayers
-                                    , neutralCountryTroops = destroyTroops clickedCountryId activeGame.neutralCountryTroops
-                                    , currentPlayerTurn = nextPlayerTurn
-                                }
+                                    else
+                                        PlayerTurn.PlayerTurn PlayerTurn.CapitolPlacement nextPlayerId
+                    in
+                    Ok
+                        { activeGame
+                            | players = updatedPlayers
+                            , neutralCountryTroops = destroyTroops clickedCountryId activeGame.neutralCountryTroops
+                            , currentPlayerTurn = nextPlayerTurn
+                        }
 
-                        Nothing ->
-                            "Something bad happened" |> Error |> Err
-
-        _ ->
-            "Something bad happened" |> Error |> Err
+                Nothing ->
+                    "Something bad happened" |> Error |> Err
 
 
 attemptTroopPlacement : Country.Id -> Player.Id -> TroopCount.TroopCount -> Game -> Result Error Game
@@ -1245,7 +1224,7 @@ getDefenseThroughWater gameMap players countryId =
             let
                 countriesReachableThroughWater : List Country.Id
                 countriesReachableThroughWater =
-                    Map.getCountriesThatCanReachCountryThroughWater gameMap countryId
+                    Map.getCountriesThatCanReachCountryThroughWater  gameMap.countries gameMap.bodiesOfWater  countryId
 
                 defenderCountriesNeighboringWater : List Country.Id
                 defenderCountriesNeighboringWater =
@@ -1296,7 +1275,6 @@ isCountryOwnedByPlayer playerId countryId players =
                     False
 
         Nothing ->
-            -- TODO: Handle this error case
             False
 
 

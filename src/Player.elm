@@ -8,13 +8,12 @@ module Player exposing
     , createDefaultPlayers
     , getPlayer
     , getPlayerName
-    ,  idToString
-       -- , urlParser
-
+    , idToString
     , input
     , numberOfTroopsToPlace
     , playerSelection
     , playerSelectionSetsToPlayers
+    , urlParser
     )
 
 import Api.InputObject
@@ -23,6 +22,7 @@ import Api.Object.Player
 import Colors
 import Country
 import Dict
+import Graphql.OptionalArgument
 import Graphql.SelectionSet exposing (SelectionSet)
 import Set
 import TroopCount
@@ -56,63 +56,9 @@ idToString (Id id) =
     id |> String.fromInt
 
 
-
--- urlParser : Url.Parser.Parser (Id -> a) a
--- urlParser =
---     Url.Parser.custom "PLAYERID" (\playerId -> Just (Id playerId))
----- GRAPHQL ----
-
-
-type alias PlayerSelectionSet =
-    { id : Id
-    , name : String
-    , countryTroopCounts : Dict.Dict String TroopCount.TroopCount
-    , capitolStatus : CapitolStatus
-    , color : Colors.Color
-    , ports : Set.Set String
-    }
-
-
-createDefaultPlayers : Int -> Players
-createDefaultPlayers numberOfPlayers =
-    List.range 1 numberOfPlayers
-        |> List.map
-            (\playerId ->
-                let
-                    player : Player
-                    player =
-                        { countryTroopCounts = Dict.empty
-                        , name = "Player " ++ String.fromInt playerId
-                        , capitolStatus = NoCapitol
-                        , color = getDefaultColor (Id playerId)
-                        , ports = Set.empty
-                        }
-                in
-                ( playerId, player )
-            )
-        |> Dict.fromList
-
-
-input : Players -> List Api.InputObject.PlayerInput
-input players =
-    players
-        |> Dict.map
-            (\playerId player ->
-                let
-                    fields : Api.InputObject.PlayerInputRequiredFields
-                    fields =
-                        { id = playerId |> String.fromInt
-                        , countryTroopCounts = player.countryTroopCounts |> TroopCount.troopCountsInput
-                        , name = player.name
-                        , color = player.color |> Colors.input
-                        , ports = []
-                        }
-                in
-                Api.InputObject.buildPlayerInput
-                    fields
-                    identity
-            )
-        |> Dict.values
+urlParser : Url.Parser.Parser (Id -> a) a
+urlParser =
+    Url.Parser.custom "PLAYERID" (\playerId -> playerId |> String.toInt |> Maybe.map Id)
 
 
 addPort : Country.Id -> Player -> Player
@@ -208,10 +154,77 @@ numberOfTroopsToPlace playerId players =
             TroopCount.numberOfTroopsToPlace (Dict.size player.countryTroopCounts) troopsPerCountryPerTurn
 
         Nothing ->
-            -- TODO : Propogate error
             TroopCount.noTroops
 
 
 troopsPerCountryPerTurn : Int
 troopsPerCountryPerTurn =
     1
+
+
+
+---- GRAPHQL ----
+
+
+type alias PlayerSelectionSet =
+    { id : Id
+    , name : String
+    , countryTroopCounts : Dict.Dict String TroopCount.TroopCount
+    , capitolStatus : CapitolStatus
+    , color : Colors.Color
+    , ports : Set.Set String
+    }
+
+
+createDefaultPlayers : Int -> Players
+createDefaultPlayers numberOfPlayers =
+    List.range 1 numberOfPlayers
+        |> List.map
+            (\playerId ->
+                let
+                    player : Player
+                    player =
+                        { countryTroopCounts = Dict.empty
+                        , name = "Player " ++ String.fromInt playerId
+                        , capitolStatus = NoCapitol
+                        , color = getDefaultColor (Id playerId)
+                        , ports = Set.empty
+                        }
+                in
+                ( playerId, player )
+            )
+        |> Dict.fromList
+
+
+input : Players -> List Api.InputObject.PlayerInput
+input players =
+    players
+        |> Dict.map
+            (\playerId player ->
+                let
+                    fields : Api.InputObject.PlayerInputRequiredFields
+                    fields =
+                        { id = playerId |> String.fromInt
+                        , countryTroopCounts = player.countryTroopCounts |> TroopCount.troopCountsInput
+                        , name = player.name
+                        , color = player.color |> Colors.input
+                        , ports = player.ports |> Set.toList
+                        }
+                in
+                Api.InputObject.buildPlayerInput
+                    fields
+                    (\x ->
+                        { x
+                            | capitol =
+                                (case player.capitolStatus of
+                                    Capitol capitolId ->
+                                        Just (Country.idToString capitolId)
+
+                                    NoCapitol ->
+                                        Nothing
+                                )
+                                    |> Graphql.OptionalArgument.fromMaybe
+                        }
+                    )
+            )
+        |> Dict.values

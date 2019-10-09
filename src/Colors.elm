@@ -21,8 +21,7 @@ module Colors exposing
     , green
     , grey
     , input
-    , lightBlue,
-    selectionSet
+    , lightBlue
     , lightBrown
     , lightCharcoal
     , lightGray
@@ -36,6 +35,7 @@ module Colors exposing
     , purple
     , red
     , rgb255
+    , selectionSet
     , toColor
     , toElementColor
     , transparency
@@ -44,12 +44,13 @@ module Colors exposing
     )
 
 import Api.InputObject
+import Api.Object
+import Api.Object.Color
 import Color as ElmColor
 import Element
 import Graphql.SelectionSet exposing (SelectionSet)
 
-import Api.Object.Color
-import Api.Object
+
 type alias Color =
     { red : Int
     , green : Int
@@ -70,9 +71,10 @@ transparency value =
 selectionSet : SelectionSet Color Api.Object.Color
 selectionSet =
     Graphql.SelectionSet.map3 Color
-    Api.Object.Color.red
-    Api.Object.Color.green
-    Api.Object.Color.blue
+        Api.Object.Color.red
+        Api.Object.Color.green
+        Api.Object.Color.blue
+
 
 toElementColor : Color -> Element.Color
 toElementColor color =

@@ -13,9 +13,10 @@ module Map exposing
     , idToString
     , isCountryNeighboringWater
     , mapSelection
+    , newMapWithName
     , parse
     , parseRawMap
-    , updateCountry
+    -- , updateCountry
     , view
     )
 
@@ -23,11 +24,8 @@ import Api.InputObject
 import Api.Mutation
 import Api.Object as ApiObject
 import Api.Object.BodyOfWater
-import Api.Object.Country
 import Api.Object.Dimensions
 import Api.Object.Map
-import Api.Object.Point
-import Api.Object.Segment
 import Api.Query
 import Collage
 import Collage.Render
@@ -38,7 +36,6 @@ import Graphql.Http
 import Graphql.SelectionSet exposing (SelectionSet)
 import Html
 import Html.Attributes
-import Json.Encode
 import RemoteData
 import Set
 import ViewHelpers
@@ -47,7 +44,7 @@ import ViewHelpers
 type alias Map =
     { id : Id
     , name : String
-    , countries : Dict.Dict String Country.Country
+    , countries : Country.Countries
     , bodiesOfWater : Dict.Dict String (Set.Set String)
     , dimensions : ( Int, Int )
     }
@@ -55,7 +52,7 @@ type alias Map =
 
 type alias NewMap =
     { name : String
-    , countries : Dict.Dict String Country.Country
+    , countries : Country.Countries
     , bodiesOfWater : Dict.Dict String (Set.Set String)
     , dimensions : ( Int, Int )
     }
@@ -172,7 +169,7 @@ create newMap toMsg =
 mapSelectionSetToMap : MapSelectionSet -> Map
 mapSelectionSetToMap selectionSet =
     let
-        countrySelectionSetsToCountries : List Country.SelectionSet -> Dict.Dict String Country.Country
+        countrySelectionSetsToCountries : List Country.SelectionSet -> Country.Countries
         countrySelectionSetsToCountries countrySelectionSets =
             countrySelectionSets
                 |> List.map
@@ -216,38 +213,43 @@ get (Id id) gameMaps =
             Error "Game map not found" |> Err
 
 
-getCountriesThatCanReachCountryThroughWater : Map -> Country.Id -> List Country.Id
-getCountriesThatCanReachCountryThroughWater gameMap countryId =
+getCountriesThatCanReachCountryThroughWater : Country.Countries -> Dict.Dict String (Set.Set String) -> Country.Id -> List Country.Id
+getCountriesThatCanReachCountryThroughWater countries bodiesOfWater countryId =
     let
+        neighboringBodiesOfWater : Set.Set String
         neighboringBodiesOfWater =
-            case Country.getCountry countryId gameMap.countries of
+            case Country.getCountry countryId countries of
                 Just countryBeingAttacked ->
                     countryBeingAttacked.neighboringBodiesOfWater
 
                 Nothing ->
-                    -- TODO
                     Set.empty
     in
     neighboringBodiesOfWater
         |> Set.foldl
-            (\bodyOfWaterId countries ->
-                case Dict.get bodyOfWaterId gameMap.bodiesOfWater of
+            (\bodyOfWaterId countriesNeighboringWater ->
+                case Dict.get bodyOfWaterId bodiesOfWater of
                     Just countryIdsNeighboringWater ->
-                        (countryIdsNeighboringWater |> Set.toList |> List.map Country.Id) ++ countries
+                        (countryIdsNeighboringWater |> Set.toList |> List.map Country.Id) ++ countriesNeighboringWater
 
                     _ ->
-                        countries
+                        countriesNeighboringWater
             )
             []
 
 
-isCountryNeighboringWater : Country.Id -> Dict.Dict String Country.Country -> Maybe Bool
+isCountryNeighboringWater : Country.Id -> Country.Countries -> Maybe Bool
 isCountryNeighboringWater countryId countries =
     Country.getCountry countryId countries
         |> Maybe.map
             (\country ->
                 Set.size country.neighboringBodiesOfWater > 0
             )
+
+
+newMapWithName : String -> NewMap -> NewMap
+newMapWithName name newMap =
+    { newMap | name = name }
 
 
 parse : String -> String -> NewMap
@@ -327,11 +329,6 @@ parse name text =
     , dimensions = gameMapWithoutPolygons.dimensions
     , name = name
     }
-
-
-updateCountry : Country.Id -> Country.Country -> Dict.Dict String Country.Country -> Dict.Dict String Country.Country
-updateCountry (Country.Id countryId) country countries =
-    Dict.insert countryId country countries
 
 
 
@@ -599,7 +596,7 @@ getEdgesForCountryForCoordinate allAreas ( x, y ) =
             Set.empty
 
 
-view : Int -> Dict.Dict String Country.Country -> ( Int, Int ) -> Html.Html msg
+view : Int -> Country.Countries -> ( Int, Int ) -> Html.Html msg
 view scale countries ( width, height ) =
     let
         scaledWidth =

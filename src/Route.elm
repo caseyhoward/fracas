@@ -54,7 +54,7 @@ parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
         , Parser.map ConfiguringGame (s "games" </> s "new")
-        , Parser.map Game (s "games" </> Game.urlParser </> Game.playerUrlParser)
+        , Parser.map Game (s "games" </> Game.urlParser </> Player.urlParser)
         , Parser.map NewMap (s "maps" </> s "new")
         ]
 

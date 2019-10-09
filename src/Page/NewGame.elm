@@ -77,10 +77,6 @@ toSession model =
             session
 
 
-
----- UPDATE ----
-
-
 toNewGame : Model -> NewGame
 toNewGame model =
     case model of
@@ -92,6 +88,10 @@ toNewGame model =
 
         Redirecting newGame _ ->
             newGame
+
+
+
+---- UPDATE ----
 
 
 type Msg
@@ -294,13 +294,13 @@ mapSelect mapsRemoteData selectedMapId =
                 }
 
         RemoteData.Loading ->
-            Element.text "Loading"
+            Element.text "..."
 
         RemoteData.Failure _ ->
             Element.text "fail"
 
         RemoteData.NotAsked ->
-            Element.text "not asked"
+            Element.text ""
 
 
 numberOfPlayersInput : String -> Element.Element Msg

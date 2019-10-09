@@ -28,11 +28,9 @@ import Graphql.Http
 import Html
 import Html.Attributes
 import Map
-import Maps.Big
 import Player
 import PlayerTurn
 import RemoteData
-import Route
 import Session
 import Set
 import Time
@@ -80,6 +78,19 @@ init session activeGameId playerId =
         }
     , Game.get activeGameId GotGame
     )
+
+
+toSession : Model -> Session.Session
+toSession model =
+    case model of
+        GameSaving gameLoadedModel _ ->
+            gameLoadedModel.session
+
+        GameLoaded gameLoadedModel ->
+            gameLoadedModel.session
+
+        GameLoading gameLoadingModel ->
+            gameLoadingModel.session
 
 
 
@@ -147,9 +158,7 @@ update msg model =
         GameLoaded gameLoadedModel ->
             case msg of
                 CountryMouseUp clickedCountryId ->
-                    ( handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel |> GameLoaded
-                    , Cmd.none
-                    )
+                    handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel
 
                 CountryMouseDown clickedCountryId ->
                     ( handleCountryMouseDown clickedCountryId gameLoadedModel |> GameLoaded, Cmd.none )
@@ -192,54 +201,33 @@ updateModelWithGameResult result model =
             { model | error = Just (Game.errorToString error) }
 
 
-handleCountryMouseUpFromPlayer : Country.Id -> GameLoadedModel -> GameLoadedModel
-handleCountryMouseUpFromPlayer clickedCountryId model =
-    let
-        updatedModel =
-            case model.countryBorderHelperOutlineStatus of
-                CountryBorderHelperOutlineActive _ ->
-                    model
+handleCountryMouseUpFromPlayer : Country.Id -> GameLoadedModel -> ( Model, Cmd Msg )
+handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel =
+    case gameLoadedModel.countryBorderHelperOutlineStatus of
+        CountryBorderHelperOutlineActive _ ->
+            ( GameLoaded gameLoadedModel, Cmd.none )
 
-                CountryBorderHelperOutlineInactive ->
-                    model
+        CountryBorderHelperOutlineInactive ->
+            ( GameLoaded gameLoadedModel, Cmd.none )
 
-                CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
-                    if clickedCountryId == countryToShowInfoForId then
-                        case Game.countryClicked clickedCountryId model.activeGame of
-                            Ok updatedGame ->
-                                -- Game.save updatedGame
-                                { model | activeGame = updatedGame }
+        CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
+            if clickedCountryId == countryToShowInfoForId then
+                case Game.countryClicked clickedCountryId gameLoadedModel.activeGame of
+                    Ok updatedGame ->
+                        ( GameSaving
+                            { gameLoadedModel
+                                | activeGame = updatedGame
+                                , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
+                            }
+                            RemoteData.Loading
+                        , Game.save updatedGame GotGame
+                        )
 
-                            Err error ->
-                                { model | error = Just (Game.errorToString error) }
+                    Err error ->
+                        ( GameLoaded { gameLoadedModel | error = Just (Game.errorToString error) }, Cmd.none )
 
-                    else
-                        model
-    in
-    { updatedModel | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
-
-
-
--- handleCountryMouseUpFromPlayer : Country.Id -> GameLoadedModel -> GameLoadedModel
--- handleCountryMouseUpFromPlayer clickedCountryId model =
---     let
---         updatedModel =
---             case model.countryBorderHelperOutlineStatus of
---                 CountryBorderHelperOutlineActive _ ->
---                     model
---                 CountryBorderHelperOutlineInactive ->
---                     model
---                 CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
---                     if clickedCountryId == countryToShowInfoForId then
---                         case Game.countryClicked clickedCountryId model.activeGame of
---                             Ok updatedGame ->
---                                 { model | activeGame = updatedGame }
---                             Err error ->
---                                 { model | error = Just (Game.errorToString error) }
---                     else
---                         model
---     in
---     { updatedModel | countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive }
+            else
+                ( GameLoaded gameLoadedModel, Cmd.none )
 
 
 handleCountryMouseDown : Country.Id -> GameLoadedModel -> GameLoadedModel
@@ -278,7 +266,7 @@ waitingToShowCountryHelperOutlines countryBorderHelperOutlineStatus =
 view : Model -> { title : String, content : Html.Html Msg }
 view model =
     case model of
-        GameLoading gameLoading ->
+        GameLoading _ ->
             { title = "Fracas - Loading", content = Element.none |> Element.layout [] }
 
         GameLoaded gameLoaded ->
@@ -301,7 +289,7 @@ view model =
             , title = "Fracas"
             }
 
-        GameSaving gameLoaded gameSaving ->
+        GameSaving gameLoaded _ ->
             { content =
                 case gameLoaded.session.windowSize of
                     Just windowSize ->
@@ -1105,16 +1093,3 @@ subscriptions model =
 
         GameSaving _ _ ->
             Browser.Events.onResize (\x y -> WindowResized x y)
-
-
-toSession : Model -> Session.Session
-toSession model =
-    case model of
-        GameSaving gameLoadedModel _ ->
-            gameLoadedModel.session
-
-        GameLoaded gameLoadedModel ->
-            gameLoadedModel.session
-
-        GameLoading gameLoadingModel ->
-            gameLoadingModel.session

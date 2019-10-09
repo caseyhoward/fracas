@@ -23,8 +23,7 @@ import ViewHelpers
 type alias Model =
     { session : Session.Session
     , rawMap : String
-    , name : String
-    , mapPreview : Map.NewMap
+    , newMap : Map.NewMap
     , savingMap : RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map
     }
 
@@ -32,10 +31,9 @@ type alias Model =
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
     ( { session = session
-      , name = ""
       , rawMap = ""
       , savingMap = RemoteData.NotAsked
-      , mapPreview = Map.parse "" ""
+      , newMap = Map.parse "" ""
       }
     , Cmd.none
     )
@@ -57,16 +55,16 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         CreateMap ->
-            ( model, Map.create model.mapPreview CreatedMap )
+            ( model, Map.create model.newMap CreatedMap )
 
         CreatedMap savingMap ->
             ( { model | savingMap = savingMap }, Cmd.none )
 
         UpdateName name ->
-            ( { model | name = name }, Cmd.none )
+            ( { model | newMap = model.newMap |> Map.newMapWithName name }, Cmd.none )
 
         UpdateRawMap rawMap ->
-            ( { model | rawMap = rawMap, mapPreview = Map.parse model.name rawMap }, Cmd.none )
+            ( { model | rawMap = rawMap, newMap = Map.parse model.newMap.name rawMap }, Cmd.none )
 
         WindowResized width height ->
             ( { model | session = model.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
@@ -93,7 +91,7 @@ view model =
                     { onChange = UpdateName
                     , placeholder = Nothing
                     , label = Element.Input.labelAbove (ViewHelpers.defaultLabelAttributes ++ [ Element.alignLeft ]) (Element.text "Map name")
-                    , text = model.name
+                    , text = model.newMap.name
                     }
                 , Element.Input.multiline
                     (ViewHelpers.defaultTextInputAttributes ++ [ Element.height (Element.px 500) ])
@@ -103,7 +101,7 @@ view model =
                     , text = model.rawMap
                     , spellcheck = False
                     }
-                , Map.view ViewHelpers.pixelsPerMapSquare model.mapPreview.countries model.mapPreview.dimensions |> Element.html |> Element.el [ Element.width Element.fill ]
+                , Map.view ViewHelpers.pixelsPerMapSquare model.newMap.countries model.newMap.dimensions |> Element.html |> Element.el [ Element.width Element.fill ]
                 , Element.Input.button
                     (ViewHelpers.defaultButtonAttributes
                         ++ [ Element.width (Element.px 120)

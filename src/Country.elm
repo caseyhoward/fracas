@@ -1,5 +1,6 @@
 module Country exposing
     ( Area
+    , Countries
     , Country
     , Id(..)
     , Point
@@ -12,12 +13,12 @@ module Country exposing
     , getCountry
     , getCountryIds
     , getMedianCoordinates
+    , idToString
     , scaledCountries
     , selectionSet
     )
 
 import Api.InputObject
-import Api.Mutation
 import Api.Object as ApiObject
 import Api.Object.BodyOfWater
 import Api.Object.Country
@@ -62,6 +63,10 @@ type alias ScaledCountry =
     }
 
 
+type alias Countries =
+    Dict.Dict String Country
+
+
 type alias ScaledPoint =
     ( Float, Float )
 
@@ -72,6 +77,11 @@ type Id
 
 type alias Area =
     Set.Set ( Int, Int )
+
+
+idToString : Id -> String
+idToString (Id id) =
+    id
 
 
 getCountryIds : Dict.Dict String Country -> List Id
@@ -150,7 +160,6 @@ scaleCountry scaleFactor country =
 
 
 
-
 ---- GRAPHQL ----
 
 
@@ -163,6 +172,7 @@ type alias SelectionSet =
     , neighboringCountries : Set.Set String
     , neighboringBodiesOfWater : Set.Set String
     }
+
 
 countryInputs : Dict.Dict String Country -> List Api.InputObject.CountryInput
 countryInputs countries =
@@ -274,4 +284,3 @@ pointToGraphql ( x, y ) =
 segmentToGraphql : ( ( Int, Int ), ( Int, Int ) ) -> { point1 : { x : Int, y : Int }, point2 : { x : Int, y : Int } }
 segmentToGraphql ( ( x1, y1 ), ( x2, y2 ) ) =
     { point1 = { x = x1, y = y1 }, point2 = { x = x2, y = y2 } }
-
