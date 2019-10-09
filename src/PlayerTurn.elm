@@ -5,6 +5,7 @@ module PlayerTurn exposing
     , getCurrentPlayer
     , getPlayerTurnStageFromPlayerTurn
     , isCapitolPlacementTurn
+    , isPlayerTurn
     , playerTurnInput
     , selectionSet
     , toString
@@ -78,6 +79,11 @@ isCapitolPlacementTurn currentPlayerTurn =
 
         _ ->
             False
+
+
+isPlayerTurn : PlayerTurn -> Player.Id -> Bool
+isPlayerTurn (PlayerTurn _ playerTurnPlayerId) playerId =
+    playerId == playerTurnPlayerId
 
 
 troopsToMove : PlayerTurn -> Maybe String

@@ -20,15 +20,10 @@ module Country exposing
 
 import Api.InputObject
 import Api.Object as ApiObject
-import Api.Object.BodyOfWater
 import Api.Object.Country
-import Api.Object.Dimensions
-import Api.Object.Map
 import Api.Object.Point
 import Api.Object.Segment
-import Api.Query
 import Collage
-import Collage.Render
 import Color
 import Dict
 import Graphql.SelectionSet

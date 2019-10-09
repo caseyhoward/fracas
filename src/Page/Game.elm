@@ -212,7 +212,7 @@ handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel =
 
         CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
             if clickedCountryId == countryToShowInfoForId then
-                case Game.countryClicked clickedCountryId gameLoadedModel.activeGame of
+                case Game.countryClicked clickedCountryId gameLoadedModel.playerId gameLoadedModel.activeGame of
                     Ok updatedGame ->
                         ( GameSaving
                             { gameLoadedModel

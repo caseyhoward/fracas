@@ -189,28 +189,31 @@ errorToString (Error error) =
     error
 
 
-countryClicked : Country.Id -> Game -> Result Error Game
-countryClicked clickedCountryId activeGame =
-    case activeGame.currentPlayerTurn of
-        PlayerTurn.PlayerTurn playerTurnStage currentPlayerId ->
-            case playerTurnStage of
-                PlayerTurn.CapitolPlacement ->
-                    attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
+countryClicked : Country.Id -> Player.Id -> Game -> Result Error Game
+countryClicked clickedCountryId userId activeGame =
+    if PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn userId then
+        case activeGame.currentPlayerTurn of
+            PlayerTurn.PlayerTurn playerTurnStage currentPlayerId ->
+                case playerTurnStage of
+                    PlayerTurn.CapitolPlacement ->
+                        attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
 
-                PlayerTurn.TroopPlacement ->
-                    attemptTroopPlacement clickedCountryId currentPlayerId (Player.numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
+                    PlayerTurn.TroopPlacement ->
+                        attemptTroopPlacement clickedCountryId currentPlayerId (Player.numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
 
-                PlayerTurn.AttackAnnexOrPort ->
-                    attackAnnexOrPort clickedCountryId currentPlayerId activeGame
+                    PlayerTurn.AttackAnnexOrPort ->
+                        attackAnnexOrPort clickedCountryId currentPlayerId activeGame
 
-                PlayerTurn.TroopMovement ->
-                    attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
+                    PlayerTurn.TroopMovement ->
+                        attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
 
-                PlayerTurn.TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
-                    attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString activeGame
+                    PlayerTurn.TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
+                        attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString activeGame
 
-                PlayerTurn.GameOver ->
-                    Ok activeGame
+                    PlayerTurn.GameOver ->
+                        Ok activeGame
+    else
+        "Not your turn" |> Error |> Err
 
 
 getAttackStrengthPerPlayer : Map.Map -> Player.Players -> Country.Id -> Dict.Dict Int TroopCount.TroopCount
