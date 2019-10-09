@@ -109,6 +109,7 @@ toNewGame model =
 
 type Msg
     = AddPlayer
+    | RemovePlayer Int
     | StartGameClicked
     | ColorSelected Int Colors.Color
     | ChangeColorButtonClicked Int
@@ -126,7 +127,34 @@ update msg model =
         ConfiguringGame newGame session ->
             case msg of
                 AddPlayer ->
-                    Debug.todo ""
+                    case Player.availablePlayerColors newGame.players |> List.head of
+                        Just color ->
+                            let
+                                updatedPlayers =
+                                    (newGame.players |> Dict.values)
+                                        ++ [ { name = "", color = color } ]
+                                        |> List.indexedMap (\id player -> ( id, player ))
+                                        |> Dict.fromList
+                            in
+                            ( ConfiguringGame
+                                { newGame
+                                    | players = updatedPlayers
+                                }
+                                session
+                            , Cmd.none
+                            )
+
+                        Nothing ->
+                            Debug.todo ""
+
+                RemovePlayer playerId ->
+                    ( ConfiguringGame
+                        { newGame
+                            | players = newGame.players |> Dict.remove playerId
+                        }
+                        session
+                    , Cmd.none
+                    )
 
                 ColorSelected playerId color ->
                     case newGame.players |> Dict.get playerId of
@@ -203,6 +231,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 ChangeColorButtonClicked _ ->
+                    ( model, Cmd.none )
+
+                RemovePlayer _ ->
                     ( model, Cmd.none )
 
                 StartGameClicked ->
@@ -417,27 +448,54 @@ mapView countries dimensions =
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
 playerConfiguration players =
     Element.column [ Element.spacing 20 ]
-        (Element.el [ Element.Font.bold ] (Element.text "Players")
+        ((Element.el [ Element.Font.bold ] (Element.text "Players")
             :: (players
                     |> Dict.map playerFields
                     |> Dict.values
                )
+         )
+            ++ [ addPlayerButton ]
         )
 
 
 playerFields : Int -> Player.NewPlayer -> Element.Element Msg
 playerFields playerId player =
-    Element.row []
-        [ Element.Input.text
-            [ Element.width (Element.px 250)
+    Element.row [ Element.spacing 10 ]
+        [ Element.row []
+            [ Element.Input.text
+                [ Element.width (Element.px 250)
+                ]
+                { onChange = UpdatePlayerName playerId
+                , text = player.name
+                , placeholder = Nothing
+                , label = Element.Input.labelHidden "Name"
+                }
+            , colorButton player.color (ChangeColorButtonClicked playerId)
             ]
-            { onChange = UpdatePlayerName playerId
-            , text = player.name
-            , placeholder = Nothing
-            , label = Element.Input.labelHidden "Name"
-            }
-        , colorButton player.color (ChangeColorButtonClicked playerId)
+        , removePlayerButton playerId
         ]
+
+
+addPlayerButton : Element.Element Msg
+addPlayerButton =
+    Element.Input.button
+        (ViewHelpers.defaultButtonAttributes
+            ++ [ Element.Background.color (Colors.blue |> Colors.toElementColor)
+               , Element.Font.color (Colors.white |> Colors.toElementColor)
+               ]
+        )
+        { onPress = Just AddPlayer, label = ViewHelpers.centerText "Add Player" }
+
+
+removePlayerButton : Int -> Element.Element Msg
+removePlayerButton playerId =
+    Element.Input.button
+        (ViewHelpers.defaultButtonAttributes
+            ++ [ Element.Background.color (Colors.red |> Colors.toElementColor)
+               , Element.Font.color (Colors.white |> Colors.toElementColor)
+               ]
+        )
+        { onPress = Just (RemovePlayer playerId), label = Element.text "Delete" }
 
 
 colorButton : Colors.Color -> Msg -> Element.Element Msg

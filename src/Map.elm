@@ -16,7 +16,6 @@ module Map exposing
     , newMapWithName
     , parse
     , parseRawMap
-    -- , updateCountry
     , view
     )
 
