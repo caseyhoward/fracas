@@ -18,6 +18,7 @@ import Element.Lazy
 import Game
 import Graphql.Http
 import Html
+import Html.Attributes
 import Html.Events
 import Json.Decode
 import Map
@@ -25,7 +26,6 @@ import Player
 import Random
 import Random.Dict
 import Random.List
-import Html.Attributes
 import RemoteData
 import Route
 import Session
@@ -319,9 +319,14 @@ randomTroopPlacementsGenerator : List String -> Random.Generator (Dict.Dict Stri
 randomTroopPlacementsGenerator countryIds =
     -- This can pick the same country twice so you might not get the max number of countries
     Random.Dict.dict
-        100
+        (List.length countryIds * randomTroopCountryPercentage // 100)
         (Random.List.choose countryIds |> Random.map Tuple.first |> Random.map (Maybe.withDefault "-1"))
         (TroopCount.random maximumNeutralCountryTroops)
+
+
+randomTroopCountryPercentage : Int
+randomTroopCountryPercentage =
+    50
 
 
 
