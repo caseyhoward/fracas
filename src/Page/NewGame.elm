@@ -388,7 +388,7 @@ playerColorSelect players maybePlayerId =
                             , Element.wrappedRow [ Element.width Element.fill ]
                                 (players
                                     |> Player.availablePlayerColors
-                                    |> List.map (\color -> colorButton color (ColorSelected playerId color))
+                                    |> List.map (\color -> Element.el [ Element.height (Element.px 50) ] (colorButton color (ColorSelected playerId color)))
                                 )
                             ]
                         )
