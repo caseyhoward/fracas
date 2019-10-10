@@ -339,21 +339,21 @@ view model =
     { title = ""
     , content =
         Element.layout
-            [ Element.width Element.fill
-            , Element.centerX
-            , Element.height Element.fill
+            [ Element.centerX
             , Element.inFront (playerColorSelect (model |> toNewGame |> .players) (model |> toNewGame |> .configureColor))
             , Element.padding 30
             , Element.Background.color (Colors.blue |> Colors.toElementColor)
+            , Element.width Element.fill
             ]
             (Element.column
                 [ Element.width Element.fill
-                , Element.height Element.fill
+                , Element.spacing 20
+                , Element.Background.color (Colors.blue |> Colors.toElementColor)
                 ]
                 [ Element.el [ Element.width Element.fill, Element.centerX ] title
                 , Element.el [ Element.width Element.fill, Element.centerX ]
                     (Element.wrappedRow
-                        [ Element.spacing 100, Element.centerX ]
+                        [ Element.spacing 40, Element.centerX ]
                         [ Element.el
                             [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
                             (playerConfiguration (model |> toNewGame |> .players))
@@ -362,7 +362,7 @@ view model =
                             (mapConfiguration (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId))
                         ]
                     )
-                , startGameButton
+                , Element.el [ Element.width Element.fill ] startGameButton
                 ]
             )
     }
@@ -420,9 +420,9 @@ mapConfiguration mapsRemoteData selectedMapId =
 mapSelect : List Map.Map -> Maybe String -> Element.Element Msg
 mapSelect maps selectedMapId =
     Element.el
-        [ Element.centerX, Element.Background.color (Colors.white |> Colors.toElementColor), Element.padding 20 ]
+        [ Element.centerX, Element.Background.color (Colors.gray |> Colors.toElementColor), Element.padding 20 ]
         (Element.Input.radio
-            [ Element.padding 10
+            [ Element.padding 8
             , Element.spacing 20
             ]
             { onChange = SelectMap
@@ -439,7 +439,8 @@ mapSelect maps selectedMapId =
                                         border =
                                             case optionState of
                                                 Element.Input.Idle ->
-                                                    [ Element.Border.color (Colors.gray |> Colors.toElementColor)
+                                                    [ Element.Border.color (Colors.charcoal |> Colors.toElementColor)
+                                                    , Element.Background.color (Colors.white |> Colors.toElementColor)
                                                     , Element.Border.solid
                                                     , Element.Border.width 2
                                                     ]
@@ -478,7 +479,7 @@ mapView countries dimensions =
 
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
 playerConfiguration players =
-    Element.column [ Element.spacing 20, Element.centerX, Element.Background.color (Colors.white |> Colors.toElementColor), Element.padding 20 ]
+    Element.column [ Element.spacing 20, Element.centerX, Element.Background.color (Colors.gray |> Colors.toElementColor), Element.padding 20 ]
         ((Element.el [ Element.Font.bold ] (Element.text "Players")
             :: (players
                     |> Dict.map playerFields
@@ -494,7 +495,7 @@ playerFields playerId player =
     Element.row [ Element.spacing 10 ]
         [ Element.row []
             [ Element.Input.text
-                [ Element.width (Element.px 250)
+                [ Element.width (Element.px 200)
                 , Html.Attributes.id ("player-name-" ++ String.fromInt playerId) |> Element.htmlAttribute
                 ]
                 { onChange = UpdatePlayerName playerId
@@ -525,6 +526,7 @@ removePlayerButton playerId =
         (ViewHelpers.defaultButtonAttributes
             ++ [ Element.Background.color (Colors.red |> Colors.toElementColor)
                , Element.Font.color (Colors.white |> Colors.toElementColor)
+               , Element.Font.size 10
                ]
         )
         { onPress = Just (RemovePlayer playerId), label = Element.text "Delete" }
@@ -544,7 +546,7 @@ colorButton color message =
 
 startGameButton : Element.Element Msg
 startGameButton =
-    Element.el [ Element.padding 50, Element.centerX ]
+    Element.el [ Element.centerX ]
         (Element.Input.button
             (ViewHelpers.defaultButtonAttributes
                 ++ [ Element.Background.color (Element.rgb255 0 150 0)
@@ -563,10 +565,10 @@ title : Element.Element Msg
 title =
     let
         titleMap =
-            Map.parse "title" Maps.FracasTitle.map |> Debug.log ""
+            Map.parse "title" Maps.FracasTitle.map
     in
     Element.el
-        [ Element.width (Element.px 800)
+        [ Element.width (Element.px 400)
         , Element.centerX
         ]
         (Map.view 100 titleMap.countries titleMap.dimensions |> Element.html)
