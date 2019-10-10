@@ -22,6 +22,7 @@ import Html.Attributes
 import Html.Events
 import Json.Decode
 import Map
+import Maps.FracasTitle
 import Player
 import Random
 import Random.Dict
@@ -343,17 +344,22 @@ view model =
             , Element.height Element.fill
             , Element.inFront (playerColorSelect (model |> toNewGame |> .players) (model |> toNewGame |> .configureColor))
             , Element.padding 30
+            , Element.Background.color (Colors.blue |> Colors.toElementColor)
             ]
             (Element.column
                 [ Element.width Element.fill
                 , Element.height Element.fill
                 ]
-                [ title
+                [ Element.el [ Element.width Element.fill, Element.centerX ] title
                 , Element.el [ Element.width Element.fill, Element.centerX ]
                     (Element.wrappedRow
                         [ Element.spacing 100, Element.centerX ]
-                        [ Element.el [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ] (playerConfiguration (model |> toNewGame |> .players))
-                        , Element.el [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ] (mapConfiguration (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId))
+                        [ Element.el
+                            [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
+                            (playerConfiguration (model |> toNewGame |> .players))
+                        , Element.el
+                            [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
+                            (mapConfiguration (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId))
                         ]
                     )
                 , startGameButton
@@ -414,7 +420,7 @@ mapConfiguration mapsRemoteData selectedMapId =
 mapSelect : List Map.Map -> Maybe String -> Element.Element Msg
 mapSelect maps selectedMapId =
     Element.el
-        [ Element.centerX ]
+        [ Element.centerX, Element.Background.color (Colors.white |> Colors.toElementColor), Element.padding 20 ]
         (Element.Input.radio
             [ Element.padding 10
             , Element.spacing 20
@@ -472,7 +478,7 @@ mapView countries dimensions =
 
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
 playerConfiguration players =
-    Element.column [ Element.spacing 20, Element.centerX ]
+    Element.column [ Element.spacing 20, Element.centerX, Element.Background.color (Colors.white |> Colors.toElementColor), Element.padding 20 ]
         ((Element.el [ Element.Font.bold ] (Element.text "Players")
             :: (players
                     |> Dict.map playerFields
@@ -555,14 +561,15 @@ startGameButton =
 
 title : Element.Element Msg
 title =
+    let
+        titleMap =
+            Map.parse "title" Maps.FracasTitle.map |> Debug.log ""
+    in
     Element.el
-        [ Element.padding 50
-        , Element.Font.bold
-        , Element.Font.size 80
+        [ Element.width (Element.px 800)
         , Element.centerX
-        , Element.Font.color (Colors.darkBlue |> ViewHelpers.colorToElementColor)
         ]
-        (Element.text "Fracas")
+        (Map.view 100 titleMap.countries titleMap.dimensions |> Element.html)
 
 
 

@@ -652,4 +652,5 @@ getWaterCollage scale ( width, height ) =
             background
                 |> Collage.outlined (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 8.0) (Collage.uniform Color.black))
     in
-    Collage.group [ backgroundBorder, backgroundWater ]
+    -- Collage.group [ backgroundBorder, backgroundWater ]
+    Collage.group [  backgroundWater ]
