@@ -359,7 +359,7 @@ viewPlayingGameMobile activeGame showAvailableMoves countryBorderHelperOutlineSt
                     [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
-                    (getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus device |> Element.html)
+                    (getGameBoardHtml 100 activeGame showAvailableMoves countryBorderHelperOutlineStatus device |> Element.html)
                 , viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatus
                 ]
             ]
@@ -381,7 +381,7 @@ viewPlayingGameDesktop activeGame showAvailableMoves countryBorderHelperOutlineS
                     [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
-                    (getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus device |> Element.html)
+                    (getGameBoardHtml 100 activeGame showAvailableMoves countryBorderHelperOutlineStatus device |> Element.html)
                 , Element.column
                     [ Element.width Element.fill
                     , Element.Border.width 1
@@ -761,14 +761,14 @@ getWaterCollage gameMap =
     Collage.group [ backgroundBorder, backgroundWater ]
 
 
-getGameBoardHtml : Game.Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Device -> Html.Html Msg
-getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus device =
+getGameBoardHtml : Int -> Game.Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Device -> Html.Html Msg
+getGameBoardHtml scaleFactor activeGame showAvailableMoves countryBorderHelperOutlineStatus device =
     case Game.getCountriesToRender activeGame.map activeGame.players activeGame.currentPlayerTurn activeGame.neutralCountryTroops of
         Just countriesToRender ->
             let
                 waterCollage : Collage.Collage Msg
                 waterCollage =
-                    Map.getWaterCollage 100 activeGame.map.dimensions
+                    Map.getWaterCollage scaleFactor activeGame.map.dimensions
 
                 countriesCollage =
                     countriesToRender
@@ -778,10 +778,10 @@ getGameBoardHtml activeGame showAvailableMoves countryBorderHelperOutlineStatus 
                 troopCountFontSize =
                     case device.class of
                         Element.Phone ->
-                            200
+                            scaleFactor * 2
 
                         _ ->
-                            100
+                            toFloat scaleFactor * 0.90 |> round
 
                 troopCountsCollage =
                     countriesToRender

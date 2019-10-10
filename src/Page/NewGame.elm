@@ -342,21 +342,21 @@ view model =
             , Element.centerX
             , Element.height Element.fill
             , Element.inFront (playerColorSelect (model |> toNewGame |> .players) (model |> toNewGame |> .configureColor))
-            , Element.centerX
+            , Element.padding 30
             ]
             (Element.column
                 [ Element.width Element.fill
                 , Element.height Element.fill
                 ]
                 [ title
-                , Element.el [ Element.centerX ]
-                    (Element.column
-                        [ Element.width Element.fill, Element.spacing 50 ]
-                        [ playerConfiguration (model |> toNewGame |> .players)
-                        , mapConfiguration (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId)
-                        , startGameButton
+                , Element.el [ Element.width Element.fill, Element.centerX ]
+                    (Element.wrappedRow
+                        [ Element.spacing 100, Element.centerX ]
+                        [ Element.el [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ] (playerConfiguration (model |> toNewGame |> .players))
+                        , Element.el [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ] (mapConfiguration (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId))
                         ]
                     )
+                , startGameButton
                 ]
             )
     }
@@ -413,53 +413,56 @@ mapConfiguration mapsRemoteData selectedMapId =
 
 mapSelect : List Map.Map -> Maybe String -> Element.Element Msg
 mapSelect maps selectedMapId =
-    Element.Input.radio
-        [ Element.padding 10
-        , Element.spacing 20
-        ]
-        { onChange = SelectMap
-        , selected = selectedMapId
-        , label = Element.Input.labelAbove [ Element.Font.bold ] (Element.text "Map")
-        , options =
-            maps
-                |> List.map
-                    (\map ->
-                        Element.Input.optionWith
-                            (map.id |> Map.idToString)
-                            (\optionState ->
-                                let
-                                    border =
-                                        case optionState of
-                                            Element.Input.Idle ->
-                                                [ Element.Border.color (Colors.gray |> Colors.toElementColor)
-                                                , Element.Border.solid
-                                                , Element.Border.width 2
-                                                ]
+    Element.el
+        [ Element.centerX ]
+        (Element.Input.radio
+            [ Element.padding 10
+            , Element.spacing 20
+            ]
+            { onChange = SelectMap
+            , selected = selectedMapId
+            , label = Element.Input.labelAbove [ Element.Font.bold ] (Element.text "Map")
+            , options =
+                maps
+                    |> List.map
+                        (\map ->
+                            Element.Input.optionWith
+                                (map.id |> Map.idToString)
+                                (\optionState ->
+                                    let
+                                        border =
+                                            case optionState of
+                                                Element.Input.Idle ->
+                                                    [ Element.Border.color (Colors.gray |> Colors.toElementColor)
+                                                    , Element.Border.solid
+                                                    , Element.Border.width 2
+                                                    ]
 
-                                            Element.Input.Focused ->
-                                                [ Element.Border.color (Colors.white |> Colors.toElementColor)
-                                                , Element.Border.solid
-                                                , Element.Border.width 2
-                                                ]
+                                                Element.Input.Focused ->
+                                                    [ Element.Border.color (Colors.white |> Colors.toElementColor)
+                                                    , Element.Border.solid
+                                                    , Element.Border.width 2
+                                                    ]
 
-                                            Element.Input.Selected ->
-                                                [ Element.Border.color (Colors.blue |> Colors.toElementColor)
-                                                , Element.Border.solid
-                                                , Element.Border.width 2
-                                                , Element.Background.color (Colors.lightBlue |> Colors.toElementColor)
-                                                , Element.Font.color (Colors.white |> Colors.toElementColor)
-                                                ]
-                                in
-                                Element.row
-                                    (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
-                                    [ Element.el
-                                        [ Element.width (Element.px 50) ]
-                                        (Element.Lazy.lazy2 mapView map.countries map.dimensions)
-                                    , Element.text map.name
-                                    ]
-                            )
-                    )
-        }
+                                                Element.Input.Selected ->
+                                                    [ Element.Border.color (Colors.blue |> Colors.toElementColor)
+                                                    , Element.Border.solid
+                                                    , Element.Border.width 2
+                                                    , Element.Background.color (Colors.lightBlue |> Colors.toElementColor)
+                                                    , Element.Font.color (Colors.white |> Colors.toElementColor)
+                                                    ]
+                                    in
+                                    Element.row
+                                        (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
+                                        [ Element.el
+                                            [ Element.width (Element.px 50) ]
+                                            (Element.Lazy.lazy2 mapView map.countries map.dimensions)
+                                        , Element.text map.name
+                                        ]
+                                )
+                        )
+            }
+        )
 
 
 mapView : Country.Countries -> ( Int, Int ) -> Element.Element Msg
@@ -469,7 +472,7 @@ mapView countries dimensions =
 
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
 playerConfiguration players =
-    Element.column [ Element.spacing 20 ]
+    Element.column [ Element.spacing 20, Element.centerX ]
         ((Element.el [ Element.Font.bold ] (Element.text "Players")
             :: (players
                     |> Dict.map playerFields

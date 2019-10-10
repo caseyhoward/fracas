@@ -8,8 +8,6 @@ async function getMap(id: string): Promise<Map> {
   return result.rows[0];
 }
 
-
-
 const resolvers = {
   Query: {
     map: async (_: any, x: { id: string }) => {
@@ -37,6 +35,9 @@ const resolvers = {
     maps: async (_: any, x: { id: string }) => {
       try {
         const result = await database.query("SELECT * FROM maps");
+        // const result = await database.query("DELETE FROM maps WHERE id=$1", [
+        //   34
+        // ]);
         return result.rows.map(mapToJson);
       } catch (error) {
         console.log(error);
