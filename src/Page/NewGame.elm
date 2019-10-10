@@ -25,6 +25,7 @@ import Player
 import Random
 import Random.Dict
 import Random.List
+import Html.Attributes
 import RemoteData
 import Route
 import Session
@@ -111,6 +112,7 @@ toNewGame model =
 type Msg
     = AddPlayer
     | ColorSelectBackgroundClicked
+    | FocusResult (Result Browser.Dom.Error ())
     | RemovePlayer Int
     | StartGameClicked
     | ColorSelected Int Colors.Color
@@ -137,13 +139,16 @@ update msg model =
                                         ++ [ { name = "", color = color } ]
                                         |> List.indexedMap (\id player -> ( id, player ))
                                         |> Dict.fromList
+
+                                newId =
+                                    (updatedPlayers |> Dict.keys |> List.length) - 1
                             in
                             ( ConfiguringGame
                                 { newGame
                                     | players = updatedPlayers
                                 }
                                 session
-                            , Cmd.none
+                            , Browser.Dom.focus ("player-name-" ++ String.fromInt newId) |> Task.attempt FocusResult
                             )
 
                         Nothing ->
@@ -176,6 +181,9 @@ update msg model =
 
                         Nothing ->
                             ( model, Cmd.none )
+
+                FocusResult _ ->
+                    ( model, Cmd.none )
 
                 ChangeColorButtonClicked playerId ->
                     ( ConfiguringGame { newGame | configureColor = Just playerId } session, Cmd.none )
@@ -239,6 +247,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 ChangeColorButtonClicked _ ->
+                    ( model, Cmd.none )
+
+                FocusResult _ ->
                     ( model, Cmd.none )
 
                 RemovePlayer _ ->
@@ -326,11 +337,11 @@ view model =
             , Element.centerX
             , Element.height Element.fill
             , Element.inFront (playerColorSelect (model |> toNewGame |> .players) (model |> toNewGame |> .configureColor))
+            , Element.centerX
             ]
             (Element.column
                 [ Element.width Element.fill
                 , Element.height Element.fill
-                , Element.centerX
                 ]
                 [ title
                 , Element.el [ Element.centerX ]
@@ -470,6 +481,7 @@ playerFields playerId player =
         [ Element.row []
             [ Element.Input.text
                 [ Element.width (Element.px 250)
+                , Html.Attributes.id ("player-name-" ++ String.fromInt playerId) |> Element.htmlAttribute
                 ]
                 { onChange = UpdatePlayerName playerId
                 , text = player.name
@@ -518,24 +530,25 @@ colorButton color message =
 
 startGameButton : Element.Element Msg
 startGameButton =
-    Element.Input.button
-        (ViewHelpers.defaultButtonAttributes
-            ++ [ Element.Background.color (Element.rgb255 0 150 0)
-               , Element.width Element.fill
-               , Element.padding 20
-               , Element.centerX
-               , Element.moveDown 30
-               , Element.Font.size 30
-               , Element.Font.color (Colors.white |> ViewHelpers.colorToElementColor)
-               ]
+    Element.el [ Element.padding 50, Element.centerX ]
+        (Element.Input.button
+            (ViewHelpers.defaultButtonAttributes
+                ++ [ Element.Background.color (Element.rgb255 0 150 0)
+                   , Element.width Element.fill
+                   , Element.padding 20
+                   , Element.centerX
+                   , Element.Font.size 30
+                   , Element.Font.color (Colors.white |> ViewHelpers.colorToElementColor)
+                   ]
+            )
+            { onPress = Just StartGameClicked, label = ViewHelpers.centerText "Start Game" }
         )
-        { onPress = Just StartGameClicked, label = ViewHelpers.centerText "Start Game" }
 
 
 title : Element.Element Msg
 title =
     Element.el
-        [ Element.padding 100
+        [ Element.padding 50
         , Element.Font.bold
         , Element.Font.size 80
         , Element.centerX
