@@ -10,6 +10,7 @@ import Dict
 import Element
 import Element.Background
 import Element.Border
+import Element.Events
 import Element.Font
 import Element.Input
 import Element.Keyed
@@ -109,6 +110,7 @@ toNewGame model =
 
 type Msg
     = AddPlayer
+    | ColorSelectBackgroundClicked
     | RemovePlayer Int
     | StartGameClicked
     | ColorSelected Int Colors.Color
@@ -145,7 +147,10 @@ update msg model =
                             )
 
                         Nothing ->
-                            Debug.todo ""
+                            ( ConfiguringGame { newGame | error = Just "Too many cooks" } session, Cmd.none )
+
+                ColorSelectBackgroundClicked ->
+                    ( ConfiguringGame { newGame | configureColor = Nothing } session, Cmd.none )
 
                 RemovePlayer playerId ->
                     ( ConfiguringGame
@@ -228,6 +233,9 @@ update msg model =
                     ( model, Cmd.none )
 
                 ColorSelected _ _ ->
+                    ( model, Cmd.none )
+
+                ColorSelectBackgroundClicked ->
                     ( model, Cmd.none )
 
                 ChangeColorButtonClicked _ ->
@@ -344,20 +352,18 @@ playerColorSelect players maybePlayerId =
         Just playerId ->
             case Dict.get playerId players of
                 Just player ->
-                    Element.el
-                        [ Element.width Element.fill
-                        , Element.height Element.fill
-                        , Element.Background.color (Element.rgba255 0 0 0 0.8)
-                        ]
+                    ViewHelpers.dialog
+                        ColorSelectBackgroundClicked
+                        [ Element.width Element.shrink, Element.height (Element.px 300) ]
                         (Element.column
                             [ Element.padding 20
-                            , Element.centerX
-                            , Element.centerY
                             , Element.Background.color (Colors.white |> Colors.toElementColor)
                             , Element.spacing 20
+                            , Element.width (Element.px 300)
+                            , Element.height Element.fill
                             ]
                             [ Element.text ("Select color for " ++ player.name)
-                            , Element.wrappedRow [ Element.width (Element.px 250) ]
+                            , Element.wrappedRow [ Element.width Element.fill ]
                                 (players
                                     |> Player.availablePlayerColors
                                     |> List.map (\color -> colorButton color (ColorSelected playerId color))

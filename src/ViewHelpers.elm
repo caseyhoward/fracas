@@ -4,17 +4,19 @@ module ViewHelpers exposing
     , defaultButtonAttributes
     , defaultLabelAttributes
     , defaultTextInputAttributes
+    , dialog
     , errorToString
     ,  pixelsPerMapSquare
        -- , selectButton
 
     )
 
-import Colors
 import Color
+import Colors
 import Element
 import Element.Background
 import Element.Border
+import Element.Events
 import Element.Font
 import Graphql.Http
 import Graphql.Http.GraphqlError
@@ -61,6 +63,41 @@ defaultTextInputAttributes =
     , Element.Border.color (Element.rgb255 100 100 100)
     , Element.Border.solid
     ]
+
+
+overlayAttributes : msg -> List (Element.Attribute msg)
+overlayAttributes closeMessage =
+    [ Element.Background.color (Element.rgba255 0 0 0 0.8)
+    , Element.Events.onClick closeMessage
+    , Element.height Element.fill
+    , Element.width Element.fill
+    ]
+
+
+
+
+
+dialog : msg -> List (Element.Attribute msg) -> Element.Element msg -> Element.Element msg
+dialog closeMessage attributes dialogContent =
+    Element.row
+        [ Element.height Element.fill
+        , Element.width Element.fill
+        ]
+        [ Element.el (overlayAttributes closeMessage) Element.none
+        , Element.column
+            [ Element.height Element.fill
+            , Element.width Element.shrink
+            ]
+            [ Element.el (overlayAttributes closeMessage) Element.none
+            , Element.el
+                (attributes
+                    ++ [ Element.scrollbarY ]
+                )
+                dialogContent
+            , Element.el (overlayAttributes closeMessage) Element.none
+            ]
+        , Element.el (overlayAttributes closeMessage) Element.none
+        ]
 
 
 pixelsPerMapSquare : Int
