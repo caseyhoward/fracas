@@ -1308,7 +1308,7 @@ isCountryReachableFromOtherCountry fromCountryId toCountryId countries players =
 
 nextPlayer : Player.Players -> Player.Id -> Player.Id
 nextPlayer players (Player.Id currentPlayerId) =
-    remainderBy (Dict.size players) currentPlayerId + 1 |> Player.Id
+    remainderBy (Dict.size players) (currentPlayerId + 1) |> Player.Id
 
 
 nextPlayerCheckForDeadPlayers : Player.Players -> Player.Id -> Player.Id

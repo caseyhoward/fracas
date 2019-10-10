@@ -50,11 +50,11 @@ type alias NewPlayer =
 defaultNewPlayers : Dict.Dict Int NewPlayer
 defaultNewPlayers =
     [ ( 0, { name = "Kevin", color = Colors.darkGreen } )
-    , ( 1, { name = "Denny", color = Colors.lightGreen } )
-    , ( 2, { name = "Jason", color = Colors.lightYellow } )
+    , ( 1, { name = "Jim", color = Colors.lightGreen } )
+    , ( 2, { name = "Lyle", color = Colors.lightYellow } )
     , ( 3, { name = "Nat", color = Colors.orange } )
-    , ( 4, { name = "Jim", color = Colors.brown } )
-    , ( 5, { name = "Lyle", color = Colors.lightPurple } )
+    , ( 4, { name = "Denny", color = Colors.brown } )
+    , ( 5, { name = "Jason", color = Colors.lightPurple } )
     ]
         |> Dict.fromList
 
@@ -100,8 +100,6 @@ availablePlayerColors players =
     , Colors.green
     , Colors.darkGreen
     , Colors.lightBlue
-    -- , Colors.blue
-    -- , Colors.darkBlue
     , Colors.lightGray
     , Colors.gray
     , Colors.darkGray
