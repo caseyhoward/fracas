@@ -40,6 +40,7 @@ defaultButtonAttributes =
     , Element.Font.size 16
     , Element.Font.bold
     , Element.Border.rounded 2
+    , Element.Border.width 1
     , Element.Border.shadow { offset = ( 2, 2 ), size = 1, blur = 1, color = Element.rgba 0 0 0 0.1 }
     , Element.width Element.fill
     , Element.Font.variant Element.Font.smallCaps
@@ -72,9 +73,6 @@ overlayAttributes closeMessage =
     , Element.height Element.fill
     , Element.width Element.fill
     ]
-
-
-
 
 
 dialog : msg -> List (Element.Attribute msg) -> Element.Element msg -> Element.Element msg

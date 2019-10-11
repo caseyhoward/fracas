@@ -53,34 +53,9 @@ type LocalGameCase
 
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    ( LocalGame
-        (ConfiguringGame
-            { players = Player.defaultNewPlayers
-            , configureColor = Nothing
-            , error = Nothing
-            , maps = RemoteData.Loading
-            , selectedMapId = Nothing
-            }
-            session
-        )
+    ( ChoosingGameType session
     , Cmd.none
     )
-        |> Tuple.mapSecond
-            (\_ ->
-                Cmd.batch
-                    [ Task.attempt
-                        (\viewportResult ->
-                            case viewportResult of
-                                Ok viewport ->
-                                    WindowResized (round viewport.viewport.width) (round viewport.viewport.height)
-
-                                Err _ ->
-                                    WindowResized 0 0
-                        )
-                        Browser.Dom.getViewport
-                    , Map.getAll GotMaps
-                    ]
-            )
 
 
 toSession : Model -> Session.Session
@@ -119,6 +94,8 @@ toNewGame model =
 type Msg
     = AddPlayer
     | ColorSelectBackgroundClicked
+    | LocalGameClicked
+    | InternetGameClicked
     | FocusResult (Result Browser.Dom.Error ())
     | RemovePlayer Int
     | StartGameClicked
@@ -136,7 +113,40 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case model of
         ChoosingGameType session ->
-            ( model, Cmd.none )
+            case msg of
+                InternetGameClicked ->
+                    ( model
+                    , Cmd.none
+                    )
+
+                LocalGameClicked ->
+                    ( LocalGame
+                        (ConfiguringGame
+                            { players = Player.defaultNewPlayers
+                            , configureColor = Nothing
+                            , error = Nothing
+                            , maps = RemoteData.Loading
+                            , selectedMapId = Nothing
+                            }
+                            session
+                        )
+                    , Cmd.batch
+                        [ Task.attempt
+                            (\viewportResult ->
+                                case viewportResult of
+                                    Ok viewport ->
+                                        WindowResized (round viewport.viewport.width) (round viewport.viewport.height)
+
+                                    Err _ ->
+                                        WindowResized 0 0
+                            )
+                            Browser.Dom.getViewport
+                        , Map.getAll GotMaps
+                        ]
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
 
         LocalGame localGameCase ->
             updateLocalGame msg localGameCase
@@ -245,6 +255,12 @@ updateLocalGame msg model =
                         Nothing ->
                             ( model, Cmd.none )
 
+                LocalGameClicked ->
+                    ( model, Cmd.none )
+
+                InternetGameClicked ->
+                    ( model, Cmd.none )
+
         GeneratingRandomTroopCounts newGame session ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
@@ -302,6 +318,12 @@ updateLocalGame msg model =
                 UpdatePlayerName _ _ ->
                     ( model, Cmd.none )
 
+                LocalGameClicked ->
+                    ( model, Cmd.none )
+
+                InternetGameClicked ->
+                    ( model, Cmd.none )
+
         Redirecting _ _ ->
             ( model, Cmd.none )
 
@@ -355,30 +377,71 @@ view : Model -> { title : String, content : Html.Html Msg }
 view model =
     case model of
         ChoosingGameType _ ->
-            Debug.todo ""
+            viewChoosingGameType
 
         LocalGame localGame ->
             viewLocalGame localGame
 
 
+viewChoosingGameType : { title : String, content : Html.Html Msg }
+viewChoosingGameType =
+    let
+        gameTypeButton : String -> String -> Msg -> Element.Element Msg
+        gameTypeButton titleText description msg =
+            Element.el [ Element.width Element.fill ]
+                (Element.el
+                    [ Element.centerX
+                    ]
+                    (Element.Input.button
+                        (ViewHelpers.defaultButtonAttributes
+                            ++ [ Element.width (Element.px 300)
+                               , Element.height Element.fill
+                               , Element.centerX
+                               , Element.Border.color (Colors.black |> Colors.toElementColor)
+                               , Element.Border.rounded 10
+                               ]
+                        )
+                        { label =
+                            Element.el
+                                [ Element.padding 20, Element.width Element.fill, Element.Font.center ]
+                                (Element.column
+                                    [ Element.width Element.fill, Element.spacing 20 ]
+                                    [ Element.el [ Element.Font.size 20, Element.width Element.fill, Element.Font.center ] (Element.text titleText)
+                                    , Element.el [ Element.Font.medium ] (Element.paragraph [] [ Element.text description ])
+                                    ]
+                                )
+                        , onPress = Just msg
+                        }
+                    )
+                )
+    in
+    { title = "Choose Game Type"
+    , content =
+        layout
+            Element.none
+            (Element.el [ Element.width Element.fill, Element.centerX ]
+                (Element.wrappedRow
+                    [ Element.width Element.fill, Element.spacing 50, Element.centerX ]
+                    [ gameTypeButton "Local" "All players will be using this computer or device" LocalGameClicked
+                    , gameTypeButton "Internet" "Each player will be using their own computer or device" InternetGameClicked
+                    ]
+                )
+            )
+    }
+
+
 viewLocalGame : LocalGameCase -> { title : String, content : Html.Html Msg }
 viewLocalGame model =
-    { title = ""
+    { title = "Configure Local Game"
     , content =
-        Element.layout
-            [ Element.centerX
-            , Element.inFront (playerColorSelect (model |> toNewGame |> .players) (model |> toNewGame |> .configureColor))
-            , Element.padding 30
-            , Element.Background.color (Colors.blue |> Colors.toElementColor)
-            , Element.width Element.fill
-            ]
+        layout
+            (playerColorSelect (model |> toNewGame |> .players) (model |> toNewGame |> .configureColor))
             (Element.column
                 [ Element.width Element.fill
                 , Element.spacingXY 0 20
                 , Element.Background.color (Colors.blue |> Colors.toElementColor)
                 ]
-                [ Element.el [ Element.width Element.fill, Element.centerX ] title
-                , Element.el [ Element.width Element.fill, Element.centerX ]
+                [ Element.el [ Element.width Element.fill, Element.centerX ]
                     (Element.wrappedRow
                         [ Element.spacing 40, Element.centerX ]
                         [ Element.el
@@ -393,6 +456,26 @@ viewLocalGame model =
                 ]
             )
     }
+
+
+layout : Element.Element Msg -> Element.Element Msg -> Html.Html Msg
+layout overlay body =
+    Element.layout
+        [ Element.centerX
+        , Element.inFront overlay
+        , Element.padding 30
+        , Element.Background.color (Colors.blue |> Colors.toElementColor)
+        , Element.width Element.fill
+        ]
+        (Element.column
+            [ Element.width Element.fill
+            , Element.spacingXY 0 20
+            , Element.Background.color (Colors.blue |> Colors.toElementColor)
+            ]
+            [ Element.el [ Element.width Element.fill, Element.centerX ] title
+            , body
+            ]
+        )
 
 
 playerColorSelect : Dict.Dict Int Player.NewPlayer -> Maybe Int -> Element.Element Msg
