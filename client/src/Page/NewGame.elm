@@ -421,7 +421,7 @@ viewChoosingGameType =
             Element.none
             (Element.el [ Element.width Element.fill, Element.centerX ]
                 (Element.wrappedRow
-                    [ Element.width Element.fill, Element.spacing 50, Element.centerX ]
+                    [ Element.spacing 50, Element.centerX ]
                     [ gameTypeButton "Local" "All players will be using this computer or device" LocalGameClicked
                     , gameTypeButton "Internet" "Each player will be using their own computer or device" InternetGameClicked
                     ]
