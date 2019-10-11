@@ -10,17 +10,13 @@ import Dict
 import Element
 import Element.Background
 import Element.Border
-import Element.Events
 import Element.Font
 import Element.Input
-import Element.Keyed
 import Element.Lazy
 import Game
 import Graphql.Http
 import Html
 import Html.Attributes
-import Html.Events
-import Json.Decode
 import Map
 import Maps.FracasTitle
 import Player

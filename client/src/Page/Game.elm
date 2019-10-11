@@ -212,7 +212,7 @@ handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel =
 
         CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
             if clickedCountryId == countryToShowInfoForId then
-                case Game.countryClicked clickedCountryId gameLoadedModel.playerId gameLoadedModel.activeGame of
+                case Game.countryClicked clickedCountryId gameLoadedModel.activeGame of
                     Ok updatedGame ->
                         ( GameSaving
                             { gameLoadedModel
@@ -781,7 +781,7 @@ getGameBoardHtml scaleFactor activeGame showAvailableMoves countryBorderHelperOu
                             scaleFactor * 2
 
                         _ ->
-                            toFloat scaleFactor * 0.90 |> round
+                            toFloat scaleFactor * 0.9 |> round
 
                 troopCountsCollage =
                     countriesToRender

@@ -29,7 +29,6 @@ module Game exposing
     , urlParser
     )
 
-import Api.Enum.PlayerTurnStage
 import Api.InputObject
 import Api.Mutation
 import Api.Object
@@ -182,8 +181,8 @@ errorToString (Error error) =
     error
 
 
-countryClicked : Country.Id -> Player.Id -> Game -> Result Error Game
-countryClicked clickedCountryId userId activeGame =
+countryClicked : Country.Id -> Game -> Result Error Game
+countryClicked clickedCountryId  activeGame =
     -- if PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn userId then
     case activeGame.currentPlayerTurn of
         PlayerTurn.PlayerTurn playerTurnStage currentPlayerId ->

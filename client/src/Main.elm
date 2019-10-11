@@ -1,7 +1,6 @@
 module Main exposing (main)
 
 import Browser
-import Browser.Events
 import Browser.Navigation
 import Html
 import Page
@@ -46,9 +45,10 @@ init _ url key =
 ---- UPDATE ----
 
 
-type Msg
-    = ChangedRoute (Maybe Route.Route)
-    | ChangedUrl Url.Url
+type
+    Msg
+    -- = ChangedRoute (Maybe Route.Route)
+    = ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
     | GotGameMsg Page.Game.Msg
     | GotNewGameMsg Page.NewGame.Msg
@@ -71,9 +71,8 @@ update msg model =
         ( ChangedUrl url, _ ) ->
             changeRouteTo (Route.fromUrl url) model
 
-        ( ChangedRoute route, _ ) ->
-            changeRouteTo route model
-
+        -- ( ChangedRoute route, _ ) ->
+        --     changeRouteTo route model
         ( GotGameMsg subMsg, Game activeGame ) ->
             Page.Game.update subMsg activeGame
                 |> updateWith Game GotGameMsg

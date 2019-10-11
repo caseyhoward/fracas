@@ -122,7 +122,7 @@ view model =
                         RemoteData.Failure err ->
                             Element.text ("Error: " ++ (err |> ViewHelpers.errorToString))
 
-                        RemoteData.Success news ->
+                        RemoteData.Success _ ->
                             Element.text "Redirecting"
                     )
                 ]

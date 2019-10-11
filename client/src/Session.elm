@@ -7,12 +7,9 @@ module Session exposing
     , updateWindowSize
     )
 
-import Game
 import Browser.Navigation
 import Dict
-import Map
-import Maps.Big
-import ViewHelpers
+import Game
 
 
 type alias WindowSize =

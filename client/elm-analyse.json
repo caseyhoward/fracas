@@ -1,0 +1,12 @@
+{
+  "excludedPaths": ["src/Api"],
+  "checks": {
+    "UnusedImportAlias": true,
+    "UnusedVariable": true,
+    "UnusedPatternVariable": true,
+    "SingleFieldRecord": false
+  },
+  "TriggerWords": {
+    "words": []
+  }
+}
