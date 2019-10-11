@@ -46,9 +46,7 @@ const resolvers = {
   },
   Game: {
     map: async (game: Game) => {
-      console.log("Game.map : game = " + JSON.stringify(game));
       const map = await getMap(game.mapId);
-      console.log("map: " + JSON.stringify(map));
       return mapToJson(map);
     }
   },
@@ -131,7 +129,6 @@ interface Game {
 }
 
 function gameToJson(gameRow: any): Game {
-  console.log(JSON.stringify(gameRow));
   const gameWithoutId = JSON.parse(gameRow.game_json);
   return {
     ...gameWithoutId,
@@ -141,6 +138,5 @@ function gameToJson(gameRow: any): Game {
 
 function mapToJson(mapRow: any): Map {
   const mapWithoutId = JSON.parse(mapRow.map_json);
-  console.log(JSON.stringify({ ...mapWithoutId, id: mapRow.id }));
   return { ...mapWithoutId, id: mapRow.id };
 }

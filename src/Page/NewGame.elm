@@ -56,7 +56,7 @@ init session =
         { players = Player.defaultNewPlayers
         , configureColor = Nothing
         , error = Nothing
-        , maps = RemoteData.NotAsked
+        , maps = RemoteData.Loading
         , selectedMapId = Nothing
         }
         session
@@ -347,7 +347,7 @@ view model =
             ]
             (Element.column
                 [ Element.width Element.fill
-                , Element.spacing 20
+                , Element.spacingXY 0 20
                 , Element.Background.color (Colors.blue |> Colors.toElementColor)
                 ]
                 [ Element.el [ Element.width Element.fill, Element.centerX ] title
@@ -406,21 +406,34 @@ mapConfiguration mapsRemoteData selectedMapId =
         RemoteData.Success maps ->
             Element.Lazy.lazy2 mapSelect maps selectedMapId
 
-        -- mapSelect maps selectedMapId
         RemoteData.Loading ->
-            Element.text "..."
+            Element.el
+                [ Element.centerX
+                ]
+                (Element.el
+                    [ Element.width (Element.px 340)
+                    , Element.Background.color (Colors.gray |> Colors.toElementColor)
+                    , Element.Border.rounded 10
+                    , Element.padding 10
+                    ]
+                    (Element.text "Loading maps ...")
+                )
 
         RemoteData.Failure _ ->
             Element.text "fail"
 
         RemoteData.NotAsked ->
-            Element.text ""
+            Element.text "not asked"
 
 
 mapSelect : List Map.Map -> Maybe String -> Element.Element Msg
 mapSelect maps selectedMapId =
     Element.el
-        [ Element.centerX, Element.Background.color (Colors.gray |> Colors.toElementColor), Element.padding 20 ]
+        [ Element.centerX
+        , Element.Background.color (Colors.gray |> Colors.toElementColor)
+        , Element.Border.rounded 10
+        , Element.padding 20
+        ]
         (Element.Input.radio
             [ Element.padding 8
             , Element.spacing 20
@@ -479,7 +492,13 @@ mapView countries dimensions =
 
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
 playerConfiguration players =
-    Element.column [ Element.spacing 20, Element.centerX, Element.Background.color (Colors.gray |> Colors.toElementColor), Element.padding 20 ]
+    Element.column
+        [ Element.spacing 20
+        , Element.centerX
+        , Element.Background.color (Colors.gray |> Colors.toElementColor)
+        , Element.padding 20
+        , Element.Border.rounded 10
+        ]
         ((Element.el [ Element.Font.bold ] (Element.text "Players")
             :: (players
                     |> Dict.map playerFields
