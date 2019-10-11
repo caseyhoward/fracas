@@ -41,6 +41,11 @@ type alias NewGame =
 
 
 type Model
+    = ChoosingGameType Session.Session
+    | LocalGame LocalGameCase
+
+
+type LocalGameCase
     = ConfiguringGame NewGame Session.Session
     | GeneratingRandomTroopCounts NewGame Session.Session
     | Redirecting NewGame Session.Session
@@ -48,14 +53,16 @@ type Model
 
 init : Session.Session -> ( Model, Cmd Msg )
 init session =
-    ( ConfiguringGame
-        { players = Player.defaultNewPlayers
-        , configureColor = Nothing
-        , error = Nothing
-        , maps = RemoteData.Loading
-        , selectedMapId = Nothing
-        }
-        session
+    ( LocalGame
+        (ConfiguringGame
+            { players = Player.defaultNewPlayers
+            , configureColor = Nothing
+            , error = Nothing
+            , maps = RemoteData.Loading
+            , selectedMapId = Nothing
+            }
+            session
+        )
     , Cmd.none
     )
         |> Tuple.mapSecond
@@ -79,17 +86,20 @@ init session =
 toSession : Model -> Session.Session
 toSession model =
     case model of
-        ConfiguringGame _ session ->
+        ChoosingGameType session ->
             session
 
-        GeneratingRandomTroopCounts _ session ->
+        LocalGame (ConfiguringGame _ session) ->
             session
 
-        Redirecting _ session ->
+        LocalGame (GeneratingRandomTroopCounts _ session) ->
+            session
+
+        LocalGame (Redirecting _ session) ->
             session
 
 
-toNewGame : Model -> NewGame
+toNewGame : LocalGameCase -> NewGame
 toNewGame model =
     case model of
         ConfiguringGame newGame _ ->
@@ -124,6 +134,17 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    case model of
+        ChoosingGameType session ->
+            ( model, Cmd.none )
+
+        LocalGame localGameCase ->
+            updateLocalGame msg localGameCase
+                |> Tuple.mapFirst LocalGame
+
+
+updateLocalGame : Msg -> LocalGameCase -> ( LocalGameCase, Cmd Msg )
+updateLocalGame msg model =
     case model of
         ConfiguringGame newGame session ->
             case msg of
@@ -290,7 +311,7 @@ maximumNeutralCountryTroops =
     10
 
 
-startGame : Session.Session -> NewGame -> ( Model, Cmd Msg )
+startGame : Session.Session -> NewGame -> ( LocalGameCase, Cmd Msg )
 startGame session newGame =
     case newGame.maps of
         RemoteData.Success maps ->
@@ -332,6 +353,16 @@ randomTroopCountryPercentage =
 
 view : Model -> { title : String, content : Html.Html Msg }
 view model =
+    case model of
+        ChoosingGameType _ ->
+            Debug.todo ""
+
+        LocalGame localGame ->
+            viewLocalGame localGame
+
+
+viewLocalGame : LocalGameCase -> { title : String, content : Html.Html Msg }
+viewLocalGame model =
     { title = ""
     , content =
         Element.layout
