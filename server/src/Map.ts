@@ -1,5 +1,8 @@
 import * as Database from "./db";
 
+export { Map, MapInput } from "./api/graphql";
+import { Map, MapInput } from "./api/graphql";
+
 export async function findFirstId(
   executeQuery: Database.ExecuteQuery
 ): Promise<number> {
@@ -12,11 +15,11 @@ export interface NewMap {
   mapJson: string;
 }
 
-export interface Map {
-  id: string;
-  name: string;
-  mapJson: string;
-}
+// export interface Map {
+//   id: string;
+//   name: string;
+//   mapJson: string;
+// }
 
 export async function findById(
   executeQuery: Database.ExecuteQuery,
@@ -41,7 +44,7 @@ export async function findAll(
 
 export async function create(
   executeQuery: Database.ExecuteQuery,
-  newMap: NewMap
+  newMap: MapInput
 ): Promise<Map> {
   try {
     const result = await executeQuery(

@@ -1,6 +1,7 @@
 import * as Uuid from "./Uuid";
 import { ExecuteQuery } from "./db";
 import * as Map from "./Map";
+// import { PlayerToken } from "./api/graphql";
 
 export interface PlayerToken {
   kind: "player_token";
@@ -9,7 +10,7 @@ export interface PlayerToken {
 
 export interface InternetGame {}
 
-export async function create(executeQuery: ExecuteQuery): Promise<PlayerToken> {
+export async function create(executeQuery: ExecuteQuery): Promise<string> {
   const mapId = await Map.findFirstId(executeQuery);
   const hostToken = Uuid.generate();
   console.log([Uuid.generate(), mapId, ""]);
@@ -22,7 +23,7 @@ export async function create(executeQuery: ExecuteQuery): Promise<PlayerToken> {
     [internetGame.rows[0].id, hostToken, ""]
   );
 
-  return playerToken(hostToken);
+  return hostToken;
 }
 
 export function findById(
