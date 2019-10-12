@@ -15,6 +15,7 @@ export async function findById(
   id: string
 ): Promise<Map> {
   const result = await executeQuery("SELECT * FROM maps WHERE id = $1", [id]);
+  console.log(id, result);
   return mapsRowToMap(result.rows[0]);
 }
 
@@ -50,13 +51,14 @@ interface NewMapsRow {
 
 function mapsRowToMap(mapsRow: MapsRow): Map {
   const parsedJson = JSON.parse(mapsRow.map_json);
-  return {
+  const map = {
     id: mapsRow.id.toString(),
     name: parsedJson.name,
     countries: parsedJson.countries,
     bodiesOfWater: parsedJson.bodiesOfWater,
     dimensions: parsedJson.dimensions
   };
+  return map;
 }
 
 function mapToMapsRow(map: Map): MapsRow {

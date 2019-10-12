@@ -188,12 +188,6 @@ type Query {
   maps: [Map!]!
 }
 
-# type NewInternetGameTokens {
-#   hostPlayerToken: String!
-#   joinGameToken: String!
-#   userPlayerId: String!
-# }
-
 type Mutation {
   createGame(newGame: NewGameInput!): Game!
   createInternetGame: String! # Returns hostToken

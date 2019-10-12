@@ -5,11 +5,13 @@ describe("Map", () => {
   describe(".create", () => {
     it("creates a map", async () => {
       const map = await Map.create(TestDatabase.query, {
-        name: "test 1",
-        mapJson: '{"abc": 123}'
+        name: "abc",
+        countries: [],
+        bodiesOfWater: [],
+        dimensions: { width: 0, height: 0 }
       });
       const foundMap = await Map.findById(TestDatabase.query, map.id);
-      expect(foundMap).toBeDefined();
+      expect(foundMap.name).toEqual("abc");
     });
   });
 });
