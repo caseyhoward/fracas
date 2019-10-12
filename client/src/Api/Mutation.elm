@@ -39,35 +39,18 @@ createInternetGame =
     Object.selectionForField "String" "createInternetGame" [] Decode.string
 
 
-type alias StartInternetGameRequiredArguments =
-    { playerToken : String }
+type alias CreateMapRequiredArguments =
+    { map : Api.InputObject.MapInput }
 
 
 {-|
 
-  - playerToken -
+  - map -
 
 -}
-startInternetGame : StartInternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
-startInternetGame requiredArgs object_ =
-    Object.selectionForCompositeField "startInternetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
-
-
-type alias RemovePlayerRequiredArguments =
-    { playerToken : String
-    , playerId : String
-    }
-
-
-{-|
-
-  - playerToken -
-  - playerId -
-
--}
-removePlayer : RemovePlayerRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
-removePlayer requiredArgs object_ =
-    Object.selectionForCompositeField "removePlayer" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string, Argument.required "playerId" requiredArgs.playerId Encode.string ] object_ identity
+createMap : CreateMapRequiredArguments -> SelectionSet decodesTo Api.Object.Map -> SelectionSet decodesTo RootMutation
+createMap requiredArgs object_ =
+    Object.selectionForCompositeField "createMap" [ Argument.required "map" requiredArgs.map Api.InputObject.encodeMapInput ] object_ identity
 
 
 type alias JoinInternetGameRequiredArguments =
@@ -84,7 +67,38 @@ joinInternetGame requiredArgs object_ =
     Object.selectionForCompositeField "joinInternetGame" [ Argument.required "joinGameToken" requiredArgs.joinGameToken Encode.string ] object_ identity
 
 
-type alias GetInterentGameRequiredArguments =
+type alias RemovePlayerRequiredArguments =
+    { playerToken : String
+    , playerId : Int
+    }
+
+
+{-|
+
+  - playerToken -
+  - playerId -
+
+-}
+removePlayer : RemovePlayerRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
+removePlayer requiredArgs object_ =
+    Object.selectionForCompositeField "removePlayer" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string, Argument.required "playerId" requiredArgs.playerId Encode.int ] object_ identity
+
+
+type alias SaveGameRequiredArguments =
+    { game : Api.InputObject.GameInput }
+
+
+{-|
+
+  - game -
+
+-}
+saveGame : SaveGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
+saveGame requiredArgs object_ =
+    Object.selectionForCompositeField "saveGame" [ Argument.required "game" requiredArgs.game Api.InputObject.encodeGameInput ] object_ identity
+
+
+type alias StartInternetGameRequiredArguments =
     { playerToken : String }
 
 
@@ -93,9 +107,9 @@ type alias GetInterentGameRequiredArguments =
   - playerToken -
 
 -}
-getInterentGame : GetInterentGameRequiredArguments -> SelectionSet decodesTo Api.Union.InternetGame -> SelectionSet decodesTo RootMutation
-getInterentGame requiredArgs object_ =
-    Object.selectionForCompositeField "getInterentGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
+startInternetGame : StartInternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
+startInternetGame requiredArgs object_ =
+    Object.selectionForCompositeField "startInternetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
 
 
 type alias UpdatePlayerNameRequiredArguments =
@@ -130,31 +144,3 @@ type alias UpdatePlayerColorRequiredArguments =
 updatePlayerColor : UpdatePlayerColorRequiredArguments -> SelectionSet decodesTo Api.Object.InternetGameConfiguration -> SelectionSet decodesTo RootMutation
 updatePlayerColor requiredArgs object_ =
     Object.selectionForCompositeField "updatePlayerColor" [ Argument.required "color" requiredArgs.color Api.InputObject.encodeColorInput, Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
-
-
-type alias SaveGameRequiredArguments =
-    { game : Api.InputObject.GameInput }
-
-
-{-|
-
-  - game -
-
--}
-saveGame : SaveGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
-saveGame requiredArgs object_ =
-    Object.selectionForCompositeField "saveGame" [ Argument.required "game" requiredArgs.game Api.InputObject.encodeGameInput ] object_ identity
-
-
-type alias CreateMapRequiredArguments =
-    { map : Api.InputObject.MapInput }
-
-
-{-|
-
-  - map -
-
--}
-createMap : CreateMapRequiredArguments -> SelectionSet decodesTo Api.Object.Map -> SelectionSet decodesTo RootMutation
-createMap requiredArgs object_ =
-    Object.selectionForCompositeField "createMap" [ Argument.required "map" requiredArgs.map Api.InputObject.encodeMapInput ] object_ identity

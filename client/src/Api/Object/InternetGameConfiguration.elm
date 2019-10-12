@@ -32,6 +32,6 @@ mapId =
 
 
 {-| -}
-userPlayerId : SelectionSet String Api.Object.InternetGameConfiguration
+userPlayerId : SelectionSet Int Api.Object.InternetGameConfiguration
 userPlayerId =
-    Object.selectionForField "String" "userPlayerId" [] Decode.string
+    Object.selectionForField "Int" "userPlayerId" [] Decode.int

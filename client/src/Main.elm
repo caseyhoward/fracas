@@ -88,6 +88,10 @@ update msg model =
             Page.NewGame.update subMsg newGame
                 |> updateWith NewGame GotNewGameMsg
 
+        ( GotInternetGameMsg subMsg, InternetGame internetGame ) ->
+            Page.InternetGame.update subMsg internetGame
+                |> updateWith InternetGame GotInternetGameMsg
+
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
             ( model, Cmd.none )

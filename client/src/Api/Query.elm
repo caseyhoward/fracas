@@ -56,9 +56,9 @@ type alias InternetGameRequiredArguments =
   - playerToken -
 
 -}
-internetGame : InternetGameRequiredArguments -> SelectionSet decodesTo Api.Union.InternetGame -> SelectionSet (Maybe decodesTo) RootQuery
+internetGame : InternetGameRequiredArguments -> SelectionSet decodesTo Api.Union.InternetGame -> SelectionSet decodesTo RootQuery
 internetGame requiredArgs object_ =
-    Object.selectionForCompositeField "internetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ (identity >> Decode.nullable)
+    Object.selectionForCompositeField "internetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
 
 
 {-| -}

@@ -11,7 +11,7 @@ module Game exposing
     , get
     , getAttackStrengthPerPlayer
     , getCountriesToRender
-    , getCountryAttackers
+    , getCountryAttackers,selectionSet
     , getCountryDefenders
     , getCountryDefenseStrength
     , getCountryHasPort

@@ -171,20 +171,20 @@ union InternetGame = InternetGameConfiguration | Game
 
 type InternetGamePlayerConfiguration {
   color: Color!
-  playerId: String!
-  mapId: String!
+  playerId: Int!
+  name: String!
 }
 
 type InternetGameConfiguration {
   players: [InternetGamePlayerConfiguration!]!
   mapId: String!
-  userPlayerId: String!
+  userPlayerId: Int!
 }
 
 type Query {
   map(id: String!): Map!
   game(id: String!): Game!
-  internetGame(playerToken: String!): InternetGame
+  internetGame(playerToken: String!): InternetGame!
   maps: [Map!]!
 }
 
@@ -198,9 +198,8 @@ type Mutation {
   createGame(newGame: NewGameInput!): Game!
   createInternetGame: String! # Returns hostToken
   createMap(map: MapInput!): Map!
-  getInterentGame(playerToken: String!): InternetGame!
   joinInternetGame(joinGameToken: String!): InternetGameConfiguration! # Returns player token
-  removePlayer(playerToken: String!, playerId: String!): Game! # Must be host
+  removePlayer(playerToken: String!, playerId: Int!): Game! # Must be host
   saveGame(game: GameInput!): Game! # Local only
   startInternetGame(playerToken: String!): Game! # Must be host
   updatePlayerName(

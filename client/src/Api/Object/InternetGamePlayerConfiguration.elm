@@ -26,12 +26,12 @@ color object_ =
 
 
 {-| -}
-playerId : SelectionSet String Api.Object.InternetGamePlayerConfiguration
+playerId : SelectionSet Int Api.Object.InternetGamePlayerConfiguration
 playerId =
-    Object.selectionForField "String" "playerId" [] Decode.string
+    Object.selectionForField "Int" "playerId" [] Decode.int
 
 
 {-| -}
-mapId : SelectionSet String Api.Object.InternetGamePlayerConfiguration
-mapId =
-    Object.selectionForField "String" "mapId" [] Decode.string
+name : SelectionSet String Api.Object.InternetGamePlayerConfiguration
+name =
+    Object.selectionForField "String" "name" [] Decode.string
