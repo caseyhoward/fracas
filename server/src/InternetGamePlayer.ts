@@ -8,8 +8,11 @@ export interface InternetGamePlayer {
 
 export async function findByToken(
   executeQuery: Database.ExecuteQuery,
-  playerToken: PlayerToken
+  playerToken: string
 ): Promise<InternetGamePlayer> {
-  const result = await executeQuery("");
+  const result = await executeQuery(
+    "SELECT * FROM internet_game_players WHERE token = $1",
+    [playerToken]
+  );
   return result.rows[0];
 }

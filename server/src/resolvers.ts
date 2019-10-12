@@ -13,27 +13,27 @@ function gameToJson(gameRow: any): Game {
 
 export const resolvers: Resolvers = {
   Query: {
-    map: async (_, map, __, ___) => {
+    map: async (_, map) => {
       return Map.findById(database.query, map.id);
     },
-    game: async (_, game, __, ___) => {
+    game: async (_, game) => {
       const result = await database.query("SELECT * FROM games WHERE id = $1", [
         game.id
       ]);
       return gameToJson(result.rows[0]);
     },
-    maps: async (_, x, __, ___) => Map.findAll(database.query)
+    maps: async () => Map.findAll(database.query)
   },
   Game: {
-    map: async (game: Game) => {
-      return await Map.findById(database.query, game.map.id);
+    map: async (game: any) => {
+      return await Map.findById(database.query, game.mapId);
     }
   },
   Mutation: {
-    createMap: async (_: any, mapInput) => {
+    createMap: async (_, mapInput) => {
       return Map.create(database.query, mapInput.map);
     },
-    createInternetGame: async (_: any) => {
+    createInternetGame: async () => {
       return createInternetGameResolver(() =>
         InternetGame.create(database.query)
       );

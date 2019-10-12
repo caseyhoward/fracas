@@ -10,56 +10,73 @@ export async function findFirstId(
   return result.rows[0].id;
 }
 
-export interface NewMap {
-  name: string;
-  mapJson: string;
-}
-
-// export interface Map {
-//   id: string;
-//   name: string;
-//   mapJson: string;
-// }
-
 export async function findById(
   executeQuery: Database.ExecuteQuery,
   id: string
 ): Promise<Map> {
   const result = await executeQuery("SELECT * FROM maps WHERE id = $1", [id]);
-  return mapToJson(result.rows[0]);
+  return mapsRowToMap(result.rows[0]);
 }
 
 export async function findAll(
   executeQuery: Database.ExecuteQuery
 ): Promise<Map[]> {
-  try {
-    const result = await executeQuery("SELECT * FROM maps");
-
-    return result.rows.map(mapToJson);
-  } catch (error) {
-    console.log(error);
-    throw error;
-  }
+  const result = await executeQuery("SELECT * FROM maps");
+  return result.rows.map(mapsRowToMap);
 }
 
 export async function create(
   executeQuery: Database.ExecuteQuery,
   newMap: MapInput
 ): Promise<Map> {
-  try {
-    const result = await executeQuery(
-      "INSERT INTO maps(name, map_json) VALUES ($1, $2) RETURNING *",
-      [newMap.name, JSON.stringify(newMap)]
-    );
-    return mapToJson(result.rows[0]);
-  } catch (error) {
-    console.log(error);
-    return error.toString();
-  }
+  const row = mapInputToMapsRow(newMap);
+  const result = await executeQuery(
+    "INSERT INTO maps(name, map_json) VALUES ($1, $2) RETURNING *",
+    [row.name, row.map_json]
+  );
+  return mapsRowToMap(result.rows[0]);
 }
 
-function mapToJson(mapRow: any): Map {
-  console.log(mapRow);
-  const mapWithoutId = JSON.parse(mapRow.map_json);
-  return { ...mapWithoutId, id: mapRow.id };
+interface MapsRow {
+  id: number;
+  name: string;
+  map_json: string;
+}
+
+interface NewMapsRow {
+  name: string;
+  map_json: string;
+}
+
+function mapsRowToMap(mapsRow: MapsRow): Map {
+  const parsedJson = JSON.parse(mapsRow.map_json);
+  return {
+    id: mapsRow.id.toString(),
+    name: parsedJson.name,
+    countries: parsedJson.countries,
+    bodiesOfWater: parsedJson.bodiesOfWater,
+    dimensions: parsedJson.dimensions
+  };
+}
+
+function mapToMapsRow(map: Map): MapsRow {
+  const mapJson = JSON.stringify({
+    name: map.name,
+    countries: map.countries,
+    bodiesOfWater: map.bodiesOfWater,
+    dimensions: map.dimensions
+  });
+
+  return { id: parseInt(map.id, 10), map_json: mapJson, name: map.name };
+}
+
+function mapInputToMapsRow(map: MapInput): NewMapsRow {
+  const mapJson = JSON.stringify({
+    name: map.name,
+    countries: map.countries,
+    bodiesOfWater: map.bodiesOfWater,
+    dimensions: map.dimensions
+  });
+
+  return { map_json: mapJson, name: map.name };
 }
