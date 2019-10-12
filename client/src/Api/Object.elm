@@ -29,6 +29,14 @@ type Game
     = Game
 
 
+type InternetGameConfiguration
+    = InternetGameConfiguration
+
+
+type InternetGamePlayerConfiguration
+    = InternetGamePlayerConfiguration
+
+
 type Map
     = Map
 

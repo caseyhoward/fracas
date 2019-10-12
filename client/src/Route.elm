@@ -10,6 +10,7 @@ import Browser.Navigation as Nav
 import Game
 import Html exposing (Attribute)
 import Html.Attributes as Attr
+import InternetGame
 import Player
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
@@ -23,6 +24,8 @@ type Route
     = ConfiguringGame
     | NewMap
     | Game Game.Id Player.Id
+    | InternetGame InternetGame.PlayerToken
+    | JoinInternetGame String
 
 
 href : Route -> Attribute msg
@@ -55,6 +58,8 @@ parser =
         [ Parser.map ConfiguringGame Parser.top
         , Parser.map ConfiguringGame (s "games" </> s "new")
         , Parser.map Game (s "games" </> Game.urlParser </> s "players" </> Player.urlParser)
+        , Parser.map InternetGame (s "games" </> s "internet" </> InternetGame.playerTokenUrlParser)
+        , Parser.map JoinInternetGame (s "games" </> s "internet" </> s "join" </> Parser.string)
         , Parser.map NewMap (s "maps" </> s "new")
         ]
 
@@ -66,6 +71,12 @@ routeToString page =
             case page of
                 ConfiguringGame ->
                     [ "games", "new" ]
+
+                InternetGame playerKey ->
+                    [ "games", "internet", "new", playerKey |> InternetGame.playerTokenToString ]
+
+                JoinInternetGame joinGameKey ->
+                    [ "games", "internet", "join", joinGameKey ]
 
                 Game gameId playerId ->
                     [ "games", Game.idToString gameId, "players", Player.idToString playerId ]

@@ -5,6 +5,7 @@ import Browser.Navigation
 import Html
 import Page
 import Page.Game
+import Page.InternetGame
 import Page.NewGame
 import Page.NewMap
 import Route
@@ -20,6 +21,7 @@ type Model
     = NewGame Page.NewGame.Model
     | Game Page.Game.Model
     | NewMap Page.NewMap.Model
+    | InternetGame Page.InternetGame.Model
     | Redirect Session.Session
 
 
@@ -53,6 +55,7 @@ type
     | GotGameMsg Page.Game.Msg
     | GotNewGameMsg Page.NewGame.Msg
     | GotNewMapMsg Page.NewMap.Msg
+    | GotInternetGameMsg Page.InternetGame.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -116,6 +119,13 @@ changeRouteTo maybeRoute model =
             Page.NewMap.init session
                 |> updateWith NewMap GotNewMapMsg
 
+        Just (Route.InternetGame playerToken) ->
+            Page.InternetGame.init session playerToken
+                |> updateWith InternetGame GotInternetGameMsg
+
+        Just (Route.JoinInternetGame gameToken) ->
+            Debug.todo ""
+
         Nothing ->
             ( model, Cmd.none )
 
@@ -128,6 +138,9 @@ toSession model =
 
         Game activeGame ->
             activeGame |> Page.Game.toSession
+
+        InternetGame internetGame ->
+            internetGame |> Page.InternetGame.toSession
 
         NewMap newMap ->
             newMap |> Page.NewMap.toSession
@@ -159,6 +172,9 @@ view model =
         Game activeGame ->
             viewPage Page.Game GotGameMsg (Page.Game.view activeGame)
 
+        InternetGame internetGame ->
+            viewPage Page.InternetGame GotInternetGameMsg (Page.InternetGame.view internetGame)
+
         NewMap newMap ->
             viewPage Page.NewMap GotNewMapMsg (Page.NewMap.view newMap)
 
@@ -178,6 +194,9 @@ subscriptions model =
 
         Game activeGame ->
             Sub.map GotGameMsg (Page.Game.subscriptions activeGame)
+
+        InternetGame internetGame ->
+            Sub.map GotInternetGameMsg (Page.InternetGame.subscriptions internetGame)
 
         NewMap newMap ->
             Sub.map GotNewMapMsg (Page.NewMap.subscriptions newMap)

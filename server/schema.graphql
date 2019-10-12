@@ -167,14 +167,48 @@ enum PlayerTurnStage {
   GameOver
 }
 
+union InternetGame = InternetGameConfiguration | Game
+
+type InternetGamePlayerConfiguration {
+  color: Color!
+  playerId: String!
+  mapId: String!
+}
+
+type InternetGameConfiguration {
+  players: [InternetGamePlayerConfiguration!]!
+  mapId: String!
+  userPlayerId: String!
+}
+
 type Query {
   map(id: String!): Map!
   game(id: String!): Game!
+  internetGame(playerToken: String!): InternetGame
   maps: [Map!]!
 }
 
+# type NewInternetGameTokens {
+#   hostPlayerToken: String!
+#   joinGameToken: String!
+#   userPlayerId: String!
+# }
+
 type Mutation {
   createGame(newGame: NewGameInput!): Game!
-  saveGame(game: GameInput!): Game!
+  createInternetGame: String! # Returns hostToken
   createMap(map: MapInput!): Map!
+  getInterentGame(playerToken: String!): InternetGame!
+  joinInternetGame(joinGameToken: String!): InternetGameConfiguration! # Returns player token
+  removePlayer(playerToken: String!, playerId: String!): Game! # Must be host
+  saveGame(game: GameInput!): Game! # Local only
+  startInternetGame(playerToken: String!): Game! # Must be host
+  updatePlayerName(
+    name: String!
+    playerToken: String!
+  ): InternetGameConfiguration!
+  updatePlayerColor(
+    color: ColorInput!
+    playerToken: String!
+  ): InternetGameConfiguration!
 }

@@ -47,6 +47,20 @@ game requiredArgs object_ =
     Object.selectionForCompositeField "game" [ Argument.required "id" requiredArgs.id Encode.string ] object_ identity
 
 
+type alias InternetGameRequiredArguments =
+    { playerToken : String }
+
+
+{-|
+
+  - playerToken -
+
+-}
+internetGame : InternetGameRequiredArguments -> SelectionSet decodesTo Api.Union.InternetGame -> SelectionSet (Maybe decodesTo) RootQuery
+internetGame requiredArgs object_ =
+    Object.selectionForCompositeField "internetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ (identity >> Decode.nullable)
+
+
 {-| -}
 maps : SelectionSet decodesTo Api.Object.Map -> SelectionSet (List decodesTo) RootQuery
 maps object_ =

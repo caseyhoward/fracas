@@ -33,6 +33,105 @@ createGame requiredArgs object_ =
     Object.selectionForCompositeField "createGame" [ Argument.required "newGame" requiredArgs.newGame Api.InputObject.encodeNewGameInput ] object_ identity
 
 
+{-| -}
+createInternetGame : SelectionSet String RootMutation
+createInternetGame =
+    Object.selectionForField "String" "createInternetGame" [] Decode.string
+
+
+type alias StartInternetGameRequiredArguments =
+    { playerToken : String }
+
+
+{-|
+
+  - playerToken -
+
+-}
+startInternetGame : StartInternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
+startInternetGame requiredArgs object_ =
+    Object.selectionForCompositeField "startInternetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
+
+
+type alias RemovePlayerRequiredArguments =
+    { playerToken : String
+    , playerId : String
+    }
+
+
+{-|
+
+  - playerToken -
+  - playerId -
+
+-}
+removePlayer : RemovePlayerRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
+removePlayer requiredArgs object_ =
+    Object.selectionForCompositeField "removePlayer" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string, Argument.required "playerId" requiredArgs.playerId Encode.string ] object_ identity
+
+
+type alias JoinInternetGameRequiredArguments =
+    { joinGameToken : String }
+
+
+{-|
+
+  - joinGameToken -
+
+-}
+joinInternetGame : JoinInternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.InternetGameConfiguration -> SelectionSet decodesTo RootMutation
+joinInternetGame requiredArgs object_ =
+    Object.selectionForCompositeField "joinInternetGame" [ Argument.required "joinGameToken" requiredArgs.joinGameToken Encode.string ] object_ identity
+
+
+type alias GetInterentGameRequiredArguments =
+    { playerToken : String }
+
+
+{-|
+
+  - playerToken -
+
+-}
+getInterentGame : GetInterentGameRequiredArguments -> SelectionSet decodesTo Api.Union.InternetGame -> SelectionSet decodesTo RootMutation
+getInterentGame requiredArgs object_ =
+    Object.selectionForCompositeField "getInterentGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
+
+
+type alias UpdatePlayerNameRequiredArguments =
+    { name : String
+    , playerToken : String
+    }
+
+
+{-|
+
+  - name -
+  - playerToken -
+
+-}
+updatePlayerName : UpdatePlayerNameRequiredArguments -> SelectionSet decodesTo Api.Object.InternetGameConfiguration -> SelectionSet decodesTo RootMutation
+updatePlayerName requiredArgs object_ =
+    Object.selectionForCompositeField "updatePlayerName" [ Argument.required "name" requiredArgs.name Encode.string, Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
+
+
+type alias UpdatePlayerColorRequiredArguments =
+    { color : Api.InputObject.ColorInput
+    , playerToken : String
+    }
+
+
+{-|
+
+  - color -
+  - playerToken -
+
+-}
+updatePlayerColor : UpdatePlayerColorRequiredArguments -> SelectionSet decodesTo Api.Object.InternetGameConfiguration -> SelectionSet decodesTo RootMutation
+updatePlayerColor requiredArgs object_ =
+    Object.selectionForCompositeField "updatePlayerColor" [ Argument.required "color" requiredArgs.color Api.InputObject.encodeColorInput, Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
+
+
 type alias SaveGameRequiredArguments =
     { game : Api.InputObject.GameInput }
 

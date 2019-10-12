@@ -1,7 +1,5 @@
 module Page.NewGame exposing (Model, Msg, init, subscriptions, toSession, update, view)
 
--- import Map
-
 import Browser.Dom
 import Browser.Events
 import Colors
@@ -17,6 +15,7 @@ import Game
 import Graphql.Http
 import Html
 import Html.Attributes
+import InternetGame
 import Map
 import Maps.FracasTitle
 import Player
@@ -96,6 +95,7 @@ type Msg
     | ColorSelectBackgroundClicked
     | LocalGameClicked
     | InternetGameClicked
+    | InternetGameCreated (RemoteData.RemoteData (Graphql.Http.Error InternetGame.PlayerToken) InternetGame.PlayerToken)
     | FocusResult (Result Browser.Dom.Error ())
     | RemovePlayer Int
     | StartGameClicked
@@ -115,9 +115,7 @@ update msg model =
         ChoosingGameType session ->
             case msg of
                 InternetGameClicked ->
-                    ( model
-                    , Cmd.none
-                    )
+                    ( model, InternetGame.create InternetGameCreated )
 
                 LocalGameClicked ->
                     ( LocalGame
@@ -144,6 +142,9 @@ update msg model =
                         , Map.getAll GotMaps
                         ]
                     )
+
+                InternetGameCreated playerToken ->
+                    ( model, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -261,6 +262,9 @@ updateLocalGame msg model =
                 InternetGameClicked ->
                     ( model, Cmd.none )
 
+                InternetGameCreated _ ->
+                    ( model, Cmd.none )
+
         GeneratingRandomTroopCounts newGame session ->
             case msg of
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
@@ -322,6 +326,9 @@ updateLocalGame msg model =
                     ( model, Cmd.none )
 
                 InternetGameClicked ->
+                    ( model, Cmd.none )
+
+                InternetGameCreated _ ->
                     ( model, Cmd.none )
 
         Redirecting _ _ ->
