@@ -1,7 +1,7 @@
 import { Game, NewGameInput, GameInput } from "./api/graphql";
 export { Game, NewGameInput } from "./api/graphql";
 
-import * as Database from "./db";
+import * as Database from "./Database";
 
 function gameInputToGameRow(gameInput: NewGameInput): NewGameRow {
   const gameJson = {

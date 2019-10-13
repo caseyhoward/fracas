@@ -1,4 +1,4 @@
-import * as Database from "./db";
+import * as Database from "./Database";
 
 export { Map, MapInput } from "./api/graphql";
 import { Map, MapInput } from "./api/graphql";
@@ -15,7 +15,6 @@ export async function findById(
   id: string
 ): Promise<Map> {
   const result = await executeQuery("SELECT * FROM maps WHERE id = $1", [id]);
-  console.log(id, result);
   return mapsRowToMap(result.rows[0]);
 }
 

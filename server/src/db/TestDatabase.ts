@@ -1,5 +1,5 @@
 import { Pool, QueryConfig, QueryResult, QueryResultRow } from "pg";
-import * as Database from "./index";
+import * as Database from "../Database";
 
 // PGHOST='localhost'
 // PGUSER=process.env.USER

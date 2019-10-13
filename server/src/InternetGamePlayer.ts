@@ -1,4 +1,4 @@
-import * as Database from "./db";
+import * as Database from "./Database";
 
 interface Row {
   id: number;
@@ -11,7 +11,7 @@ export interface InternetGamePlayer {
   gameId: number;
 }
 
-export async function findGameIdByToken(
+export async function findByToken(
   executeQuery: Database.ExecuteQuery,
   playerToken: string
 ): Promise<InternetGamePlayer> {

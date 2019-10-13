@@ -198,11 +198,12 @@ type Mutation {
   removePlayer(playerToken: String!, playerId: Int!): Game! # Must be host
   saveGame(game: GameInput!): Game! # Local only
   startInternetGame(playerToken: String!): Game! # Must be host
-  updatePlayerName(
+  updateMapForInternetGame(playerToken: String!, mapId: String!): InternetGame!
+  updatePlayerNameForInternetGame(
     name: String!
     playerToken: String!
   ): InternetGameConfiguration!
-  updatePlayerColor(
+  updatePlayerColorForInternetGame(
     color: ColorInput!
     playerToken: String!
   ): InternetGameConfiguration!

@@ -1,7 +1,7 @@
 import * as InternetGame from "./InternetGame";
 import * as InternetGamePlayer from "./InternetGamePlayer";
 import * as Map from "./Map";
-import * as TestDatabase from "./db";
+import * as TestDatabase from "./Database";
 
 describe("InternetGame", () => {
   describe(".create", () => {

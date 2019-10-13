@@ -40,8 +40,8 @@ type Msg
     | UpdatePlayerName String
     | RemovePlayer Int
     | StartGameClicked
-    | AddPlayer
     | SelectMap String
+    | MapUpdated (RemoteData.RemoteData (Graphql.Http.Error InternetGame.GameOrConfiguration) InternetGame.GameOrConfiguration)
 
 
 type Model
@@ -53,6 +53,7 @@ type Model
 type alias LoadingModel =
     { session : Session.Session
     , gameAndMaps : RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet
+    , playerToken : InternetGame.PlayerToken
     }
 
 
@@ -61,18 +62,29 @@ type alias ConfiguringModel =
     , configuration : InternetGame.Configuration
     , maps : List Map.Map
     , configureColor : Maybe Int
-    , selectedMapId : Maybe String
+    , playerToken : InternetGame.PlayerToken
     }
 
 
 type alias PlayingModel =
-    { session : Session.Session, game : Game.Game }
+    { session : Session.Session
+    , game : Game.Game
+    , playerToken : InternetGame.PlayerToken
+    }
 
 
 type alias SelectionSet =
     { gameOrConfiguration : InternetGame.GameOrConfiguration
     , maps : List Map.Map
     }
+
+
+
+-- updateMapSelectionSet : InternetGame.PlayerToken -> Graphql.SelectionSet.SelectionSet SelectionSet Graphql.Operation.RootQuery
+-- updateMapSelectionSet playerToken =
+--     Graphql.SelectionSet.map2 SelectionSet
+--         (Api.Mutation.updateMapForInternetGame { playerToken = playerToken |> InternetGame.playerTokenToString } InternetGame.selectionSet)
+--         (Api.Query.maps Map.mapSelection)
 
 
 selectionSet : InternetGame.PlayerToken -> Graphql.SelectionSet.SelectionSet SelectionSet Graphql.Operation.RootQuery
@@ -91,7 +103,7 @@ getGameAndMaps playerToken toMsg =
 
 init : Session.Session -> InternetGame.PlayerToken -> ( Model, Cmd Msg )
 init session playerToken =
-    ( Loading { session = session, gameAndMaps = RemoteData.Loading }
+    ( Loading { session = session, gameAndMaps = RemoteData.Loading, playerToken = playerToken }
     , getGameAndMaps playerToken GotGameAndMaps
     )
 
@@ -124,13 +136,13 @@ update msg model =
                                         , configuration = configuration
                                         , configureColor = Nothing
                                         , maps = gameAndMaps.maps
-                                        , selectedMapId = Nothing -- TODO: Select first map if they have already loaded
+                                        , playerToken = loadingModel.playerToken
                                         }
                                     , Cmd.none
                                     )
 
                                 InternetGame.InternetGame game ->
-                                    ( Playing { session = loadingModel.session, game = game }, Cmd.none )
+                                    ( Playing { session = loadingModel.session, game = game, playerToken = loadingModel.playerToken }, Cmd.none )
 
                         _ ->
                             ( Loading { loadingModel | gameAndMaps = gameRemoteData }, Cmd.none )
@@ -139,7 +151,25 @@ update msg model =
                     Debug.todo ""
 
         Configuring configuringModel ->
-            Debug.todo ""
+            case msg of
+                SelectMap mapId ->
+                    let
+                        configuration =
+                            configuringModel.configuration
+
+                        updatedConfiguringModel : InternetGame.Configuration
+                        updatedConfiguringModel =
+                            { configuration | mapId = mapId |> Map.Id }
+                    in
+                    ( Configuring { configuringModel | configuration = updatedConfiguringModel }
+                    , InternetGame.updateMap configuringModel.playerToken (Map.Id mapId) MapUpdated
+                    )
+
+                MapUpdated updatedConfiguration ->
+                    ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         Playing playingModel ->
             Debug.todo ""
@@ -190,7 +220,7 @@ viewConfiguring configuringModel =
                             (playerConfiguration p)
                         , Element.el
                             [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
-                            (NewGame.mapConfiguration configuringModel.maps configuringModel.selectedMapId SelectMap)
+                            (NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap)
                         ]
                     )
                 , Element.el [ Element.width Element.fill ] (NewGame.startGameButton StartGameClicked)
@@ -208,13 +238,11 @@ playerConfiguration players =
         , Element.padding 20
         , Element.Border.rounded 10
         ]
-        ((Element.el [ Element.Font.bold ] (Element.text "Players")
+        (Element.el [ Element.Font.bold ] (Element.text "Players")
             :: (players
                     |> Dict.map playerFields
                     |> Dict.values
                )
-         )
-            ++ [ NewGame.addPlayerButton AddPlayer ]
         )
 
 

@@ -8,6 +8,7 @@ module InternetGame exposing
     , playerTokenToString
     , playerTokenUrlParser
     , selectionSet
+    , updateMap
     )
 
 -- import Api.Object
@@ -81,31 +82,42 @@ get playerToken toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
+updateMap : PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
+updateMap playerToken mapId toMsg =
+    Api.Mutation.updateMapForInternetGame
+        { playerToken = playerToken |> playerTokenToString, mapId = mapId |> Map.idToString }
+        selectionSet
+        |> Graphql.Http.mutationRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+configurationSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGameConfiguration
+configurationSelectionSet =
+    Graphql.SelectionSet.map3
+        (\players mapId userPlayerId ->
+            InternetGameConfiguration
+                { players = players
+                , mapId = mapId
+                , userPlayerId = Player.Id userPlayerId
+                }
+        )
+        (Api.Object.InternetGameConfiguration.players playerConfigurationSelectionSet)
+        (Graphql.SelectionSet.map Map.Id Api.Object.InternetGameConfiguration.mapId)
+        Api.Object.InternetGameConfiguration.userPlayerId
+
+
+playerConfigurationSelectionSet : Graphql.SelectionSet.SelectionSet PlayerConfiguration Api.Object.InternetGamePlayerConfiguration
+playerConfigurationSelectionSet =
+    Graphql.SelectionSet.map3
+        PlayerConfiguration
+        (Graphql.SelectionSet.map Player.Id Api.Object.InternetGamePlayerConfiguration.playerId)
+        (Api.Object.InternetGamePlayerConfiguration.color Colors.selectionSet)
+        Api.Object.InternetGamePlayerConfiguration.name
+
+
 selectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Union.InternetGame
 selectionSet =
     let
-        playerConfigurationSelectionSet : Graphql.SelectionSet.SelectionSet PlayerConfiguration Api.Object.InternetGamePlayerConfiguration
-        playerConfigurationSelectionSet =
-            Graphql.SelectionSet.map3
-                PlayerConfiguration
-                (Graphql.SelectionSet.map Player.Id Api.Object.InternetGamePlayerConfiguration.playerId)
-                (Api.Object.InternetGamePlayerConfiguration.color Colors.selectionSet)
-                Api.Object.InternetGamePlayerConfiguration.name
-
-        configurationSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGameConfiguration
-        configurationSelectionSet =
-            Graphql.SelectionSet.map3
-                (\players mapId userPlayerId ->
-                    InternetGameConfiguration
-                        { players = players
-                        , mapId = mapId
-                        , userPlayerId = Player.Id userPlayerId
-                        }
-                )
-                (Api.Object.InternetGameConfiguration.players playerConfigurationSelectionSet)
-                (Graphql.SelectionSet.map Map.Id Api.Object.InternetGameConfiguration.mapId)
-                Api.Object.InternetGameConfiguration.userPlayerId
-
         gameSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.Game
         gameSelectionSet =
             Graphql.SelectionSet.map InternetGame Game.selectionSet
