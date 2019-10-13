@@ -176,8 +176,10 @@ type InternetGamePlayerConfiguration {
 }
 
 type InternetGameConfiguration {
+  id: Int!
   players: [InternetGamePlayerConfiguration!]!
   mapId: String!
+  joinToken: String!
   userPlayerId: Int!
 }
 

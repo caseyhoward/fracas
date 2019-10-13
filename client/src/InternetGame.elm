@@ -1,4 +1,14 @@
-module InternetGame exposing (Configuration, GameOrConfiguration(..), InternetGameTokens, PlayerToken, create, get, playerTokenToString, playerTokenUrlParser)
+module InternetGame exposing
+    ( Configuration
+    , GameOrConfiguration(..)
+    , InternetGameTokens
+    , PlayerToken
+    , create
+    , get
+    , playerTokenToString
+    , playerTokenUrlParser
+    , selectionSet
+    )
 
 -- import Api.Object
 
@@ -10,27 +20,28 @@ import Api.Query
 import Api.Union
 import Api.Union.InternetGame
 import Colors
+import Dict
 import Game
 import Graphql.Http
 import Graphql.SelectionSet
 import Map
+import Player
 import RemoteData
 import Url.Parser
 
 
-type PlayerId
-    = PlayerId Int
-
-
 type alias PlayerConfiguration =
-    { id : PlayerId
+    { id : Player.Id
     , color : Colors.Color
     , name : String
     }
 
 
 type alias Configuration =
-    { players : List PlayerConfiguration, mapId : Map.Id, userPlayerId : PlayerId }
+    { players : List PlayerConfiguration
+    , mapId : Map.Id
+    , userPlayerId : Player.Id
+    }
 
 
 type JoinToken
@@ -63,12 +74,21 @@ create toMsg =
 
 get : PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
 get playerToken toMsg =
+    Api.Query.internetGame
+        { playerToken = playerToken |> playerTokenToString }
+        selectionSet
+        |> Graphql.Http.queryRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+selectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Union.InternetGame
+selectionSet =
     let
         playerConfigurationSelectionSet : Graphql.SelectionSet.SelectionSet PlayerConfiguration Api.Object.InternetGamePlayerConfiguration
         playerConfigurationSelectionSet =
             Graphql.SelectionSet.map3
                 PlayerConfiguration
-                (Graphql.SelectionSet.map PlayerId Api.Object.InternetGamePlayerConfiguration.playerId)
+                (Graphql.SelectionSet.map Player.Id Api.Object.InternetGamePlayerConfiguration.playerId)
                 (Api.Object.InternetGamePlayerConfiguration.color Colors.selectionSet)
                 Api.Object.InternetGamePlayerConfiguration.name
 
@@ -79,7 +99,7 @@ get playerToken toMsg =
                     InternetGameConfiguration
                         { players = players
                         , mapId = mapId
-                        , userPlayerId = PlayerId userPlayerId
+                        , userPlayerId = Player.Id userPlayerId
                         }
                 )
                 (Api.Object.InternetGameConfiguration.players playerConfigurationSelectionSet)
@@ -89,19 +109,11 @@ get playerToken toMsg =
         gameSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.Game
         gameSelectionSet =
             Graphql.SelectionSet.map InternetGame Game.selectionSet
-
-        selectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Union.InternetGame
-        selectionSet =
-            Api.Union.InternetGame.fragments
-                { onInternetGameConfiguration = configurationSelectionSet
-                , onGame = gameSelectionSet
-                }
     in
-    Api.Query.internetGame
-        { playerToken = playerToken |> playerTokenToString }
-        selectionSet
-        |> Graphql.Http.queryRequest "http://192.168.1.7:4000"
-        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+    Api.Union.InternetGame.fragments
+        { onInternetGameConfiguration = configurationSelectionSet
+        , onGame = gameSelectionSet
+        }
 
 
 playerTokenToString : PlayerToken -> String

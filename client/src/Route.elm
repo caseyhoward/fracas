@@ -72,11 +72,11 @@ routeToString page =
                 ConfiguringGame ->
                     [ "games", "new" ]
 
-                InternetGame playerKey ->
-                    [ "games", "internet", "new", playerKey |> InternetGame.playerTokenToString ]
-
                 JoinInternetGame joinGameKey ->
                     [ "games", "internet", "join", joinGameKey ]
+
+                InternetGame playerKey ->
+                    [ "games", "internet", playerKey |> InternetGame.playerTokenToString ]
 
                 Game gameId playerId ->
                     [ "games", Game.idToString gameId, "players", Player.idToString playerId ]

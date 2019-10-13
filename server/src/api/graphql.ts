@@ -98,8 +98,10 @@ export type InternetGame = InternetGameConfiguration | Game;
 
 export type InternetGameConfiguration = {
    __typename?: 'InternetGameConfiguration',
+  id: Scalars['Int'],
   players: Array<InternetGamePlayerConfiguration>,
   mapId: Scalars['String'],
+  joinToken: Scalars['String'],
   userPlayerId: Scalars['Int'],
 };
 
@@ -462,8 +464,10 @@ export type InternetGameResolvers<ContextType = any, ParentType extends Resolver
 };
 
 export type InternetGameConfigurationResolvers<ContextType = any, ParentType extends ResolversParentTypes['InternetGameConfiguration'] = ResolversParentTypes['InternetGameConfiguration']> = {
+  id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>,
   players?: Resolver<Array<ResolversTypes['InternetGamePlayerConfiguration']>, ParentType, ContextType>,
   mapId?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
+  joinToken?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
   userPlayerId?: Resolver<ResolversTypes['Int'], ParentType, ContextType>,
 };
 

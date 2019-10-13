@@ -3,7 +3,6 @@ module Page.NewGame exposing (Model, Msg, init, subscriptions, toSession, update
 import Browser.Dom
 import Browser.Events
 import Colors
-import Country
 import Dict
 import Element
 import Element.Background
@@ -17,7 +16,7 @@ import Html
 import Html.Attributes
 import InternetGame
 import Map
-import Maps.FracasTitle
+import NewGame
 import Player
 import Random
 import Random.Dict
@@ -464,7 +463,7 @@ viewLocalGame model =
                             (mapConfiguration (model |> toNewGame |> .maps) (model |> toNewGame |> .selectedMapId))
                         ]
                     )
-                , Element.el [ Element.width Element.fill ] startGameButton
+                , Element.el [ Element.width Element.fill ] (NewGame.startGameButton StartGameClicked)
                 ]
             )
     }
@@ -484,7 +483,7 @@ layout overlay body =
             , Element.spacingXY 0 20
             , Element.Background.color (Colors.blue |> Colors.toElementColor)
             ]
-            [ Element.el [ Element.width Element.fill, Element.centerX ] title
+            [ Element.el [ Element.width Element.fill, Element.centerX ] NewGame.title
             , body
             ]
         )
@@ -510,7 +509,7 @@ playerColorSelect players maybePlayerId =
                             , Element.wrappedRow [ Element.width Element.fill ]
                                 (players
                                     |> Player.availablePlayerColors
-                                    |> List.map (\color -> Element.el [ Element.height (Element.px 50) ] (colorButton color (ColorSelected playerId color)))
+                                    |> List.map (\color -> Element.el [ Element.height (Element.px 50) ] (NewGame.colorButton color (ColorSelected playerId color)))
                                 )
                             ]
                         )
@@ -598,18 +597,13 @@ mapSelect maps selectedMapId =
                                         (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
                                         [ Element.el
                                             [ Element.width (Element.px 50) ]
-                                            (Element.Lazy.lazy2 mapView map.countries map.dimensions)
+                                            (Element.Lazy.lazy2 NewGame.mapView map.countries map.dimensions)
                                         , Element.text map.name
                                         ]
                                 )
                         )
             }
         )
-
-
-mapView : Country.Countries -> ( Int, Int ) -> Element.Element Msg
-mapView countries dimensions =
-    Map.view 100 countries dimensions |> Element.html
 
 
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
@@ -627,7 +621,7 @@ playerConfiguration players =
                     |> Dict.values
                )
          )
-            ++ [ addPlayerButton ]
+            ++ [ NewGame.addPlayerButton AddPlayer ]
         )
 
 
@@ -644,75 +638,10 @@ playerFields playerId player =
                 , placeholder = Nothing
                 , label = Element.Input.labelHidden "Name"
                 }
-            , colorButton player.color (ChangeColorButtonClicked playerId)
+            , NewGame.colorButton player.color (ChangeColorButtonClicked playerId)
             ]
-        , removePlayerButton playerId
+        , NewGame.removePlayerButton playerId RemovePlayer
         ]
-
-
-addPlayerButton : Element.Element Msg
-addPlayerButton =
-    Element.Input.button
-        (ViewHelpers.defaultButtonAttributes
-            ++ [ Element.Background.color (Colors.blue |> Colors.toElementColor)
-               , Element.Font.color (Colors.white |> Colors.toElementColor)
-               ]
-        )
-        { onPress = Just AddPlayer, label = ViewHelpers.centerText "Add Player" }
-
-
-removePlayerButton : Int -> Element.Element Msg
-removePlayerButton playerId =
-    Element.Input.button
-        (ViewHelpers.defaultButtonAttributes
-            ++ [ Element.Background.color (Colors.red |> Colors.toElementColor)
-               , Element.Font.color (Colors.white |> Colors.toElementColor)
-               , Element.Font.size 10
-               ]
-        )
-        { onPress = Just (RemovePlayer playerId), label = Element.text "Delete" }
-
-
-colorButton : Colors.Color -> Msg -> Element.Element Msg
-colorButton color message =
-    Element.Input.button
-        (ViewHelpers.defaultButtonAttributes
-            ++ [ Element.Background.color (color |> Colors.toElementColor)
-               , Element.height Element.fill
-               , Element.width (Element.px 50)
-               ]
-        )
-        { onPress = Just message, label = Element.text "" }
-
-
-startGameButton : Element.Element Msg
-startGameButton =
-    Element.el [ Element.centerX ]
-        (Element.Input.button
-            (ViewHelpers.defaultButtonAttributes
-                ++ [ Element.Background.color (Element.rgb255 0 150 0)
-                   , Element.width Element.fill
-                   , Element.padding 20
-                   , Element.centerX
-                   , Element.Font.size 30
-                   , Element.Font.color (Colors.white |> ViewHelpers.colorToElementColor)
-                   ]
-            )
-            { onPress = Just StartGameClicked, label = ViewHelpers.centerText "Start Game" }
-        )
-
-
-title : Element.Element Msg
-title =
-    let
-        titleMap =
-            Map.parse "title" Maps.FracasTitle.map
-    in
-    Element.el
-        [ Element.width (Element.px 400)
-        , Element.centerX
-        ]
-        (Map.view 100 titleMap.countries titleMap.dimensions |> Element.html)
 
 
 
