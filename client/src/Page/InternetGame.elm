@@ -94,17 +94,17 @@ selectionSet playerToken =
         (Api.Query.maps Map.mapSelection)
 
 
-getGameAndMaps : InternetGame.PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet -> msg) -> Cmd msg
-getGameAndMaps playerToken toMsg =
+getGameAndMaps : String -> InternetGame.PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet -> msg) -> Cmd msg
+getGameAndMaps apiUrl playerToken toMsg =
     selectionSet playerToken
-        |> Graphql.Http.queryRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.queryRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 init : Session.Session -> InternetGame.PlayerToken -> ( Model, Cmd Msg )
 init session playerToken =
     ( Loading { session = session, gameAndMaps = RemoteData.Loading, playerToken = playerToken }
-    , getGameAndMaps playerToken GotGameAndMaps
+    , getGameAndMaps session.apiUrl playerToken GotGameAndMaps
     )
 
 
@@ -162,7 +162,7 @@ update msg model =
                             { configuration | mapId = mapId |> Map.Id }
                     in
                     ( Configuring { configuringModel | configuration = updatedConfiguringModel }
-                    , InternetGame.updateMap configuringModel.playerToken (Map.Id mapId) MapUpdated
+                    , InternetGame.updateMap configuringModel.session.apiUrl configuringModel.playerToken (Map.Id mapId) MapUpdated
                     )
 
                 MapUpdated updatedConfiguration ->

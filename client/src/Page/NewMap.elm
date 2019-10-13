@@ -55,7 +55,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         CreateMap ->
-            ( model, Map.create model.newMap CreatedMap )
+            ( model, Map.create model.session.apiUrl model.newMap CreatedMap )
 
         CreatedMap savingMap ->
             ( { model | savingMap = savingMap }, Cmd.none )

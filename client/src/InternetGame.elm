@@ -21,7 +21,6 @@ import Api.Query
 import Api.Union
 import Api.Union.InternetGame
 import Colors
-import Dict
 import Game
 import Graphql.Http
 import Graphql.SelectionSet
@@ -64,30 +63,30 @@ type GameOrConfiguration
     | InternetGameConfiguration Configuration
 
 
-create : (RemoteData.RemoteData (Graphql.Http.Error PlayerToken) PlayerToken -> msg) -> Cmd msg
-create toMsg =
+create : String -> (RemoteData.RemoteData (Graphql.Http.Error PlayerToken) PlayerToken -> msg) -> Cmd msg
+create apiUrl toMsg =
     (Api.Mutation.createInternetGame
         |> Graphql.SelectionSet.map PlayerToken
     )
-        |> Graphql.Http.mutationRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.mutationRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-get : PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
-get playerToken toMsg =
+get : String ->PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
+get apiUrl playerToken toMsg =
     Api.Query.internetGame
         { playerToken = playerToken |> playerTokenToString }
         selectionSet
-        |> Graphql.Http.queryRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.queryRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-updateMap : PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
-updateMap playerToken mapId toMsg =
+updateMap :String -> PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
+updateMap apiUrl playerToken mapId toMsg =
     Api.Mutation.updateMapForInternetGame
         { playerToken = playerToken |> playerTokenToString, mapId = mapId |> Map.idToString }
         selectionSet
-        |> Graphql.Http.mutationRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.mutationRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 

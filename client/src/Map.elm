@@ -82,10 +82,10 @@ idToString (Id id) =
     id
 
 
-getAll : (RemoteData.RemoteData (Graphql.Http.Error (List Map)) (List Map) -> msg) -> Cmd msg
-getAll toMsg =
+getAll :String ->  (RemoteData.RemoteData (Graphql.Http.Error (List Map)) (List Map) -> msg) -> Cmd msg
+getAll apiUrl toMsg =
     Api.Query.maps mapSelection
-        |> Graphql.Http.queryRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.queryRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
@@ -124,8 +124,8 @@ mapSelection =
         |> Graphql.SelectionSet.map mapSelectionSetToMap
 
 
-create : NewMap -> (RemoteData.RemoteData (Graphql.Http.Error Map) Map -> msg) -> Cmd msg
-create newMap toMsg =
+create : String -> NewMap-> (RemoteData.RemoteData (Graphql.Http.Error Map) Map -> msg) -> Cmd msg
+create apiUrl newMap toMsg =
     let
         countryInputs : List Api.InputObject.CountryInput
         countryInputs =
@@ -160,7 +160,7 @@ create newMap toMsg =
             requiredFields |> Api.InputObject.buildMapInput
     in
     Api.Mutation.createMap { map = input } mapSelection
-        |> Graphql.Http.mutationRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.mutationRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 

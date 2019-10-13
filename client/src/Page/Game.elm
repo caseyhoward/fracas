@@ -76,7 +76,7 @@ init session activeGameId playerId =
         , playerId = playerId
         , session = session
         }
-    , Game.get activeGameId GotGame
+    , Game.get session.apiUrl activeGameId GotGame
     )
 
 
@@ -158,7 +158,7 @@ update msg model =
         GameLoaded gameLoadedModel ->
             case msg of
                 CountryMouseUp clickedCountryId ->
-                    handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel
+                    handleCountryMouseUpFromPlayer gameLoadedModel.session.apiUrl clickedCountryId gameLoadedModel
 
                 CountryMouseDown clickedCountryId ->
                     ( handleCountryMouseDown clickedCountryId gameLoadedModel |> GameLoaded, Cmd.none )
@@ -201,8 +201,8 @@ updateModelWithGameResult result model =
             { model | error = Just (Game.errorToString error) }
 
 
-handleCountryMouseUpFromPlayer : Country.Id -> GameLoadedModel -> ( Model, Cmd Msg )
-handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel =
+handleCountryMouseUpFromPlayer : String -> Country.Id -> GameLoadedModel -> ( Model, Cmd Msg )
+handleCountryMouseUpFromPlayer apiUrl clickedCountryId gameLoadedModel =
     case gameLoadedModel.countryBorderHelperOutlineStatus of
         CountryBorderHelperOutlineActive _ ->
             ( GameLoaded gameLoadedModel, Cmd.none )
@@ -220,7 +220,7 @@ handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel =
                                 , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
                             }
                             RemoteData.Loading
-                        , Game.save updatedGame GotGame
+                        , Game.save apiUrl updatedGame GotGame
                         )
 
                     Err error ->

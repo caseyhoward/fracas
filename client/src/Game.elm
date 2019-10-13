@@ -90,8 +90,8 @@ type Id
     = Id String
 
 
-create : String -> Dict.Dict Int Player.NewPlayer -> Dict.Dict String TroopCount.TroopCount -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
-create selectedMapId newPlayers neutralTroopCounts toMsg =
+create : String -> String -> Dict.Dict Int Player.NewPlayer -> Dict.Dict String TroopCount.TroopCount -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
+create apiUrl selectedMapId newPlayers neutralTroopCounts toMsg =
     let
         playerTurnInput : Api.InputObject.PlayerTurnInput
         playerTurnInput =
@@ -117,12 +117,12 @@ create selectedMapId newPlayers neutralTroopCounts toMsg =
             Api.Object.Game.id |> Graphql.SelectionSet.map Id
     in
     Api.Mutation.createGame input gameSelectionSet
-        |> Graphql.Http.mutationRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.mutationRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-save : Game -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
-save game toMsg =
+save : String ->  Game -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
+save apiUrl game toMsg =
     let
         input : Api.Mutation.SaveGameRequiredArguments
         input =
@@ -137,19 +137,19 @@ save game toMsg =
             }
     in
     Api.Mutation.saveGame input selectionSet
-        |> Graphql.Http.mutationRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.mutationRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-get : Id -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
-get (Id id) toMsg =
+get : String -> Id -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
+get apiUrl (Id id) toMsg =
     let
         query : SelectionSet Game Graphql.Operation.RootQuery
         query =
             Api.Query.game { id = id } selectionSet
     in
     query
-        |> Graphql.Http.queryRequest "http://192.168.1.7:4000"
+        |> Graphql.Http.queryRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 

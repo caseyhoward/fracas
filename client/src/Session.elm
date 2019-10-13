@@ -24,6 +24,7 @@ type alias Session =
 
     -- , gameMaps : Dict.Dict String Map.Map
     , activeGames : Dict.Dict String Game.Game
+    , apiUrl : String
     }
 
 
@@ -37,6 +38,7 @@ init key =
     --         [ ( "1", Map.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare )
     --         ]
     , activeGames = Dict.empty
+    , apiUrl = "http://192.168.1.7:4000"
     }
 
 

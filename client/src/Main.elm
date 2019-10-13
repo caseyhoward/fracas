@@ -127,7 +127,7 @@ changeRouteTo maybeRoute model =
             Page.InternetGame.init session playerToken
                 |> updateWith InternetGame GotInternetGameMsg
 
-        Just (Route.JoinInternetGame gameToken) ->
+        Just (Route.JoinInternetGame _) ->
             Debug.todo ""
 
         Nothing ->

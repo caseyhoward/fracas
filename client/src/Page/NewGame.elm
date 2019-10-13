@@ -114,7 +114,7 @@ update msg model =
         ChoosingGameType session ->
             case msg of
                 InternetGameClicked ->
-                    ( model, InternetGame.create InternetGameCreated )
+                    ( model, InternetGame.create session.apiUrl InternetGameCreated )
 
                 LocalGameClicked ->
                     ( LocalGame
@@ -138,7 +138,7 @@ update msg model =
                                         WindowResized 0 0
                             )
                             Browser.Dom.getViewport
-                        , Map.getAll GotMaps
+                        , Map.getAll session.apiUrl GotMaps
                         ]
                     )
 
@@ -274,7 +274,7 @@ updateLocalGame msg model =
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
                     case newGame.selectedMapId of
                         Just mapId ->
-                            ( model, Game.create mapId newGame.players neutralCountryTroopCounts GameCreated )
+                            ( model, Game.create session.apiUrl mapId newGame.players neutralCountryTroopCounts GameCreated )
 
                         Nothing ->
                             ( model, Cmd.none )
