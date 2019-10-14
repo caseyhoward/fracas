@@ -1,4 +1,3 @@
-import * as InternetGameConfigurationRepository from "./InternetGameConfigurationRepository";
 import { ExecuteQuery } from "../Database";
 import * as Models from "./Models";
 

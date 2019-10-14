@@ -1,6 +1,6 @@
 import * as Uuid from "../../Uuid";
 import { ExecuteQuery } from "../../Database";
-import * as Map from "../../Map";
+import * as Map from "../../repositories/MapRepository";
 import * as Models from "../../repositories/Models";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 

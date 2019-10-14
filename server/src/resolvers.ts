@@ -1,23 +1,19 @@
 import * as Database from "./Database";
 import * as InternetGameRepository from "./repositories/InternetGameRepository";
-import * as InternetGameConfigurationRepository from "./repositories/InternetGameConfigurationRepository";
 import * as InternetGamePlayerRepository from "./repositories/InternetGamePlayerRepository";
 import * as Game from "./Game";
-import * as Map from "./Map";
-import * as Uuid from "./Uuid";
-import * as Models from "./repositories/Models";
+import * as Map from "./repositories/MapRepository";
 import * as graphql from "./api/graphql";
 
 import {
   Resolvers,
   MutationUpdateMapForInternetGameArgs,
-  RequireFields,
-  MutationJoinInternetGameArgs,
-  InternetGamePlayerConfiguration
+  RequireFields
 } from "./api/graphql";
 
 import { createInternetGame } from "./resolvers/Mutation/createInternetGame";
 import internetGame from "./resolvers/Query/internetGame";
+import joinInternetGame from "./resolvers/Mutation/joinInternetGame";
 
 export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
   return {
@@ -45,7 +41,7 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
       createGame: async (_, createGame): Promise<Game.Game> => {
         return Game.create(executeQuery, createGame.newGame);
       },
-      // joinInternetGame,
+      joinInternetGame: (_, input) => joinInternetGame(executeQuery, input),
       saveGame: async (_, saveGame) => {
         return Game.update(executeQuery, saveGame.game);
       }
@@ -70,39 +66,6 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
     );
     throw "todo";
     // return await InternetGameRepository.findById(executeQuery, player.gameId);
-  }
-
-  async function joinInternetGame(
-    //   _: any,
-    input: RequireFields<MutationJoinInternetGameArgs, "joinGameToken">
-  ): Promise<string> {
-    throw "todo";
-    //   const playerToken = Uuid.generate();
-    //   const internetGame = await InternetGameConfigurationRepository.findByJoinToken(
-    //     executeQuery,
-    //     input.joinGameToken
-    //   );
-    //   const newPlayer = await InternetGamePlayerRepository.create(
-    //     executeQuery,
-    //     internetGame.id,
-    //     playerToken
-    //   );
-    //   const updatedPlayers: InternetGamePlayerConfiguration[] = [
-    //     ...internetGame.players,
-    //     {
-    //       __typename: "InternetGamePlayerConfiguration",
-    //       playerId: newPlayer.id,
-    //       name: "",
-    //       color: { red: 0, green: 0, blue: 0 }
-    //     }
-    //   ];
-    //   const updatedGame: Models.InternetGame = {
-    //     ...internetGame,
-    //     players: updatedPlayers
-    //   };
-    //   InternetGameRepository.save(executeQuery, updatedGame);
-
-    //   return playerToken;
   }
 
   async function gameMapResolver(game: graphql.Game) {

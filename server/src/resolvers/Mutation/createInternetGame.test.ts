@@ -1,7 +1,7 @@
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import { createInternetGame, defaultHostColor } from "./createInternetGame";
-import * as Map from "../../Map";
+import * as Map from "../../repositories/MapRepository";
 import * as TestDatabase from "../../db/TestDatabase";
 
 describe("Mutation.createInternetGame", () => {
