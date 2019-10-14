@@ -35,29 +35,35 @@ export async function updateMap(
 
 export async function save(
   executeQuery: ExecuteQuery,
-  internetGame: Models.InternetGame
+  internetGame: Models.InternetGameConfiguration
 ): Promise<void> {
-  // const updatedRow: Row = internetGameToRow(internetGame);
-  // if (internetGame.__typename ===)
-  // await executeQuery(
-  //   "UPDATE internet_games SET join_token = $1, map_id = $2, game_json = $3 WHERE id = $4",
-  //   [
-  //     internetGame.joinToken,
-  //     internetGame.map_id,
-  //     internetGame.game_json,
-  //     internetGame.id
-  //   ]
-  // );
-  throw "todo";
+  const configurationJson: Models.ConfigurationJson = {
+    __typename: "ConfigurationJson",
+    players: internetGame.players
+  };
+  await executeQuery(
+    "UPDATE internet_games SET join_token = $1, map_id = $2, game_json = $3 WHERE id = $4",
+    [
+      internetGame.joinToken,
+      internetGame.mapId,
+      configurationJson,
+      internetGame.id
+    ]
+  );
 }
 
-// export async function addPlayer(
-//   executeQuery: ExecuteQuery,
-//   id: number,
-//   player: Models.PlayerConfiguration
-// ): Promise<void> {
-//   const game = findById(executeQuery, id);
-// }
+export async function addPlayer(
+  executeQuery: ExecuteQuery,
+  id: number,
+  player: Models.PlayerConfiguration
+): Promise<void> {
+  const configuration = await findById(executeQuery, id);
+  const updatedConfiguration = {
+    ...configuration,
+    players: [...configuration.players, player]
+  };
+  save(executeQuery, updatedConfiguration);
+}
 
 // export async function findByPlayerToken(
 //   executeQuery: ExecuteQuery,

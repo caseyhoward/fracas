@@ -2,7 +2,7 @@ import * as InternetGameConfigurationRepository from "./InternetGameConfiguratio
 import * as TestDatabase from "../db/TestDatabase";
 import * as Models from "./Models";
 
-describe.only("InternetGameConfigurationRepository.create", () => {
+describe("InternetGameConfigurationRepository.create", () => {
   it("creates a new Internet game", async () => {
     const newConfiguration: Models.NewInternetGameConfiguration = {
       __typename: "NewInternetGameConfiguration",
@@ -55,18 +55,3 @@ describe("InternetGameConfigurationRepository.addPlayer", () => {
 });
 
 afterEach(() => TestDatabase.clean(TestDatabase.query));
-// await Map.create(TestDatabase.query, {
-//   name: "abc",
-//   countries: [],
-//   bodiesOfWater: [],
-//   dimensions: { width: 0, height: 0 }
-// });
-// const playerToken = await InternetGame.create(TestDatabase.query);
-// const player = await InternetGamePlayer.findByToken(
-//   TestDatabase.query,
-//   playerToken
-// );
-// const game = await InternetGame.findById(
-//   TestDatabase.query,
-//   player.gameId
-// );
