@@ -12,6 +12,7 @@ type Page
     | NewGame
     | InternetGame
     | NewMap
+    | JoinInternetGame
 
 
 view : Page -> { title : String, content : Html.Html msg } -> Browser.Document msg

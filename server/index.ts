@@ -17,7 +17,7 @@ const executePostgresQuery = Database.postgres({
   password: "abc123",
   port: 5432
 });
-executePostgresQuery("SELECT * FROM maps;").then(x => console.log(x));
+
 fs.readFile("schema.graphql", (error, typeDefsData) => {
   const options = {
     port: 4000,

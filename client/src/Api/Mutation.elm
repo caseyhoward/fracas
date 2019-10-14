@@ -62,9 +62,9 @@ type alias JoinInternetGameRequiredArguments =
   - joinGameToken -
 
 -}
-joinInternetGame : JoinInternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.InternetGameConfiguration -> SelectionSet decodesTo RootMutation
-joinInternetGame requiredArgs object_ =
-    Object.selectionForCompositeField "joinInternetGame" [ Argument.required "joinGameToken" requiredArgs.joinGameToken Encode.string ] object_ identity
+joinInternetGame : JoinInternetGameRequiredArguments -> SelectionSet String RootMutation
+joinInternetGame requiredArgs =
+    Object.selectionForField "String" "joinInternetGame" [ Argument.required "joinGameToken" requiredArgs.joinGameToken Encode.string ] Decode.string
 
 
 type alias RemovePlayerRequiredArguments =

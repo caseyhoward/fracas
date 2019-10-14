@@ -194,7 +194,7 @@ type Mutation {
   createGame(newGame: NewGameInput!): Game!
   createInternetGame: String! # Returns hostToken
   createMap(map: MapInput!): Map!
-  joinInternetGame(joinGameToken: String!): InternetGameConfiguration! # Returns player token
+  joinInternetGame(joinGameToken: String!): String! # Returns player token
   removePlayer(playerToken: String!, playerId: Int!): Game! # Must be host
   saveGame(game: GameInput!): Game! # Local only
   startInternetGame(playerToken: String!): Game! # Must be host

@@ -1,17 +1,21 @@
-import * as database from "./Database";
-import * as InternetGame from "./InternetGame";
+import * as Database from "./Database";
 import * as InternetGamePlayer from "./InternetGamePlayer";
+import * as InternetGameRepository from "./repositories/InternetGameRepository";
 import * as Game from "./Game";
 import * as Map from "./Map";
+import * as Uuid from "./Uuid";
+
 import {
   Resolvers,
-  NewGameInput,
   MutationUpdateMapForInternetGameArgs,
   RequireFields,
-  InternetGameConfiguration
+  MutationJoinInternetGameArgs,
+  InternetGamePlayerConfiguration
 } from "./api/graphql";
 
-export function resolvers(executeQuery: database.ExecuteQuery): Resolvers {
+import { createInternetGame } from "./resolvers/Mutation/createInternetGame";
+
+export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
   return {
     Query: {
       map: async (_, map) => {
@@ -22,10 +26,13 @@ export function resolvers(executeQuery: database.ExecuteQuery): Resolvers {
       },
       maps: async () => {
         return Map.findAll(executeQuery);
-      },
-      internetGame: async (_, game) => {
-        return InternetGame.findByPlayerToken(executeQuery, game.playerToken);
       }
+      // internetGame: async (_, game) => {
+      //   return InternetGameRepository.findByPlayerToken(
+      //     executeQuery,
+      //     game.playerToken
+      //   );
+      // }
     },
     Game: {
       map: gameMapResolver
@@ -34,13 +41,12 @@ export function resolvers(executeQuery: database.ExecuteQuery): Resolvers {
       createMap: async (_, mapInput) => {
         return Map.create(executeQuery, mapInput.map);
       },
-      createInternetGame: async () => {
-        return InternetGame.create(executeQuery);
-      },
-      updateMapForInternetGame,
+      createInternetGame: () => createInternetGame(executeQuery),
+      // updateMapForInternetGame,
       createGame: async (_, createGame): Promise<Game.Game> => {
         return Game.create(executeQuery, createGame.newGame);
       },
+      joinInternetGame,
       saveGame: async (_, saveGame) => {
         return Game.update(executeQuery, saveGame.game);
       }
@@ -53,18 +59,53 @@ export function resolvers(executeQuery: database.ExecuteQuery): Resolvers {
       MutationUpdateMapForInternetGameArgs,
       "playerToken" | "mapId"
     >
-  ): Promise<InternetGame.InternetGame> {
-    console.log("hello");
+  ): Promise<InternetGameRepository.InternetGame> {
     const player = await InternetGamePlayer.findByToken(
       executeQuery,
       input.playerToken
     );
-    await InternetGame.updateMap(
+    await InternetGameRepository.updateMap(
       executeQuery,
       player.gameId.toString(),
       parseInt(input.mapId, 10)
     );
-    return await InternetGame.findById(executeQuery, player.gameId);
+    return await InternetGameRepository.findById(executeQuery, player.gameId);
+  }
+
+  async function joinInternetGame(
+    _: any,
+    input: RequireFields<MutationJoinInternetGameArgs, "joinGameToken">
+  ): Promise<string> {
+    const playerToken = Uuid.generate();
+    const internetGame = await InternetGameRepository.findByJoinToken(
+      executeQuery,
+      input.joinGameToken
+    );
+    if (InternetGameRepository.isConfiguring(internetGame)) {
+      const newPlayer = await InternetGamePlayer.create(
+        executeQuery,
+        internetGame.id.toString(),
+        playerToken
+      );
+      const updatedPlayers: InternetGamePlayerConfiguration[] = [
+        ...internetGame.players,
+        {
+          playerId: newPlayer.id,
+          name: "",
+          color: { red: 0, green: 0, blue: 0 }
+        }
+      ];
+      const updatedGame: InternetGameRepository.InternetGame = {
+        ...internetGame,
+        players: updatedPlayers
+      };
+      console.log();
+      InternetGameRepository.save(executeQuery, updatedGame);
+    } else {
+      throw "You can only join games that haven't started";
+    }
+
+    return playerToken;
   }
 
   async function gameMapResolver(game: Game.Game) {

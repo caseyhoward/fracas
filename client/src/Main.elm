@@ -6,6 +6,7 @@ import Html
 import Page
 import Page.Game
 import Page.InternetGame
+import Page.JoinInternetGame
 import Page.NewGame
 import Page.NewMap
 import Route
@@ -22,6 +23,7 @@ type Model
     | Game Page.Game.Model
     | NewMap Page.NewMap.Model
     | InternetGame Page.InternetGame.Model
+    | JoinInternetGame Page.JoinInternetGame.Model
     | Redirect Session.Session
 
 
@@ -56,6 +58,7 @@ type
     | GotNewGameMsg Page.NewGame.Msg
     | GotNewMapMsg Page.NewMap.Msg
     | GotInternetGameMsg Page.InternetGame.Msg
+    | GotJoinInternetGameMsg Page.JoinInternetGame.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -92,6 +95,10 @@ update msg model =
             Page.InternetGame.update subMsg internetGame
                 |> updateWith InternetGame GotInternetGameMsg
 
+        ( GotJoinInternetGameMsg subMsg, JoinInternetGame internetGame ) ->
+            Page.JoinInternetGame.update subMsg internetGame
+                |> updateWith JoinInternetGame GotJoinInternetGameMsg
+
         ( _, _ ) ->
             -- Disregard messages that arrived for the wrong page.
             ( model, Cmd.none )
@@ -127,8 +134,9 @@ changeRouteTo maybeRoute model =
             Page.InternetGame.init session playerToken
                 |> updateWith InternetGame GotInternetGameMsg
 
-        Just (Route.JoinInternetGame _) ->
-            Debug.todo ""
+        Just (Route.JoinInternetGame joinToken) ->
+            Page.JoinInternetGame.init session joinToken
+                |> updateWith JoinInternetGame GotJoinInternetGameMsg
 
         Nothing ->
             ( model, Cmd.none )
@@ -145,6 +153,9 @@ toSession model =
 
         InternetGame internetGame ->
             internetGame |> Page.InternetGame.toSession
+
+        JoinInternetGame internetGame ->
+            internetGame |> Page.JoinInternetGame.toSession
 
         NewMap newMap ->
             newMap |> Page.NewMap.toSession
@@ -179,6 +190,9 @@ view model =
         InternetGame internetGame ->
             viewPage Page.InternetGame GotInternetGameMsg (Page.InternetGame.view internetGame)
 
+        JoinInternetGame joinInternetGame ->
+            viewPage Page.JoinInternetGame GotJoinInternetGameMsg (Page.JoinInternetGame.view joinInternetGame)
+
         NewMap newMap ->
             viewPage Page.NewMap GotNewMapMsg (Page.NewMap.view newMap)
 
@@ -201,6 +215,9 @@ subscriptions model =
 
         InternetGame internetGame ->
             Sub.map GotInternetGameMsg (Page.InternetGame.subscriptions internetGame)
+
+        JoinInternetGame _ ->
+            Sub.none
 
         NewMap newMap ->
             Sub.map GotNewMapMsg (Page.NewMap.subscriptions newMap)

@@ -79,14 +79,6 @@ type alias SelectionSet =
     }
 
 
-
--- updateMapSelectionSet : InternetGame.PlayerToken -> Graphql.SelectionSet.SelectionSet SelectionSet Graphql.Operation.RootQuery
--- updateMapSelectionSet playerToken =
---     Graphql.SelectionSet.map2 SelectionSet
---         (Api.Mutation.updateMapForInternetGame { playerToken = playerToken |> InternetGame.playerTokenToString } InternetGame.selectionSet)
---         (Api.Query.maps Map.mapSelection)
-
-
 selectionSet : InternetGame.PlayerToken -> Graphql.SelectionSet.SelectionSet SelectionSet Graphql.Operation.RootQuery
 selectionSet playerToken =
     Graphql.SelectionSet.map2 SelectionSet
@@ -203,7 +195,7 @@ viewConfiguring configuringModel =
                     )
                 |> Dict.fromList
     in
-    { title = "Configure Local Game"
+    { title = "Configure Internet Game"
     , content =
         layout
             (playerColorSelect p configuringModel.configureColor)
@@ -212,7 +204,14 @@ viewConfiguring configuringModel =
                 , Element.spacingXY 0 20
                 , Element.Background.color (Colors.blue |> Colors.toElementColor)
                 ]
-                [ Element.el [ Element.width Element.fill, Element.centerX ]
+                [ Element.el
+                    [ Element.Background.color (Colors.gray |> Colors.toElementColor)
+                    , Element.Border.rounded 10
+                    , Element.centerX
+                    , Element.padding 20
+                    ]
+                    (Element.text ("/games/internet/join/" ++ (configuringModel.configuration.joinToken |> InternetGame.joinTokenToString)))
+                , Element.el [ Element.centerX ]
                     (Element.wrappedRow
                         [ Element.spacing 40, Element.centerX ]
                         [ Element.el

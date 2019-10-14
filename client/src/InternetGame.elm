@@ -2,16 +2,17 @@ module InternetGame exposing
     ( Configuration
     , GameOrConfiguration(..)
     , InternetGameTokens
+    , JoinToken
     , PlayerToken
     , create
     , get
+    , joinGame
+    , joinTokenToString
     , playerTokenToString
     , playerTokenUrlParser
     , selectionSet
-    , updateMap
+    , updateMap, joinTokenUrlParser
     )
-
--- import Api.Object
 
 import Api.Mutation
 import Api.Object
@@ -40,6 +41,7 @@ type alias PlayerConfiguration =
 type alias Configuration =
     { players : List PlayerConfiguration
     , mapId : Map.Id
+    , joinToken : JoinToken
     , userPlayerId : Player.Id
     }
 
@@ -72,7 +74,7 @@ create apiUrl toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-get : String ->PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
+get : String -> PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
 get apiUrl playerToken toMsg =
     Api.Query.internetGame
         { playerToken = playerToken |> playerTokenToString }
@@ -81,7 +83,20 @@ get apiUrl playerToken toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-updateMap :String -> PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
+joinGame : String -> JoinToken -> (RemoteData.RemoteData (Graphql.Http.Error PlayerToken) PlayerToken -> msg) -> Cmd msg
+joinGame apiUrl (JoinToken joinToken) toMsg =
+    Api.Mutation.joinInternetGame { joinGameToken = joinToken }
+        |> Graphql.SelectionSet.map PlayerToken
+        |> Graphql.Http.mutationRequest apiUrl
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+joinTokenToString : JoinToken -> String
+joinTokenToString (JoinToken joinToken) =
+    joinToken
+
+
+updateMap : String -> PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
 updateMap apiUrl playerToken mapId toMsg =
     Api.Mutation.updateMapForInternetGame
         { playerToken = playerToken |> playerTokenToString, mapId = mapId |> Map.idToString }
@@ -92,16 +107,18 @@ updateMap apiUrl playerToken mapId toMsg =
 
 configurationSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGameConfiguration
 configurationSelectionSet =
-    Graphql.SelectionSet.map3
-        (\players mapId userPlayerId ->
+    Graphql.SelectionSet.map4
+        (\players mapId joinToken userPlayerId ->
             InternetGameConfiguration
                 { players = players
                 , mapId = mapId
                 , userPlayerId = Player.Id userPlayerId
+                , joinToken = JoinToken joinToken
                 }
         )
         (Api.Object.InternetGameConfiguration.players playerConfigurationSelectionSet)
         (Graphql.SelectionSet.map Map.Id Api.Object.InternetGameConfiguration.mapId)
+        Api.Object.InternetGameConfiguration.joinToken
         Api.Object.InternetGameConfiguration.userPlayerId
 
 
@@ -132,6 +149,10 @@ playerTokenToString (PlayerToken token) =
     token
 
 
+
 playerTokenUrlParser : Url.Parser.Parser (PlayerToken -> a) a
 playerTokenUrlParser =
     Url.Parser.custom "PLAYERTOKEN" (\playerId -> playerId |> PlayerToken |> Just)
+joinTokenUrlParser : Url.Parser.Parser (JoinToken -> a) a
+joinTokenUrlParser =
+    Url.Parser.custom "JOINTOKEN" (\joinToken -> joinToken |> JoinToken |> Just)

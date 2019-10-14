@@ -25,7 +25,7 @@ type Route
     | NewMap
     | Game Game.Id Player.Id
     | InternetGame InternetGame.PlayerToken
-    | JoinInternetGame String
+    | JoinInternetGame InternetGame.JoinToken
 
 
 href : Route -> Attribute msg
@@ -59,7 +59,7 @@ parser =
         , Parser.map ConfiguringGame (s "games" </> s "new")
         , Parser.map Game (s "games" </> Game.urlParser </> s "players" </> Player.urlParser)
         , Parser.map InternetGame (s "games" </> s "internet" </> InternetGame.playerTokenUrlParser)
-        , Parser.map JoinInternetGame (s "games" </> s "internet" </> s "join" </> Parser.string)
+        , Parser.map JoinInternetGame (s "games" </> s "internet" </> s "join" </> InternetGame.joinTokenUrlParser)
         , Parser.map NewMap (s "maps" </> s "new")
         ]
 
@@ -73,7 +73,7 @@ routeToString page =
                     [ "games", "new" ]
 
                 JoinInternetGame joinGameKey ->
-                    [ "games", "internet", "join", joinGameKey ]
+                    [ "games", "internet", "join", joinGameKey |> InternetGame.joinTokenToString ]
 
                 InternetGame playerKey ->
                     [ "games", "internet", playerKey |> InternetGame.playerTokenToString ]
