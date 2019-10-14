@@ -11,7 +11,6 @@
   "license": "ISC",
   "dependencies": {
     "apollo": "^2.19.1",
-    "global": "^4.4.0",
     "graphql-yoga": "^1.18.3",
     "pg": "^7.12.1",
     "typescript": "^3.6.3"
