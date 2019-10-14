@@ -37,6 +37,7 @@ export async function createInternetGame(
   //   game_json: JSON.stringify(newRowGameJson)
   // };
   const internetGameId = await InternetGameRepository.create(executeQuery, {
+    __typename: "NewConfiguration",
     joinToken: joinToken,
     mapId: mapId,
     players: []
@@ -47,12 +48,21 @@ export async function createInternetGame(
     internetGameId.toString(),
     hostToken
   );
-  const host: InternetGamePlayerConfiguration = {
-    color: { red: 0, green: 255, blue: 0 },
+
+  const host: InternetGameRepository.PlayerConfiguration = {
+    color: { __typename: "Color", red: 0, green: 255, blue: 0 },
     name: "Host",
     playerId: hostGamePlayer.id
   };
+
   await InternetGameRepository.addPlayer(executeQuery, internetGameId, host);
 
   return hostToken;
 }
+
+export const defaultHostColor: InternetGameRepository.Color = {
+  __typename: "Color",
+  red: 0,
+  green: 255,
+  blue: 0
+};

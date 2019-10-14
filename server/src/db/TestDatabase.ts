@@ -8,3 +8,10 @@ export const query: Database.ExecuteQuery = Database.postgres({
   password: "abc123",
   port: 5432
 });
+
+export async function clean(query: Database.ExecuteQuery): Promise<void> {
+  await query("TRUNCATE TABLE maps");
+  await query("TRUNCATE TABLE games");
+  await query("TRUNCATE TABLE internet_games");
+  await query("TRUNCATE TABLE internet_game_players");
+}
