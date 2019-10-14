@@ -1,5 +1,6 @@
 import * as InternetGameConfigurationRepository from "./InternetGameConfigurationRepository";
 import * as TestDatabase from "../db/TestDatabase";
+
 import * as Models from "./Models";
 import * as Uuid from "../Uuid";
 
@@ -81,5 +82,3 @@ describe("InternetGameConfigurationRepository.findByJoinToken", () => {
     expect(savedConfigurationByJoinToken).toEqual(savedConfiguration);
   });
 });
-
-// afterEach(() => TestDatabase.clean(TestDatabase.query));

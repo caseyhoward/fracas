@@ -88,7 +88,6 @@ export async function findById(
     "SELECT * FROM internet_games WHERE id = $1",
     [id]
   );
-
   const row: Row | undefined = result.rows[0];
   return rowToInternetGameConfiguration(row);
 }

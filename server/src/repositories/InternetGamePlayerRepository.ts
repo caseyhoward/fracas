@@ -17,7 +17,7 @@ export async function create(
     [gameId, playerToken]
   );
   const row: Row = result.rows[0];
-  return { id: row.id, gameId: gameId };
+  return { id: row.id, gameId: row.internet_game_id, playerToken: row.token };
 }
 
 export async function findByToken(

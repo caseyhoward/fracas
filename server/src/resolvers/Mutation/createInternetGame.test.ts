@@ -1,22 +1,30 @@
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
-// import * as InternetGamePlayer from "../../InternetGamePlayer";
+import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import { createInternetGame, defaultHostColor } from "./createInternetGame";
 import * as Map from "../../Map";
 import * as TestDatabase from "../../db/TestDatabase";
 
 describe("Mutation.createInternetGame", () => {
   it("works", async () => {
-    expect(1).toEqual(1);
-    // const playerToken = await createInternetGame(TestDatabase.query);
+    await Map.create(TestDatabase.query, {
+      name: "blah",
+      countries: [],
+      bodiesOfWater: [],
+      dimensions: { width: 0, height: 0 }
+    });
+    const hostToken = await createInternetGame(TestDatabase.query);
 
-    // const savedConfiguration = await InternetGameConfigurationRepository.findByPlayerToken(
-    //   TestDatabase.query,
-    //   playerToken
-    // );
+    const player = await InternetGamePlayerRepository.findByToken(
+      TestDatabase.query,
+      hostToken
+    );
 
-    // expect(savedConfiguration.players.length).toEqual(1);
-    // expect(savedConfiguration.players[0].color).toEqual(defaultHostColor);
+    const configuration = await InternetGameConfigurationRepository.findById(
+      TestDatabase.query,
+      player.gameId
+    );
+
+    expect(configuration.players.length).toEqual(1);
+    expect(configuration.players[0].color).toEqual(defaultHostColor);
   });
 });
-
-// afterEach(() => TestDatabase.clean(TestDatabase.query));

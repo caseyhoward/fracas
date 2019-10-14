@@ -17,5 +17,3 @@ describe("InternetGameConfigurationRepository.create and .findByToken", () => {
     expect(foundPlayer.playerToken).toEqual("some token");
   });
 });
-
-// afterEach(() => TestDatabase.clean(TestDatabase.query));

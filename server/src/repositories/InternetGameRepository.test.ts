@@ -28,5 +28,3 @@ describe("InternetGameRepository.create", () => {
     expect(1).toEqual(1);
   });
 });
-
-afterEach(() => TestDatabase.clean(TestDatabase.query));

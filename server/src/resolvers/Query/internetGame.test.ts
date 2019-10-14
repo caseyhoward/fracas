@@ -54,5 +54,3 @@ describe.only("Query.internetGame", () => {
     });
   });
 });
-
-// afterEach(() => TestDatabase.clean(TestDatabase.query));

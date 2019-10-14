@@ -9,7 +9,7 @@ import * as InternetGamePlayerRepository from "../../repositories/InternetGamePl
 export async function createInternetGame(
   executeQuery: ExecuteQuery
 ): Promise<string> {
-  await executeQuery("BEGIN");
+  // await executeQuery("BEGIN");
 
   const mapId = await Map.findFirstId(executeQuery);
   const hostToken = Uuid.generate();
@@ -44,7 +44,8 @@ export async function createInternetGame(
     host
   );
 
-  await executeQuery("COMMIT");
+  // await executeQuery("COMMIT");
+
   return hostToken;
 }
 
