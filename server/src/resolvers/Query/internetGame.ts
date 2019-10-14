@@ -16,6 +16,7 @@ export default async function internetGame(
     player.gameId
   );
   return {
+    __typename: "InternetGameConfiguration",
     id: configuration.id,
     players: configuration.players.map(player => {
       return { ...player, __typename: "InternetGamePlayerConfiguration" };
