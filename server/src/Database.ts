@@ -12,5 +12,6 @@ export type ExecuteQuery = ExecutePostgresQuery;
 
 export function postgres(config: PoolConfig): ExecuteQuery {
   const pool = new Pool(config);
+
   return pool.query.bind(pool);
 }

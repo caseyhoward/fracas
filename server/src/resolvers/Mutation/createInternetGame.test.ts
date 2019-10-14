@@ -1,5 +1,5 @@
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
-import * as InternetGamePlayer from "../../InternetGamePlayer";
+// import * as InternetGamePlayer from "../../InternetGamePlayer";
 import { createInternetGame, defaultHostColor } from "./createInternetGame";
 import * as Map from "../../Map";
 import * as TestDatabase from "../../db/TestDatabase";
@@ -19,4 +19,4 @@ describe("Mutation.createInternetGame", () => {
   });
 });
 
-afterEach(() => TestDatabase.clean(TestDatabase.query));
+// afterEach(() => TestDatabase.clean(TestDatabase.query));

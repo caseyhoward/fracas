@@ -55,24 +55,24 @@ export type Player = {
 };
 
 export type NewGame = {
-  __typename?: "NewGame";
+  __typename: "NewGame";
   mapId: number;
   players: Array<Player>;
   neutralCountryTroops: Array<CountryTroopCounts>;
   playerTurn: PlayerTurn;
 };
 
-export interface InternetGame extends NewGame {
-  __typename?: "NewGame";
+export type InternetGame = {
+  __typename: "InternetGame";
   id: number;
   mapId: number;
   players: Array<Player>;
   neutralCountryTroops: Array<CountryTroopCounts>;
   playerTurn: PlayerTurn;
-}
+};
 
 export type PlayerTurn = {
-  __typename?: "PlayerTurn";
+  __typename: "PlayerTurn";
   playerId: string;
   playerTurnStage: PlayerTurnStage;
   fromCountryId?: string;
@@ -80,7 +80,7 @@ export type PlayerTurn = {
 };
 
 export type PlayerConfiguration = {
-  __typename?: "PlayerConfiguration";
+  __typename: "PlayerConfiguration";
   color: Color;
   playerId: number;
   name: string;
@@ -93,4 +93,10 @@ export enum PlayerTurnStage {
   TroopMovement = "TroopMovement",
   TroopMovementFromSelected = "TroopMovementFromSelected",
   GameOver = "GameOver"
+}
+
+export interface InternetGamePlayer {
+  id: number;
+  gameId: number;
+  playerToken?: string;
 }

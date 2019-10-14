@@ -1,29 +1,27 @@
 import { ExecuteQuery } from "../Database";
-import * as InternetGamePlayer from "../InternetGamePlayer";
+import * as InternetGamePlayerRepository from "./InternetGamePlayerRepository";
 import * as Models from "./Models";
 
 // export async function create(
 //   executeQuery: ExecuteQuery,
-//   newInternetGame: NewInternetGame
+//   newInternetGame: Models.InternetGame
 // ): Promise<number> {
-//   if (newInternetGame.__typename === "NewConfiguration") {
-//     const configurationJson: ConfigurationJson = {
-//       __typename: "ConfigurationJson",
-//       players: newInternetGame.players
-//     };
-//     const internetGameResult = await executeQuery(
-//       "INSERT INTO internet_games(join_token, map_id, game_json) VALUES ($1, $2, $3) RETURNING *",
-//       [
-//         newInternetGame.joinToken,
-//         newInternetGame.mapId,
-//         JSON.stringify(configurationJson)
-//       ]
-//     );
-//     const row: Row = internetGameResult.rows[0];
-//     return row.id;
-//   } else {
-//     throw "Can't create game";
-//   }
+//   const configurationJson: Models.ConfigurationJson = {
+//     __typename: "ConfigurationJson",
+//     players: newInternetGame.players.map(player => {
+//       return {
+//         ...player,
+//         playerId: parseInt(player.id, 10),
+//         __typename: "PlayerConfiguration"
+//       };
+//     })
+//   };
+//   const internetGameResult = await executeQuery(
+//     "UPDATE internet_games SET game_json = $1 WHERE id = $2",
+//     [JSON.stringify(configurationJson), newInternetGame.id]
+//   );
+//   const row: Row = internetGameResult.rows[0];
+//   return row.id;
 // }
 
 export interface Row {
@@ -70,16 +68,16 @@ export async function addPlayer(
   const game = findById(executeQuery, id);
 }
 
-export async function findByPlayerToken(
-  executeQuery: ExecuteQuery,
-  playerToken: string
-): Promise<Models.InternetGameOrConfiguration> {
-  const player = await InternetGamePlayer.findByToken(
-    executeQuery,
-    playerToken
-  );
-  return findById(executeQuery, player.gameId);
-}
+// export async function findByPlayerToken(
+//   executeQuery: ExecuteQuery,
+//   playerToken: string
+// ): Promise<Models.InternetGameOrConfiguration> {
+//   const player = await InternetGamePlayer.findByToken(
+//     executeQuery,
+//     playerToken
+//   );
+//   return findById(executeQuery, player.gameId);
+// }
 
 // export async function findByJoinToken(
 //   executeQuery: ExecuteQuery,
@@ -107,25 +105,17 @@ export async function findById(
   return rowToInternetGame(row);
 }
 
-export function rowToInternetGame(row: Row): Models.InternetGameOrConfiguration {
+export function rowToInternetGame(row: Row): Models.InternetGame {
   const json: Models.Json = JSON.parse(row.game_json);
   if (json.__typename === "GameJson") {
-    return <any>{
-      __typename: "Game",
-      id: row.id.toString(),
+    return {
+      __typename: "InternetGame",
+      id: row.id,
+      mapId: row.map_id,
       players: json.players,
       neutralCountryTroops: json.neutralCountryTroops,
       playerTurn: json.playerTurn
     };
-  } else if (json.__typename === "ConfigurationJson") {
-    const configuration: Models.InternetGameConfiguration = {
-      __typename: "Configuration",
-      id: row.id,
-      mapId: row.map_id,
-      players: json.players,
-      joinToken: row.join_token || ""
-    };
-    return configuration;
   } else {
     throw "Bad JSON";
   }

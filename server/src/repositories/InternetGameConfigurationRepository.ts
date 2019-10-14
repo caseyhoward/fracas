@@ -1,5 +1,5 @@
+import * as InternetGameConfigurationRepository from "./InternetGameConfigurationRepository";
 import { ExecuteQuery } from "../Database";
-import * as InternetGamePlayer from "../InternetGamePlayer";
 import * as Models from "./Models";
 
 export async function create(
@@ -57,37 +57,28 @@ export async function addPlayer(
   id: number,
   player: Models.PlayerConfiguration
 ): Promise<void> {
+  executeQuery("BEGIN");
   const configuration = await findById(executeQuery, id);
   const updatedConfiguration = {
     ...configuration,
     players: [...configuration.players, player]
   };
   save(executeQuery, updatedConfiguration);
+  executeQuery("COMMIT");
 }
 
-// export async function findByPlayerToken(
-//   executeQuery: ExecuteQuery,
-//   playerToken: string
-// ): Promise<Models.InternetGameOrConfiguration> {
-//   const player = await InternetGamePlayer.findByToken(
-//     executeQuery,
-//     playerToken
-//   );
-//   return findById(executeQuery, player.gameId);
-// }
+export async function findByJoinToken(
+  executeQuery: ExecuteQuery,
+  joinToken: string
+): Promise<Models.InternetGameConfiguration> {
+  const result = await executeQuery(
+    "SELECT * FROM internet_games WHERE join_token = $1",
+    [joinToken]
+  );
 
-// export async function findByJoinToken(
-//   executeQuery: ExecuteQuery,
-//   joinToken: string
-// ): Promise<InternetGame> {
-//   const result = await executeQuery(
-//     "SELECT * FROM internet_games WHERE join_token = $1",
-//     [joinToken]
-//   );
-
-//   const row: Row = result.rows[0];
-//   return rowToInternetGame(row);
-// }
+  const row: Row | undefined = result.rows[0];
+  return rowToInternetGameConfiguration(row);
+}
 
 export async function findById(
   executeQuery: ExecuteQuery,
@@ -98,59 +89,33 @@ export async function findById(
     [id]
   );
 
-  const row: Row = result.rows[0];
+  const row: Row | undefined = result.rows[0];
   return rowToInternetGameConfiguration(row);
 }
 
 export function rowToInternetGameConfiguration(
-  row: Row
+  row: Row | undefined
 ): Models.InternetGameConfiguration {
-  const json: Models.Json = JSON.parse(row.game_json);
-  if (json.__typename === "GameJson") {
-    throw "Game already started";
-  } else if (json.__typename === "ConfigurationJson") {
-    const configuration: Models.InternetGameConfiguration = {
-      __typename: "InternetGameConfiguration",
-      id: row.id,
-      mapId: row.map_id,
-      players: json.players,
-      joinToken: row.join_token || ""
-    };
-    return configuration;
+  if (row) {
+    const json: Models.Json = JSON.parse(row.game_json);
+    if (json.__typename === "GameJson") {
+      throw "Game already started";
+    } else if (json.__typename === "ConfigurationJson") {
+      const configuration: Models.InternetGameConfiguration = {
+        __typename: "InternetGameConfiguration",
+        id: row.id,
+        mapId: row.map_id,
+        players: json.players,
+        joinToken: row.join_token || ""
+      };
+      return configuration;
+    } else {
+      throw "Bad JSON";
+    }
   } else {
-    throw "Bad JSON";
+    throw "Not found";
   }
 }
-
-// export function internetGameToRow(internetGame: InternetGame): Row {
-//   let json: Json;
-//   let jsonToken: string | undefined;
-//   let mapId: number;
-//   if (isConfiguring(internetGame)) {
-//     jsonToken = internetGame.joinToken;
-//     json = {
-//       players: internetGame.players,
-//       userPlayerId: internetGame.userPlayerId
-//     };
-//     mapId = parseInt(internetGame.mapId);
-//   } else if (isGame(internetGame)) {
-//     jsonToken = undefined;
-//     json = {
-//       players: internetGame.players,
-//       playerTurn: internetGame.playerTurn,
-//       neutralCountryTroops: internetGame.neutralCountryTroops
-//     };
-//     mapId = parseInt((<any>internetGame).mapId);
-//   } else {
-//     throw "Bad JSON";
-//   }
-//   return {
-//     id: parseInt(internetGame.id.toString()),
-//     join_token: jsonToken,
-//     map_id: mapId,
-//     game_json: JSON.stringify(json)
-//   };
-// }
 
 export interface Row {
   id: number;
