@@ -48,16 +48,20 @@ interface NewMapsRow {
   map_json: string;
 }
 
-function mapsRowToMap(mapsRow: MapsRow): Map {
-  const parsedJson = JSON.parse(mapsRow.map_json);
-  const map = {
-    id: mapsRow.id.toString(),
-    name: parsedJson.name,
-    countries: parsedJson.countries,
-    bodiesOfWater: parsedJson.bodiesOfWater,
-    dimensions: parsedJson.dimensions
-  };
-  return map;
+function mapsRowToMap(mapsRow: MapsRow | undefined): Map {
+  if (mapsRow) {
+    const parsedJson = JSON.parse(mapsRow.map_json);
+    const map = {
+      id: mapsRow.id.toString(),
+      name: parsedJson.name,
+      countries: parsedJson.countries,
+      bodiesOfWater: parsedJson.bodiesOfWater,
+      dimensions: parsedJson.dimensions
+    };
+    return map;
+  } else {
+    throw "Map not found";
+  }
 }
 
 function mapToMapsRow(map: Map): MapsRow {

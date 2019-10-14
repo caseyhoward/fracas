@@ -8,6 +8,39 @@ Try the early terrible version [here](http://fracas.caseyhoward.net)
 
 ![gameboard](./docs/gameboard.png)
 
+## Development
+
+### Server
+
+#### Tab 1
+
+```sh
+cd server && tsc -w
+# Another terminal
+cd server && nodemon build/index.js
+```
+OR
+
+```sh
+cd server && nodemon index.ts # Need ts-node installed
+```
+
+### Tab 2
+
+```sh
+cd server && docker-compose up -d # For postgres
+```
+
+### Tab 3
+
+```sh
+cd server && npm run test -- --watch
+```
+
+### Client
+
+cd client && elm-app start
+
 
 ## Todo
 

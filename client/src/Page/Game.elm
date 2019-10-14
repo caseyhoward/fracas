@@ -130,6 +130,9 @@ update msg model =
                             , Cmd.none
                             )
 
+                        RemoteData.Failure error ->
+                            ( GameLoading { gameLoadingModel | error = Just (ViewHelpers.errorToString error) }, Cmd.none )
+
                         _ ->
                             ( model, Cmd.none )
 
@@ -266,8 +269,18 @@ waitingToShowCountryHelperOutlines countryBorderHelperOutlineStatus =
 view : Model -> { title : String, content : Html.Html Msg }
 view model =
     case model of
-        GameLoading _ ->
-            { title = "Fracas - Loading", content = Element.none |> Element.layout [] }
+        GameLoading gameLoading ->
+            { title = "Fracas - Loading"
+            , content =
+                Element.layout []
+                    (case gameLoading.error of
+                        Just error ->
+                            Element.text error
+
+                        Nothing ->
+                            Element.none
+                    )
+            }
 
         GameLoaded gameLoaded ->
             { content =

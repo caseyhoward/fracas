@@ -105,8 +105,7 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
     //   return playerToken;
   }
 
-  async function gameMapResolver(game: Game.Game) {
-    const gameWithMapId = await Game.get(executeQuery, parseInt(game.id, 10));
-    return Map.findById(executeQuery, gameWithMapId.id);
+  async function gameMapResolver(game: graphql.Game) {
+    return Map.findById(executeQuery, game.map.id);
   }
 }
