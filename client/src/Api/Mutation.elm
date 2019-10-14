@@ -124,7 +124,7 @@ type alias UpdateMapForInternetGameRequiredArguments =
   - mapId -
 
 -}
-updateMapForInternetGame : UpdateMapForInternetGameRequiredArguments -> SelectionSet decodesTo Api.Union.InternetGame -> SelectionSet decodesTo RootMutation
+updateMapForInternetGame : UpdateMapForInternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.InternetGameConfiguration -> SelectionSet decodesTo RootMutation
 updateMapForInternetGame requiredArgs object_ =
     Object.selectionForCompositeField "updateMapForInternetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string, Argument.required "mapId" requiredArgs.mapId Encode.string ] object_ identity
 

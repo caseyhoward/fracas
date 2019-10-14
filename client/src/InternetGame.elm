@@ -1,5 +1,6 @@
 module InternetGame exposing
     ( Configuration
+    , Game
     , GameOrConfiguration(..)
     , InternetGameTokens
     , JoinToken
@@ -8,19 +9,21 @@ module InternetGame exposing
     , get
     , joinGame
     , joinTokenToString
+    , joinTokenUrlParser
     , playerTokenToString
     , playerTokenUrlParser
     , selectionSet
-    , updateMap, joinTokenUrlParser
+    , updateMap
     )
 
 import Api.Mutation
 import Api.Object
+import Api.Object.InternetGame
 import Api.Object.InternetGameConfiguration
 import Api.Object.InternetGamePlayerConfiguration
 import Api.Query
 import Api.Union
-import Api.Union.InternetGame
+import Api.Union.InternetGameOrConfiguration
 import Colors
 import Game
 import Graphql.Http
@@ -61,8 +64,14 @@ type alias InternetGameTokens =
 
 
 type GameOrConfiguration
-    = InternetGame Game.Game
+    = InternetGame Game
     | InternetGameConfiguration Configuration
+
+
+type alias Game =
+    { game : Game.Game
+    , currentUserPlayerId : Player.Id
+    }
 
 
 create : String -> (RemoteData.RemoteData (Graphql.Http.Error PlayerToken) PlayerToken -> msg) -> Cmd msg
@@ -96,30 +105,34 @@ joinTokenToString (JoinToken joinToken) =
     joinToken
 
 
-updateMap : String -> PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error GameOrConfiguration) GameOrConfiguration -> msg) -> Cmd msg
+updateMap : String -> PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error Configuration) Configuration -> msg) -> Cmd msg
 updateMap apiUrl playerToken mapId toMsg =
     Api.Mutation.updateMapForInternetGame
         { playerToken = playerToken |> playerTokenToString, mapId = mapId |> Map.idToString }
-        selectionSet
+        configurationSelectionSet1
         |> Graphql.Http.mutationRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-configurationSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGameConfiguration
-configurationSelectionSet =
+configurationSelectionSet1 : Graphql.SelectionSet.SelectionSet Configuration Api.Object.InternetGameConfiguration
+configurationSelectionSet1 =
     Graphql.SelectionSet.map4
         (\players mapId joinToken userPlayerId ->
-            InternetGameConfiguration
-                { players = players
-                , mapId = mapId
-                , userPlayerId = Player.Id userPlayerId
-                , joinToken = JoinToken joinToken
-                }
+            { players = players
+            , mapId = mapId
+            , userPlayerId = Player.Id userPlayerId
+            , joinToken = JoinToken joinToken
+            }
         )
         (Api.Object.InternetGameConfiguration.players playerConfigurationSelectionSet)
         (Graphql.SelectionSet.map Map.Id Api.Object.InternetGameConfiguration.mapId)
         Api.Object.InternetGameConfiguration.joinToken
-        Api.Object.InternetGameConfiguration.userPlayerId
+        Api.Object.InternetGameConfiguration.currentUserPlayerId
+
+
+configurationSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGameConfiguration
+configurationSelectionSet =
+    Graphql.SelectionSet.map InternetGameConfiguration configurationSelectionSet1
 
 
 playerConfigurationSelectionSet : Graphql.SelectionSet.SelectionSet PlayerConfiguration Api.Object.InternetGamePlayerConfiguration
@@ -131,16 +144,18 @@ playerConfigurationSelectionSet =
         Api.Object.InternetGamePlayerConfiguration.name
 
 
-selectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Union.InternetGame
+gameSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGame
+gameSelectionSet =
+    Graphql.SelectionSet.map2 (\game currentUserPlayerId -> InternetGame { game = game, currentUserPlayerId = Player.Id currentUserPlayerId })
+        (Api.Object.InternetGame.game Game.selectionSet)
+        Api.Object.InternetGame.currentUserPlayerId
+
+
+selectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Union.InternetGameOrConfiguration
 selectionSet =
-    let
-        gameSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.Game
-        gameSelectionSet =
-            Graphql.SelectionSet.map InternetGame Game.selectionSet
-    in
-    Api.Union.InternetGame.fragments
+    Api.Union.InternetGameOrConfiguration.fragments
         { onInternetGameConfiguration = configurationSelectionSet
-        , onGame = gameSelectionSet
+        , onInternetGame = gameSelectionSet
         }
 
 
@@ -149,10 +164,11 @@ playerTokenToString (PlayerToken token) =
     token
 
 
-
 playerTokenUrlParser : Url.Parser.Parser (PlayerToken -> a) a
 playerTokenUrlParser =
     Url.Parser.custom "PLAYERTOKEN" (\playerId -> playerId |> PlayerToken |> Just)
+
+
 joinTokenUrlParser : Url.Parser.Parser (JoinToken -> a) a
 joinTokenUrlParser =
     Url.Parser.custom "JOINTOKEN" (\joinToken -> joinToken |> JoinToken |> Just)

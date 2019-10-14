@@ -44,6 +44,6 @@ joinToken =
 
 
 {-| -}
-userPlayerId : SelectionSet Int Api.Object.InternetGameConfiguration
-userPlayerId =
-    Object.selectionForField "Int" "userPlayerId" [] Decode.int
+currentUserPlayerId : SelectionSet Int Api.Object.InternetGameConfiguration
+currentUserPlayerId =
+    Object.selectionForField "Int" "currentUserPlayerId" [] Decode.int

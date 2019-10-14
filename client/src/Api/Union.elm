@@ -5,5 +5,5 @@
 module Api.Union exposing (..)
 
 
-type InternetGame
-    = InternetGame
+type InternetGameOrConfiguration
+    = InternetGameOrConfiguration

@@ -2,7 +2,7 @@
 -- https://github.com/dillonkearns/elm-graphql
 
 
-module Api.Union.InternetGame exposing (..)
+module Api.Union.InternetGameOrConfiguration exposing (..)
 
 import Api.InputObject
 import Api.Interface
@@ -21,7 +21,7 @@ import Json.Decode as Decode
 
 type alias Fragments decodesTo =
     { onInternetGameConfiguration : SelectionSet decodesTo Api.Object.InternetGameConfiguration
-    , onGame : SelectionSet decodesTo Api.Object.Game
+    , onInternetGame : SelectionSet decodesTo Api.Object.InternetGame
     }
 
 
@@ -29,11 +29,11 @@ type alias Fragments decodesTo =
 -}
 fragments :
     Fragments decodesTo
-    -> SelectionSet decodesTo Api.Union.InternetGame
+    -> SelectionSet decodesTo Api.Union.InternetGameOrConfiguration
 fragments selections =
     Object.exhuastiveFragmentSelection
         [ Object.buildFragment "InternetGameConfiguration" selections.onInternetGameConfiguration
-        , Object.buildFragment "Game" selections.onGame
+        , Object.buildFragment "InternetGame" selections.onInternetGame
         ]
 
 
@@ -43,5 +43,5 @@ update syntax to add `SelectionSet`s for the types you want to handle.
 maybeFragments : Fragments (Maybe decodesTo)
 maybeFragments =
     { onInternetGameConfiguration = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
-    , onGame = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
+    , onInternetGame = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
     }

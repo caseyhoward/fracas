@@ -41,7 +41,7 @@ type Msg
     | RemovePlayer Int
     | StartGameClicked
     | SelectMap String
-    | MapUpdated (RemoteData.RemoteData (Graphql.Http.Error InternetGame.GameOrConfiguration) InternetGame.GameOrConfiguration)
+    | MapUpdated (RemoteData.RemoteData (Graphql.Http.Error InternetGame.Configuration) InternetGame.Configuration)
 
 
 type Model
@@ -68,7 +68,7 @@ type alias ConfiguringModel =
 
 type alias PlayingModel =
     { session : Session.Session
-    , game : Game.Game
+    , game : InternetGame.Game
     , playerToken : InternetGame.PlayerToken
     }
 
@@ -134,7 +134,13 @@ update msg model =
                                     )
 
                                 InternetGame.InternetGame game ->
-                                    ( Playing { session = loadingModel.session, game = game, playerToken = loadingModel.playerToken }, Cmd.none )
+                                    ( Playing
+                                        { session = loadingModel.session
+                                        , game = game
+                                        , playerToken = loadingModel.playerToken
+                                        }
+                                    , Cmd.none
+                                    )
 
                         _ ->
                             ( Loading { loadingModel | gameAndMaps = gameRemoteData }, Cmd.none )
