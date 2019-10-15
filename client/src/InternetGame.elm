@@ -14,6 +14,7 @@ module InternetGame exposing
     , playerTokenUrlParser
     , selectionSet
     , updateMap
+    , updatePlayerName
     )
 
 import Api.Mutation
@@ -103,6 +104,14 @@ joinGame apiUrl (JoinToken joinToken) toMsg =
 joinTokenToString : JoinToken -> String
 joinTokenToString (JoinToken joinToken) =
     joinToken
+
+
+updatePlayerName : String -> PlayerToken -> String -> (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool -> msg) -> Cmd msg
+updatePlayerName apiUrl playerToken name toMsg =
+    Api.Mutation.updatePlayerNameForInternetGame
+        { playerToken = playerToken |> playerTokenToString, name = name }
+        |> Graphql.Http.mutationRequest apiUrl
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 updateMap : String -> PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error Configuration) Configuration -> msg) -> Cmd msg

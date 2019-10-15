@@ -38,6 +38,7 @@ type Msg
     | ColorSelected Int Colors.Color
     | ColorSelectBackgroundClicked
     | UpdatePlayerName String
+    | UpdatedPlayerName (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | RemovePlayer Int
     | StartGameClicked
     | SelectMap String
@@ -189,7 +190,7 @@ update msg model =
                         updatedConfiguringModel =
                             { configuration | players = updatedPlayers }
                     in
-                    ( Configuring { configuringModel | configuration = updatedConfiguringModel }, Cmd.none )
+                    ( Configuring { configuringModel | configuration = updatedConfiguringModel }, InternetGame.updatePlayerName configuringModel.session.apiUrl configuringModel.playerToken name UpdatedPlayerName )
 
                 _ ->
                     ( model, Cmd.none )
