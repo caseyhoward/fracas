@@ -1,0 +1,15 @@
+language: node_js
+node_js:
+  - "10"
+services:
+  - docker
+# cache:
+#   directories:
+#     - "node_modules"
+
+before_install:
+  - cd server
+  - docker-compose up -d
+
+script:
+  - bin/build.sh
