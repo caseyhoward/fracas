@@ -1,5 +1,10 @@
 import * as Database from "../Database";
 import * as Models from "./Models";
+import * as Graphql from "../api/graphql";
+
+export function mapToGraphql(map: Models.Map): Graphql.Map {
+  return { ...map, id: map.id.toString() };
+}
 
 export async function findFirstId(
   executeQuery: Database.ExecuteQuery
@@ -10,7 +15,7 @@ export async function findFirstId(
 
 export async function findById(
   executeQuery: Database.ExecuteQuery,
-  id: string
+  id: number
 ): Promise<Models.Map> {
   const result = await executeQuery("SELECT * FROM maps WHERE id = $1", [id]);
   return mapsRowToMap(result.rows[0]);
@@ -50,7 +55,7 @@ function mapsRowToMap(mapsRow: MapsRow | undefined): Models.Map {
   if (mapsRow) {
     const parsedJson = JSON.parse(mapsRow.map_json);
     const map = {
-      id: mapsRow.id.toString(),
+      id: mapsRow.id,
       name: parsedJson.name,
       countries: parsedJson.countries,
       bodiesOfWater: parsedJson.bodiesOfWater,
@@ -60,17 +65,6 @@ function mapsRowToMap(mapsRow: MapsRow | undefined): Models.Map {
   } else {
     throw "Map not found";
   }
-}
-
-function mapToMapsRow(map: Models.Map): MapsRow {
-  const mapJson = JSON.stringify({
-    name: map.name,
-    countries: map.countries,
-    bodiesOfWater: map.bodiesOfWater,
-    dimensions: map.dimensions
-  });
-
-  return { id: parseInt(map.id, 10), map_json: mapJson, name: map.name };
 }
 
 function mapInputToMapsRow(map: Models.NewMap): NewMapsRow {

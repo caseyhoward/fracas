@@ -27,7 +27,7 @@ export type Dimensions = {
 
 export type Map = {
   __typename?: "Map";
-  id: string;
+  id: number;
   name: string;
   countries: Array<Country>;
   bodiesOfWater: Array<BodyOfWater>;

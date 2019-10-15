@@ -2,7 +2,6 @@ import * as Database from "./Database";
 import * as InternetGamePlayerRepository from "./repositories/InternetGamePlayerRepository";
 import * as InternetGameConfigurationRepository from "./repositories/InternetGameConfigurationRepository";
 import * as Game from "./Game";
-import * as Map from "./repositories/MapRepository";
 import * as graphql from "./api/graphql";
 
 import {
@@ -13,33 +12,32 @@ import {
 
 import { createInternetGame } from "./resolvers/Mutation/createInternetGame";
 import internetGame from "./resolvers/Query/internetGame";
+import gameMap from "./resolvers/Game/map";
+import map from "./resolvers/Query/map";
+import maps from "./resolvers/Query/maps";
+import createMap from "./resolvers/Mutation/createMap";
 import joinInternetGame from "./resolvers/Mutation/joinInternetGame";
-import updatePlayerName from "./resolvers/Mutation/updatePlayerName";
+import updatePlayerName from "./resolvers/Mutation/updatePlayerNameForInternetGame";
+import { exec } from "child_process";
 
 export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
   return {
     Query: {
-      map: async (_, map) => {
-        return Map.findById(executeQuery, map.id);
-      },
+      map: async (_, query) => map(executeQuery, query),
       game: async (_, game) => {
         return Game.get(executeQuery, parseInt(game.id, 10));
       },
-      maps: async () => {
-        return Map.findAll(executeQuery);
-      },
+      maps: async () => maps(executeQuery),
       internetGame: async (_, game) => internetGame(executeQuery, game)
     },
     Game: {
-      map: gameMapResolver
+      map: (game, _) => gameMap(executeQuery, game)
     },
     Mutation: {
       createGame: async (_, createGame): Promise<Game.Game> => {
         return Game.create(executeQuery, createGame.newGame);
       },
-      createMap: async (_, mapInput) => {
-        return Map.create(executeQuery, mapInput.map);
-      },
+      createMap: async (_, input) => createMap(executeQuery, input),
       joinInternetGame: (_, input) => joinInternetGame(executeQuery, input),
       createInternetGame: () => createInternetGame(executeQuery),
       updatePlayerNameForInternetGame: (_, input) =>
@@ -69,9 +67,5 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
     );
     throw "todo";
     // return await InternetGameRepository.findById(executeQuery, player.gameId);
-  }
-
-  async function gameMapResolver(game: graphql.Game) {
-    return Map.findById(executeQuery, game.map.id);
   }
 }

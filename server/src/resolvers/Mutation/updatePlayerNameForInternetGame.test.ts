@@ -4,11 +4,11 @@ import { createInternetGame, defaultHostColor } from "./createInternetGame";
 import joinInternetGame from "./joinInternetGame";
 import * as Map from "../../repositories/MapRepository";
 import * as TestDatabase from "../../db/TestDatabase";
-import * as Fixtures from "../../test/Fixtures";
+import * as Factories from "../../test/Factories";
 
-describe("Mutation.updatePlayerName", () => {
+describe("Mutation.updatePlayerNameForInternetGame", () => {
   it("works", async () => {
-    const internetGameConfiguration = Fixtures.internetGameConfiguration();
+    const internetGameConfiguration = Factories.createInternetGameConfiguration();
   });
   //     await Map.create(TestDatabase.query, {
   //       name: "blah",

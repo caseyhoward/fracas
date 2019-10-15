@@ -6,7 +6,7 @@ import * as Models from "../../repositories/Models";
 import * as Uuid from "../../Uuid";
 import { defaultHostColor } from "../Mutation/createInternetGame";
 
-describe.only("Query.internetGame", () => {
+describe("Query.internetGame", () => {
   describe("with configuration", () => {
     it("returns configuration", async () => {
       const joinToken = Uuid.generate();
