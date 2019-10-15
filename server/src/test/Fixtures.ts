@@ -37,6 +37,7 @@ export function map(options: MapOptions): Models.NewMap {
 interface PlayerOptions {
   id: number;
   name?: string;
+  color?: Models.Color;
 }
 
 export function player(options: PlayerOptions): Models.PlayerConfiguration {

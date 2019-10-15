@@ -8,7 +8,6 @@ import * as Uuid from "../Uuid";
 
 interface CreateInternetGameConfigurationOptions {
   mapOrMapId?: number | Models.Map;
-  // players?: Models.PlayerConfiguration[];
 }
 
 export async function createInternetGameConfiguration(
@@ -25,7 +24,6 @@ export async function createInternetGameConfiguration(
   }
   const newInternetGameConfiguration = Fixtures.internetGameConfiguration({
     mapId: mapId
-    // players: options.players
   });
   return InternetGameConfigurationRepository.create(
     TestDatabase.query,
