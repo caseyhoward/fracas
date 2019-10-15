@@ -10,7 +10,7 @@ module Player exposing
     , defaultNewPlayers
     , getPlayer
     , getPlayerName
-    , idToString
+    , idToString, hostPlayerId
     , input
     , newPlayersInput
     , numberOfTroopsToPlace
@@ -80,6 +80,16 @@ idToString (Id id) =
 urlParser : Url.Parser.Parser (Id -> a) a
 urlParser =
     Url.Parser.custom "PLAYERID" (\playerId -> playerId |> String.toInt |> Maybe.map Id)
+
+
+hostPlayerId : Dict.Dict Int Player -> Id
+hostPlayerId players =
+    case players |> Dict.keys |> List.head of
+        Just host ->
+            Id host
+
+        Nothing ->
+            Id -1
 
 
 addPort : Country.Id -> Player -> Player

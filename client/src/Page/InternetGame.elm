@@ -34,7 +34,7 @@ import ViewHelpers
 
 type Msg
     = GotGameAndMaps (RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet)
-    | ChangeColorButtonClicked Int
+    | ChangeColorButtonClicked Player.Id
     | ColorSelected Int Colors.Color
     | ColorSelectBackgroundClicked
     | UpdatePlayerName String
@@ -166,6 +166,31 @@ update msg model =
                 MapUpdated updatedConfiguration ->
                     ( model, Cmd.none )
 
+                ChangeColorButtonClicked playerId ->
+                    ( model, Cmd.none )
+
+                UpdatePlayerName name ->
+                    let
+                        configuration =
+                            configuringModel.configuration
+
+                        updatedPlayers =
+                            configuration.players
+                                |> List.map
+                                    (\player ->
+                                        if player.id == configuration.currentUserPlayerId then
+                                            { player | name = name }
+
+                                        else
+                                            player
+                                    )
+
+                        updatedConfiguringModel : InternetGame.Configuration
+                        updatedConfiguringModel =
+                            { configuration | players = updatedPlayers }
+                    in
+                    ( Configuring { configuringModel | configuration = updatedConfiguringModel }, Cmd.none )
+
                 _ ->
                     ( model, Cmd.none )
 
@@ -222,7 +247,7 @@ viewConfiguring configuringModel =
                         [ Element.spacing 40, Element.centerX ]
                         [ Element.el
                             [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
-                            (playerConfiguration p)
+                            (playerConfiguration p configuringModel.configuration.currentUserPlayerId)
                         , Element.el
                             [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
                             (NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap)
@@ -234,8 +259,8 @@ viewConfiguring configuringModel =
     }
 
 
-playerConfiguration : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
-playerConfiguration players =
+playerConfiguration : Dict.Dict Int Player.NewPlayer -> Player.Id -> Element.Element Msg
+playerConfiguration players currentUserPlayerId =
     Element.column
         [ Element.spacing 20
         , Element.centerX
@@ -245,29 +270,42 @@ playerConfiguration players =
         ]
         (Element.el [ Element.Font.bold ] (Element.text "Players")
             :: (players
-                    |> Dict.map playerFields
-                    |> Dict.values
+                    |> Dict.toList
+                    |> List.map (Tuple.mapFirst Player.Id)
+                    |> List.map (playerFields currentUserPlayerId)
                )
         )
 
 
-playerFields : Int -> Player.NewPlayer -> Element.Element Msg
-playerFields playerId player =
+playerFields : Player.Id -> ( Player.Id, Player.NewPlayer ) -> Element.Element Msg
+playerFields currentUserPlayerId ( playerId, player ) =
     Element.row [ Element.spacing 10 ]
         [ Element.row []
-            [ Element.Input.text
-                [ Element.width (Element.px 200)
-                , Html.Attributes.id ("player-name-" ++ String.fromInt playerId) |> Element.htmlAttribute
+            (if currentUserPlayerId == playerId then
+                [ Element.Input.text
+                    [ Element.width (Element.px 200)
+                    , Html.Attributes.id ("player-name-" ++ (playerId |> Player.idToString)) |> Element.htmlAttribute
+                    ]
+                    { onChange = UpdatePlayerName
+                    , text = player.name
+                    , placeholder = Nothing
+                    , label = Element.Input.labelHidden "Name"
+                    }
+                , NewGame.colorButton player.color (ChangeColorButtonClicked playerId)
                 ]
-                { onChange = UpdatePlayerName
-                , text = player.name
-                , placeholder = Nothing
-                , label = Element.Input.labelHidden "Name"
-                }
-            , NewGame.colorButton player.color (ChangeColorButtonClicked playerId)
-            ]
 
-        -- , NewGame.removePlayerButton playerId
+             else
+                [ Element.el
+                    [ Element.width (Element.px 200)
+                    , Element.paddingXY 5 0
+                    , Element.height (Element.px 50)
+                    , Element.Background.color (Colors.lightGray |> Colors.toElementColor)
+                    , Element.Font.color (Colors.lightCharcoal |> Colors.toElementColor)
+                    ]
+                    (Element.el [ Element.centerY ] (Element.text player.name))
+                , NewGame.colorButton player.color (ChangeColorButtonClicked playerId)
+                ]
+            )
         ]
 
 

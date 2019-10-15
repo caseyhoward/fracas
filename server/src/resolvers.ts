@@ -1,6 +1,6 @@
 import * as Database from "./Database";
-import * as InternetGameRepository from "./repositories/InternetGameRepository";
 import * as InternetGamePlayerRepository from "./repositories/InternetGamePlayerRepository";
+import * as InternetGameConfigurationRepository from "./repositories/InternetGameConfigurationRepository";
 import * as Game from "./Game";
 import * as Map from "./repositories/MapRepository";
 import * as graphql from "./api/graphql";
@@ -14,6 +14,7 @@ import {
 import { createInternetGame } from "./resolvers/Mutation/createInternetGame";
 import internetGame from "./resolvers/Query/internetGame";
 import joinInternetGame from "./resolvers/Mutation/joinInternetGame";
+import updatePlayerName from "./resolvers/Mutation/updatePlayerName";
 
 export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
   return {
@@ -33,15 +34,17 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
       map: gameMapResolver
     },
     Mutation: {
-      createMap: async (_, mapInput) => {
-        return Map.create(executeQuery, mapInput.map);
-      },
-      createInternetGame: () => createInternetGame(executeQuery),
-      updateMapForInternetGame,
       createGame: async (_, createGame): Promise<Game.Game> => {
         return Game.create(executeQuery, createGame.newGame);
       },
+      createMap: async (_, mapInput) => {
+        return Map.create(executeQuery, mapInput.map);
+      },
       joinInternetGame: (_, input) => joinInternetGame(executeQuery, input),
+      createInternetGame: () => createInternetGame(executeQuery),
+      updatePlayerNameForInternetGame: (_, input) =>
+        updatePlayerName(executeQuery, input),
+      updateMapForInternetGame,
       saveGame: async (_, saveGame) => {
         return Game.update(executeQuery, saveGame.game);
       }
@@ -59,7 +62,7 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
       executeQuery,
       input.playerToken
     );
-    await InternetGameRepository.updateMap(
+    await InternetGameConfigurationRepository.updateMap(
       executeQuery,
       player.gameId.toString(),
       parseInt(input.mapId, 10)

@@ -144,8 +144,8 @@ export type Mutation = {
   saveGame: Game,
   startInternetGame: Game,
   updateMapForInternetGame: InternetGameConfiguration,
-  updatePlayerNameForInternetGame: InternetGameConfiguration,
-  updatePlayerColorForInternetGame: InternetGameConfiguration,
+  updatePlayerNameForInternetGame: Scalars['Boolean'],
+  updatePlayerColorForInternetGame: Scalars['Boolean'],
 };
 
 
@@ -514,8 +514,8 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   saveGame?: Resolver<ResolversTypes['Game'], ParentType, ContextType, RequireFields<MutationSaveGameArgs, 'game'>>,
   startInternetGame?: Resolver<ResolversTypes['Game'], ParentType, ContextType, RequireFields<MutationStartInternetGameArgs, 'playerToken'>>,
   updateMapForInternetGame?: Resolver<ResolversTypes['InternetGameConfiguration'], ParentType, ContextType, RequireFields<MutationUpdateMapForInternetGameArgs, 'playerToken' | 'mapId'>>,
-  updatePlayerNameForInternetGame?: Resolver<ResolversTypes['InternetGameConfiguration'], ParentType, ContextType, RequireFields<MutationUpdatePlayerNameForInternetGameArgs, 'name' | 'playerToken'>>,
-  updatePlayerColorForInternetGame?: Resolver<ResolversTypes['InternetGameConfiguration'], ParentType, ContextType, RequireFields<MutationUpdatePlayerColorForInternetGameArgs, 'color' | 'playerToken'>>,
+  updatePlayerNameForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdatePlayerNameForInternetGameArgs, 'name' | 'playerToken'>>,
+  updatePlayerColorForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdatePlayerColorForInternetGameArgs, 'color' | 'playerToken'>>,
 };
 
 export type PlayerResolvers<ContextType = any, ParentType extends ResolversParentTypes['Player'] = ResolversParentTypes['Player']> = {

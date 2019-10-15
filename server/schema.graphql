@@ -207,12 +207,9 @@ type Mutation {
     playerToken: String!
     mapId: String!
   ): InternetGameConfiguration!
-  updatePlayerNameForInternetGame(
-    name: String!
-    playerToken: String!
-  ): InternetGameConfiguration!
+  updatePlayerNameForInternetGame(name: String!, playerToken: String!): Boolean!
   updatePlayerColorForInternetGame(
     color: ColorInput!
     playerToken: String!
-  ): InternetGameConfiguration!
+  ): Boolean!
 }

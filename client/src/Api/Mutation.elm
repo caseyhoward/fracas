@@ -141,9 +141,9 @@ type alias UpdatePlayerNameForInternetGameRequiredArguments =
   - playerToken -
 
 -}
-updatePlayerNameForInternetGame : UpdatePlayerNameForInternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.InternetGameConfiguration -> SelectionSet decodesTo RootMutation
-updatePlayerNameForInternetGame requiredArgs object_ =
-    Object.selectionForCompositeField "updatePlayerNameForInternetGame" [ Argument.required "name" requiredArgs.name Encode.string, Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
+updatePlayerNameForInternetGame : UpdatePlayerNameForInternetGameRequiredArguments -> SelectionSet Bool RootMutation
+updatePlayerNameForInternetGame requiredArgs =
+    Object.selectionForField "Bool" "updatePlayerNameForInternetGame" [ Argument.required "name" requiredArgs.name Encode.string, Argument.required "playerToken" requiredArgs.playerToken Encode.string ] Decode.bool
 
 
 type alias UpdatePlayerColorForInternetGameRequiredArguments =
@@ -158,6 +158,6 @@ type alias UpdatePlayerColorForInternetGameRequiredArguments =
   - playerToken -
 
 -}
-updatePlayerColorForInternetGame : UpdatePlayerColorForInternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.InternetGameConfiguration -> SelectionSet decodesTo RootMutation
-updatePlayerColorForInternetGame requiredArgs object_ =
-    Object.selectionForCompositeField "updatePlayerColorForInternetGame" [ Argument.required "color" requiredArgs.color Api.InputObject.encodeColorInput, Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
+updatePlayerColorForInternetGame : UpdatePlayerColorForInternetGameRequiredArguments -> SelectionSet Bool RootMutation
+updatePlayerColorForInternetGame requiredArgs =
+    Object.selectionForField "Bool" "updatePlayerColorForInternetGame" [ Argument.required "color" requiredArgs.color Api.InputObject.encodeColorInput, Argument.required "playerToken" requiredArgs.playerToken Encode.string ] Decode.bool

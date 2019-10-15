@@ -1,7 +1,5 @@
 import * as Database from "../Database";
-
-export { Map, MapInput } from "../api/graphql";
-import { Map, MapInput } from "../api/graphql";
+import * as Models from "./Models";
 
 export async function findFirstId(
   executeQuery: Database.ExecuteQuery
@@ -13,22 +11,22 @@ export async function findFirstId(
 export async function findById(
   executeQuery: Database.ExecuteQuery,
   id: string
-): Promise<Map> {
+): Promise<Models.Map> {
   const result = await executeQuery("SELECT * FROM maps WHERE id = $1", [id]);
   return mapsRowToMap(result.rows[0]);
 }
 
 export async function findAll(
   executeQuery: Database.ExecuteQuery
-): Promise<Map[]> {
+): Promise<Models.Map[]> {
   const result = await executeQuery("SELECT * FROM maps");
   return result.rows.map(mapsRowToMap);
 }
 
 export async function create(
   executeQuery: Database.ExecuteQuery,
-  newMap: MapInput
-): Promise<Map> {
+  newMap: Models.NewMap
+): Promise<Models.Map> {
   const row = mapInputToMapsRow(newMap);
   const result = await executeQuery(
     "INSERT INTO maps(name, map_json) VALUES ($1, $2) RETURNING *",
@@ -48,7 +46,7 @@ interface NewMapsRow {
   map_json: string;
 }
 
-function mapsRowToMap(mapsRow: MapsRow | undefined): Map {
+function mapsRowToMap(mapsRow: MapsRow | undefined): Models.Map {
   if (mapsRow) {
     const parsedJson = JSON.parse(mapsRow.map_json);
     const map = {
@@ -64,7 +62,7 @@ function mapsRowToMap(mapsRow: MapsRow | undefined): Map {
   }
 }
 
-function mapToMapsRow(map: Map): MapsRow {
+function mapToMapsRow(map: Models.Map): MapsRow {
   const mapJson = JSON.stringify({
     name: map.name,
     countries: map.countries,
@@ -75,7 +73,7 @@ function mapToMapsRow(map: Map): MapsRow {
   return { id: parseInt(map.id, 10), map_json: mapJson, name: map.name };
 }
 
-function mapInputToMapsRow(map: MapInput): NewMapsRow {
+function mapInputToMapsRow(map: Models.NewMap): NewMapsRow {
   const mapJson = JSON.stringify({
     name: map.name,
     countries: map.countries,

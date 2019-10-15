@@ -21,6 +21,7 @@ export async function createInternetGame(
       __typename: "NewInternetGameConfiguration",
       joinToken: joinToken,
       mapId: mapId,
+
       players: []
     }
   );

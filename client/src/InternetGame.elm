@@ -45,7 +45,7 @@ type alias Configuration =
     { players : List PlayerConfiguration
     , mapId : Map.Id
     , joinToken : JoinToken
-    , userPlayerId : Player.Id
+    , currentUserPlayerId : Player.Id
     }
 
 
@@ -117,10 +117,10 @@ updateMap apiUrl playerToken mapId toMsg =
 configurationSelectionSet1 : Graphql.SelectionSet.SelectionSet Configuration Api.Object.InternetGameConfiguration
 configurationSelectionSet1 =
     Graphql.SelectionSet.map4
-        (\players mapId joinToken userPlayerId ->
+        (\players mapId joinToken currentUserPlayerId ->
             { players = players
             , mapId = mapId
-            , userPlayerId = Player.Id userPlayerId
+            , currentUserPlayerId = Player.Id currentUserPlayerId
             , joinToken = JoinToken joinToken
             }
         )
