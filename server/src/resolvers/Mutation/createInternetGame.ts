@@ -3,7 +3,6 @@ import { ExecuteQuery } from "../../Database";
 import * as Map from "../../repositories/MapRepository";
 import * as Models from "../../repositories/Models";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
-
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 
 export async function createInternetGame(

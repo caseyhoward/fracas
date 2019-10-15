@@ -1,9 +1,10 @@
 import * as Models from "../repositories/Models";
 import * as Uuid from "../Uuid";
 
-interface InternetGameConfigurationOptions {
+export interface InternetGameConfigurationOptions {
   mapId: number;
   joinToken?: string;
+  players?: Models.PlayerConfiguration[];
 }
 
 export type MapOptions = {
@@ -30,5 +31,19 @@ export function map(options: MapOptions): Models.NewMap {
     countries: [],
     bodiesOfWater: [],
     dimensions: { width: 0, height: 0 }
+  };
+}
+
+interface PlayerOptions {
+  id: number;
+  name?: string;
+}
+
+export function player(options: PlayerOptions): Models.PlayerConfiguration {
+  return {
+    __typename: "PlayerConfiguration",
+    name: options.name || "Player " + Uuid.generate(),
+    color: { __typename: "Color", red: 0, green: 0, blue: 0 },
+    playerId: options.id
   };
 }

@@ -36,6 +36,7 @@ export async function save(
   executeQuery: ExecuteQuery,
   internetGame: Models.InternetGameConfiguration
 ): Promise<void> {
+  // console.log("Save", internetGame);
   const configurationJson: Models.ConfigurationJson = {
     __typename: "ConfigurationJson",
     players: internetGame.players
@@ -62,7 +63,7 @@ export async function addPlayer(
     ...configuration,
     players: [...configuration.players, player]
   };
-  save(executeQuery, updatedConfiguration);
+  await save(executeQuery, updatedConfiguration);
   executeQuery("COMMIT");
 }
 

@@ -157,5 +157,5 @@ export enum PlayerTurnStage {
 export interface InternetGamePlayer {
   id: number;
   gameId: number;
-  playerToken?: string;
+  playerToken: string;
 }

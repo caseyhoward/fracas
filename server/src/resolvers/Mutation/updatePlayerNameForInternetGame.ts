@@ -1,42 +1,36 @@
 import * as Database from "../../Database";
-// import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
-// import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
+import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
+import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
+import * as Graphql from "../../api/graphql";
 
-// import * as Uuid from "../../Uuid";
-// import * as Models from "../../repositories/Models";
-import * as graphql from "../../api/graphql";
-
-export default async function updatePlayerName(
+export default async function updatePlayerNameForInternetGame(
   executeQuery: Database.ExecuteQuery,
-  input: graphql.RequireFields<
-    graphql.MutationUpdatePlayerNameForInternetGameArgs,
+  input: Graphql.RequireFields<
+    Graphql.MutationUpdatePlayerNameForInternetGameArgs,
     "name" | "playerToken"
   >
 ): Promise<boolean> {
-  throw "todo";
-  //   const playerToken = Uuid.generate();
-  //   const internetGame = await InternetGameConfigurationRepository.findByJoinToken(
-  //     executeQuery,
-  //     input.joinGameToken
-  //   );
-  //   const newPlayer = await InternetGamePlayerRepository.create(
-  //     executeQuery,
-  //     internetGame.id,
-  //     playerToken
-  //   );
-  //   const updatedPlayers: Models.PlayerConfiguration[] = [
-  //     ...internetGame.players,
-  //     {
-  //       __typename: "PlayerConfiguration",
-  //       playerId: newPlayer.id,
-  //       name: "",
-  //       color: { __typename: "Color", red: 0, green: 0, blue: 0 }
-  //     }
-  //   ];
-  //   const updatedGame: Models.InternetGameConfiguration = {
-  //     ...internetGame,
-  //     players: updatedPlayers
-  //   };
-  //   await InternetGameConfigurationRepository.save(executeQuery, updatedGame);
-  //   return playerToken;
+  const internetGamePlayer = await InternetGamePlayerRepository.findByToken(
+    executeQuery,
+    input.playerToken
+  );
+  const configuration = await InternetGameConfigurationRepository.findById(
+    executeQuery,
+    internetGamePlayer.gameId
+  );
+  const updatedConfiguration = {
+    ...configuration,
+    players: configuration.players.map(player => {
+      if (player.playerId == internetGamePlayer.id) {
+        return { ...player, name: input.name };
+      } else {
+        return player;
+      }
+    })
+  };
+  await InternetGameConfigurationRepository.save(
+    executeQuery,
+    updatedConfiguration
+  );
+  return true;
 }

@@ -1,44 +1,41 @@
-import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
-import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
-import { createInternetGame, defaultHostColor } from "./createInternetGame";
-import joinInternetGame from "./joinInternetGame";
-import * as Map from "../../repositories/MapRepository";
-import * as TestDatabase from "../../db/TestDatabase";
 import * as Factories from "../../test/Factories";
+import * as Fixtures from "../../test/Fixtures";
+import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
+import updatePlayerNameForInternetGame from "./updatePlayerNameForInternetGame";
+import * as TestDatabase from "../../db/TestDatabase";
 
 describe("Mutation.updatePlayerNameForInternetGame", () => {
   it("works", async () => {
-    const internetGameConfiguration = Factories.createInternetGameConfiguration();
+    const internetGameConfigurationId = await Factories.createInternetGameConfiguration(
+      {}
+    );
+    const internetGamePlayer = await Factories.createInternetGamePlayer({
+      gameId: internetGameConfigurationId
+    });
+    const configuration = await InternetGameConfigurationRepository.findById(
+      TestDatabase.query,
+      internetGameConfigurationId
+    );
+    const updatedConfiguration = {
+      ...configuration,
+      players: [
+        Fixtures.player({ id: 1, name: "some name 1" }),
+        Fixtures.player({ id: internetGamePlayer.id, name: "some name 2" }),
+        Fixtures.player({ id: 3, name: "some name 3" })
+      ]
+    };
+    await InternetGameConfigurationRepository.save(
+      TestDatabase.query,
+      updatedConfiguration
+    );
+    await updatePlayerNameForInternetGame(TestDatabase.query, {
+      playerToken: internetGamePlayer.playerToken,
+      name: "new name"
+    });
+    const retrievedConfiguration = await InternetGameConfigurationRepository.findById(
+      TestDatabase.query,
+      internetGameConfigurationId
+    );
+    expect(retrievedConfiguration.players[1].name).toEqual("new name");
   });
-  //     await Map.create(TestDatabase.query, {
-  //       name: "blah",
-  //       countries: [],
-  //       bodiesOfWater: [],
-  //       dimensions: { width: 0, height: 0 }
-  //     });
-  //     const hostToken = await createInternetGame(TestDatabase.query);
-  //     const player = await InternetGamePlayerRepository.findByToken(
-  //       TestDatabase.query,
-  //       hostToken
-  //     );
-  //     const configuration = await InternetGameConfigurationRepository.findById(
-  //       TestDatabase.query,
-  //       player.gameId
-  //     );
-  //     const playerToken = await joinInternetGame(TestDatabase.query, {
-  //       joinGameToken: configuration.joinToken
-  //     });
-  //     const configurationWithNewPlayer = await InternetGameConfigurationRepository.findById(
-  //       TestDatabase.query,
-  //       player.gameId
-  //     );
-  //     const gamePlayer = await InternetGamePlayerRepository.findByToken(
-  //       TestDatabase.query,
-  //       playerToken
-  //     );
-  //     expect(gamePlayer.playerToken).toEqual(playerToken);
-  //     expect(configurationWithNewPlayer.players.length).toEqual(2);
-  //     expect(configurationWithNewPlayer.players[0].color).toEqual(
-  //       defaultHostColor
-  //     );
 });

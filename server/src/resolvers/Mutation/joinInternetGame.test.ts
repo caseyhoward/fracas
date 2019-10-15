@@ -1,3 +1,4 @@
+import * as Factories from "../../test/Factories";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import { createInternetGame, defaultHostColor } from "./createInternetGame";
@@ -7,12 +8,7 @@ import * as TestDatabase from "../../db/TestDatabase";
 
 describe("Mutation.joinInternetGame", () => {
   it("works", async () => {
-    await Map.create(TestDatabase.query, {
-      name: "blah",
-      countries: [],
-      bodiesOfWater: [],
-      dimensions: { width: 0, height: 0 }
-    });
+    await Factories.createMap();
     const hostToken = await createInternetGame(TestDatabase.query);
 
     const player = await InternetGamePlayerRepository.findByToken(

@@ -17,8 +17,7 @@ import map from "./resolvers/Query/map";
 import maps from "./resolvers/Query/maps";
 import createMap from "./resolvers/Mutation/createMap";
 import joinInternetGame from "./resolvers/Mutation/joinInternetGame";
-import updatePlayerName from "./resolvers/Mutation/updatePlayerNameForInternetGame";
-import { exec } from "child_process";
+import updatePlayerNameForInternetGame from "./resolvers/Mutation/updatePlayerNameForInternetGame";
 
 export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
   return {
@@ -41,7 +40,7 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
       joinInternetGame: (_, input) => joinInternetGame(executeQuery, input),
       createInternetGame: () => createInternetGame(executeQuery),
       updatePlayerNameForInternetGame: (_, input) =>
-        updatePlayerName(executeQuery, input),
+        updatePlayerNameForInternetGame(executeQuery, input),
       updateMapForInternetGame,
       saveGame: async (_, saveGame) => {
         return Game.update(executeQuery, saveGame.game);
