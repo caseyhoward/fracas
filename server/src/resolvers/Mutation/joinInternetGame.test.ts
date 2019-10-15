@@ -3,7 +3,6 @@ import * as InternetGameConfigurationRepository from "../../repositories/Interne
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import { createInternetGame, defaultHostColor } from "./createInternetGame";
 import joinInternetGame from "./joinInternetGame";
-import * as Map from "../../repositories/MapRepository";
 import * as TestDatabase from "../../test/TestDatabase";
 
 describe("Mutation.joinInternetGame", () => {
