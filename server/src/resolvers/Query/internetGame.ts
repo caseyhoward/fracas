@@ -6,6 +6,7 @@ import * as InternetGamePlayerRepository from "../../repositories/InternetGamePl
 
 export default async function internetGame(
   executeQuery: Database.ExecuteQuery,
+
   game: graphql.RequireFields<graphql.QueryInternetGameArgs, "playerToken">
 ): Promise<graphql.InternetGameOrConfiguration> {
   const player = await InternetGamePlayerRepository.findByToken(

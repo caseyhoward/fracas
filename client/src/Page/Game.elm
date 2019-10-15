@@ -1,11 +1,14 @@
 module Page.Game exposing
-    ( Model
+    ( CountryBorderHelperOutlineStatus(..)
+    , GameLoadedModel
+    , Model
     , Msg
     , init
     , subscriptions
-    , toSession, GameLoadedModel
-    , update, CountryBorderHelperOutlineStatus(..)
+    , toSession
+    , update
     , view
+    , viewGameWrapMessage
     )
 
 import Browser.Events
@@ -266,6 +269,40 @@ waitingToShowCountryHelperOutlines countryBorderHelperOutlineStatus =
 ---- VIEW ----
 
 
+viewGameWrapMessage : GameLoadedModel -> (Msg -> msg) -> { title : String, content : Html.Html msg }
+viewGameWrapMessage model toMsg =
+    let
+        { title, content } =
+            viewGame model
+
+        updatedContent =
+            content |> Html.map toMsg
+    in
+    { title = title, content = updatedContent }
+
+
+viewGame : GameLoadedModel -> { title : String, content : Html.Html Msg }
+viewGame gameLoaded =
+    { content =
+        case gameLoaded.session.windowSize of
+            Just windowSize ->
+                let
+                    device =
+                        Element.classifyDevice windowSize
+                in
+                case Element.classifyDevice windowSize |> .class of
+                    Element.Phone ->
+                        viewPlayingGameMobile gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error device
+
+                    _ ->
+                        viewPlayingGameDesktop gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error device
+
+            Nothing ->
+                viewPlayingGameDesktop gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error (Element.classifyDevice { width = 1920, height = 1080 })
+    , title = "Fracas"
+    }
+
+
 view : Model -> { title : String, content : Html.Html Msg }
 view model =
     case model of
@@ -283,24 +320,7 @@ view model =
             }
 
         GameLoaded gameLoaded ->
-            { content =
-                case gameLoaded.session.windowSize of
-                    Just windowSize ->
-                        let
-                            device =
-                                Element.classifyDevice windowSize
-                        in
-                        case Element.classifyDevice windowSize |> .class of
-                            Element.Phone ->
-                                viewPlayingGameMobile gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error device
-
-                            _ ->
-                                viewPlayingGameDesktop gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error device
-
-                    Nothing ->
-                        viewPlayingGameDesktop gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error (Element.classifyDevice { width = 1920, height = 1080 })
-            , title = "Fracas"
-            }
+            viewGame gameLoaded
 
         GameSaving gameLoaded _ ->
             { content =

@@ -36,6 +36,7 @@ type Msg
     | ChangeColorButtonClicked
     | ColorSelected Int Colors.Color
     | ColorSelectBackgroundClicked
+    | GameMsg Page.Game.Msg
     | GameStarted (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatePlayerName String
     | UpdatedColor (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
@@ -233,6 +234,9 @@ update msg model =
             ( model, Cmd.none )
 
 
+
+
+
 view : Model -> { title : String, content : Html.Html Msg }
 view model =
     case model of
@@ -296,7 +300,7 @@ viewConfiguring configuringModel =
 
 viewPlaying : PlayingModel -> { title : String, content : Html.Html Msg }
 viewPlaying playingModel =
-    { title = "game", content = Element.layout [] Element.none }
+    Page.Game.viewGameWrapMessage playingModel.gameModel GameMsg
 
 
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Player.Id -> Element.Element Msg
