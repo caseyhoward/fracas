@@ -7,15 +7,15 @@ import * as Models from "../../repositories/Models";
 
 describe("Mutation.updatePlayerColorForInternetGame", () => {
   it("works", async () => {
-    const internetGameConfigurationId = await Factories.createInternetGameConfiguration(
+    const internetGameConfiguration = await Factories.createInternetGameConfiguration(
       {}
     );
     const internetGamePlayer = await Factories.createInternetGamePlayer({
-      gameId: internetGameConfigurationId
+      gameId: internetGameConfiguration.id
     });
     const configuration = await InternetGameConfigurationRepository.findById(
       TestDatabase.query,
-      internetGameConfigurationId
+      internetGameConfiguration.id
     );
     const updatedConfiguration = {
       ...configuration,
@@ -38,7 +38,7 @@ describe("Mutation.updatePlayerColorForInternetGame", () => {
     });
     const retrievedConfiguration = await InternetGameConfigurationRepository.findById(
       TestDatabase.query,
-      internetGameConfigurationId
+      internetGameConfiguration.id
     );
     expect(retrievedConfiguration.players[1].color).toEqual(black);
   });

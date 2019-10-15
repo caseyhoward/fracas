@@ -48,3 +48,18 @@ export function player(options: PlayerOptions): Models.PlayerConfiguration {
     playerId: options.id
   };
 }
+
+export function internetGame(id: number): Models.InternetGame {
+  return {
+    __typename: "InternetGame",
+    players: [],
+    mapId: 1,
+    id,
+    playerTurn: {
+      __typename: "PlayerTurn",
+      playerId: 1,
+      playerTurnStage: Models.PlayerTurnStage.CapitolPlacement
+    },
+    neutralCountryTroops: []
+  };
+}

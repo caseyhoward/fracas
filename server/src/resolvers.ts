@@ -17,6 +17,7 @@ import map from "./resolvers/Query/map";
 import maps from "./resolvers/Query/maps";
 import createMap from "./resolvers/Mutation/createMap";
 import joinInternetGame from "./resolvers/Mutation/joinInternetGame";
+import startInternetGame from "./resolvers/Mutation/startInternetGame";
 import updatePlayerNameForInternetGame from "./resolvers/Mutation/updatePlayerNameForInternetGame";
 import updatePlayerColorForInternetGame from "./resolvers/Mutation/updatePlayerColorForInternetGame";
 
@@ -40,6 +41,7 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
       createMap: async (_, input) => createMap(executeQuery, input),
       joinInternetGame: (_, input) => joinInternetGame(executeQuery, input),
       createInternetGame: () => createInternetGame(executeQuery),
+      startInternetGame: (_, input) => startInternetGame(executeQuery, input),
       updatePlayerNameForInternetGame: (_, input) =>
         updatePlayerNameForInternetGame(executeQuery, input),
       updatePlayerColorForInternetGame: (_, input) =>

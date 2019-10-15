@@ -12,7 +12,7 @@ interface CreateInternetGameConfigurationOptions {
 
 export async function createInternetGameConfiguration(
   options: CreateInternetGameConfigurationOptions
-): Promise<number> {
+): Promise<Models.InternetGameConfiguration> {
   let mapId: number;
   if (typeof options.mapOrMapId === "number") {
     mapId = options.mapOrMapId;
@@ -25,9 +25,13 @@ export async function createInternetGameConfiguration(
   const newInternetGameConfiguration = Fixtures.internetGameConfiguration({
     mapId: mapId
   });
-  return InternetGameConfigurationRepository.create(
+  const id = await InternetGameConfigurationRepository.create(
     TestDatabase.query,
     newInternetGameConfiguration
+  );
+  return await InternetGameConfigurationRepository.findById(
+    TestDatabase.query,
+    id
   );
 }
 

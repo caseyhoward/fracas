@@ -9,7 +9,7 @@ import * as TestDatabase from "../../db/TestDatabase";
 describe("Mutation.joinInternetGame", () => {
   it("works", async () => {
     await Factories.createMap();
-    const hostToken = await createInternetGame(TestDatabase.query);
+    const hostToken = await createInternetGame(TestDatabase.query); // TODO: Use repositories/factories instead of resolver
 
     const player = await InternetGamePlayerRepository.findByToken(
       TestDatabase.query,

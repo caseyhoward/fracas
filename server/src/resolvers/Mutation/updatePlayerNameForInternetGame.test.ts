@@ -6,15 +6,15 @@ import * as TestDatabase from "../../db/TestDatabase";
 
 describe("Mutation.updatePlayerNameForInternetGame", () => {
   it("works", async () => {
-    const internetGameConfigurationId = await Factories.createInternetGameConfiguration(
+    const internetGameConfiguration = await Factories.createInternetGameConfiguration(
       {}
     );
     const internetGamePlayer = await Factories.createInternetGamePlayer({
-      gameId: internetGameConfigurationId
+      gameId: internetGameConfiguration.id
     });
     const configuration = await InternetGameConfigurationRepository.findById(
       TestDatabase.query,
-      internetGameConfigurationId
+      internetGameConfiguration.id
     );
     const updatedConfiguration = {
       ...configuration,
@@ -34,7 +34,7 @@ describe("Mutation.updatePlayerNameForInternetGame", () => {
     });
     const retrievedConfiguration = await InternetGameConfigurationRepository.findById(
       TestDatabase.query,
-      internetGameConfigurationId
+      internetGameConfiguration.id
     );
     expect(retrievedConfiguration.players[1].name).toEqual("new name");
   });

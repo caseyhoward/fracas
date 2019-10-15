@@ -105,7 +105,7 @@ export type Color = {
 
 export type Player = {
   __typename: "Player";
-  id: string;
+  id: number;
   name: string;
   countryTroopCounts: Array<CountryTroopCounts>;
   capitol?: string;
@@ -132,7 +132,7 @@ export type InternetGame = {
 
 export type PlayerTurn = {
   __typename: "PlayerTurn";
-  playerId: string;
+  playerId: number;
   playerTurnStage: PlayerTurnStage;
   fromCountryId?: string;
   troopCount?: string;
