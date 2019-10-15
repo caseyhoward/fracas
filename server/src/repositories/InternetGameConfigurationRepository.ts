@@ -56,14 +56,12 @@ export async function addPlayer(
   id: number,
   player: Models.PlayerConfiguration
 ): Promise<void> {
-  executeQuery("BEGIN");
   const configuration = await findById(executeQuery, id);
   const updatedConfiguration = {
     ...configuration,
     players: [...configuration.players, player]
   };
   await save(executeQuery, updatedConfiguration);
-  executeQuery("COMMIT");
 }
 
 export async function findByJoinToken(

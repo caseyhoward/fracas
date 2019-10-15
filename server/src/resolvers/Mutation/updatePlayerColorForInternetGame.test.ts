@@ -1,5 +1,5 @@
 import * as Factories from "../../test/Factories";
-import * as Fixtures from "../../test/Fixtures";
+import * as Builders from "../../test/Builders";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import updatePlayerColorForInternetGame from "./updatePlayerColorForInternetGame";
 import * as TestDatabase from "../../test/TestDatabase";
@@ -20,12 +20,12 @@ describe("Mutation.updatePlayerColorForInternetGame", () => {
     const updatedConfiguration = {
       ...configuration,
       players: [
-        Fixtures.player({ id: 1, color: { ...black, red: 0 } }),
-        Fixtures.player({
+        Builders.player({ id: 1, color: { ...black, red: 0 } }),
+        Builders.player({
           id: internetGamePlayer.id,
           color: { ...black, green: 0 }
         }),
-        Fixtures.player({ id: 3, color: { ...black, blue: 0 } })
+        Builders.player({ id: 3, color: { ...black, blue: 0 } })
       ]
     };
     await InternetGameConfigurationRepository.save(

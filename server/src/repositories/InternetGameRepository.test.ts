@@ -2,7 +2,7 @@ import * as InternetGameRepository from "./InternetGameRepository";
 import * as TestDatabase from "../test/TestDatabase";
 import * as Factories from "../test/Factories";
 import * as Uuid from "../Uuid";
-import * as Fixtures from "../test/Fixtures";
+import * as Builders from "../test/Builders";
 
 describe("InternetGameRepository.save", () => {
   it("save an Internet game", async () => {
@@ -12,7 +12,7 @@ describe("InternetGameRepository.save", () => {
 
     await InternetGameRepository.save(
       TestDatabase.query,
-      Fixtures.internetGame(configuration.id)
+      Builders.internetGame(configuration.id)
     );
     const savedConfiguration = await InternetGameRepository.findById(
       TestDatabase.query,

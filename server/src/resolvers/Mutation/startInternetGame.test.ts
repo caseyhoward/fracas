@@ -1,5 +1,5 @@
 import * as Factories from "../../test/Factories";
-import * as Builders from "../../test/Fixtures";
+import * as Builders from "../../test/Builders";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import startInternetGame from "./startInternetGame";

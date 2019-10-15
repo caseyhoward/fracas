@@ -1,5 +1,5 @@
 import * as Factories from "../../test/Factories";
-import * as Fixtures from "../../test/Fixtures";
+import * as Builders from "../../test/Builders";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import updatePlayerNameForInternetGame from "./updatePlayerNameForInternetGame";
 import * as TestDatabase from "../../test/TestDatabase";
@@ -19,9 +19,9 @@ describe("Mutation.updatePlayerNameForInternetGame", () => {
     const updatedConfiguration = {
       ...configuration,
       players: [
-        Fixtures.player({ id: 1, name: "some name 1" }),
-        Fixtures.player({ id: internetGamePlayer.id, name: "some name 2" }),
-        Fixtures.player({ id: 3, name: "some name 3" })
+        Builders.player({ id: 1, name: "some name 1" }),
+        Builders.player({ id: internetGamePlayer.id, name: "some name 2" }),
+        Builders.player({ id: 3, name: "some name 3" })
       ]
     };
     await InternetGameConfigurationRepository.save(

@@ -36,12 +36,12 @@ export async function get(
 }
 
 function gameToJson(gameRow: GameRow): Game {
-  const gameWithoutId = JSON.parse(gameRow.game_json);
+  const gameWithoutId: Game = JSON.parse(gameRow.game_json);
 
   return {
     ...gameWithoutId,
-    id: gameRow.id,
-    map: { id: gameRow.map_id }
+    id: gameRow.id.toString(),
+    map: <any>{ id: gameRow.map_id.toString() }
   };
 }
 

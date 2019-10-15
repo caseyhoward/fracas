@@ -1,4 +1,4 @@
-import * as Fixtures from "./Fixtures";
+import * as Builders from "./Builders";
 import * as InternetGameConfigurationRepository from "../repositories/InternetGameConfigurationRepository";
 import * as InternetGamePlayerRepository from "../repositories/InternetGamePlayerRepository";
 import * as Map from "../repositories/MapRepository";
@@ -22,7 +22,7 @@ export async function createInternetGameConfiguration(
   } else {
     mapId = options.mapOrMapId.id;
   }
-  const newInternetGameConfiguration = Fixtures.internetGameConfiguration({
+  const newInternetGameConfiguration = Builders.internetGameConfiguration({
     mapId: mapId
   });
   const id = await InternetGameConfigurationRepository.create(
@@ -36,7 +36,7 @@ export async function createInternetGameConfiguration(
 }
 
 export async function createMap(): Promise<Models.Map> {
-  const newMap = Fixtures.map({});
+  const newMap = Builders.map({});
   return await Map.create(TestDatabase.query, newMap);
 }
 
