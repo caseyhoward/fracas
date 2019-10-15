@@ -34,10 +34,11 @@ import ViewHelpers
 
 type Msg
     = GotGameAndMaps (RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet)
-    | ChangeColorButtonClicked Player.Id
+    | ChangeColorButtonClicked
     | ColorSelected Int Colors.Color
     | ColorSelectBackgroundClicked
     | UpdatePlayerName String
+    | UpdatedColor (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatedPlayerName (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | RemovePlayer Int
     | StartGameClicked
@@ -62,7 +63,7 @@ type alias ConfiguringModel =
     { session : Session.Session
     , configuration : InternetGame.Configuration
     , maps : List Map.Map
-    , configureColor : Maybe Int
+    , configureColor : Bool
     , playerToken : InternetGame.PlayerToken
     }
 
@@ -127,9 +128,9 @@ update msg model =
                                     ( Configuring
                                         { session = loadingModel.session
                                         , configuration = configuration
-                                        , configureColor = Nothing
                                         , maps = gameAndMaps.maps
                                         , playerToken = loadingModel.playerToken
+                                        , configureColor = False
                                         }
                                     , Cmd.none
                                     )
@@ -151,6 +152,37 @@ update msg model =
 
         Configuring configuringModel ->
             case msg of
+                ChangeColorButtonClicked ->
+                    ( Configuring { configuringModel | configureColor = True }, Cmd.none )
+
+                ColorSelectBackgroundClicked ->
+                    ( Configuring { configuringModel | configureColor = False }, Cmd.none )
+
+                ColorSelected playerId color ->
+                    let
+                        configuration =
+                            configuringModel.configuration
+
+                        updatedPlayers =
+                            configuration.players
+                                |> List.map
+                                    (\player ->
+                                        if player.id == configuration.currentUserPlayerId then
+                                            { player | color = color }
+
+                                        else
+                                            player
+                                    )
+
+                        updatedConfiguringModel : InternetGame.Configuration
+                        updatedConfiguringModel =
+                            { configuration | players = updatedPlayers }
+                    in
+                    ( Configuring { configuringModel | configuration = updatedConfiguringModel, configureColor = False }, InternetGame.updateColor configuringModel.session.apiUrl configuringModel.playerToken color UpdatedColor )
+
+                MapUpdated _ ->
+                    ( model, Cmd.none )
+
                 SelectMap mapId ->
                     let
                         configuration =
@@ -163,12 +195,6 @@ update msg model =
                     ( Configuring { configuringModel | configuration = updatedConfiguringModel }
                     , InternetGame.updateMap configuringModel.session.apiUrl configuringModel.playerToken (Map.Id mapId) MapUpdated
                     )
-
-                MapUpdated updatedConfiguration ->
-                    ( model, Cmd.none )
-
-                ChangeColorButtonClicked playerId ->
-                    ( model, Cmd.none )
 
                 UpdatePlayerName name ->
                     let
@@ -230,7 +256,7 @@ viewConfiguring configuringModel =
     { title = "Configure Internet Game"
     , content =
         layout
-            (playerColorSelect p configuringModel.configureColor)
+            (playerColorSelect p configuringModel.configuration.currentUserPlayerId configuringModel.configureColor)
             (Element.column
                 [ Element.width Element.fill
                 , Element.spacingXY 0 20
@@ -292,7 +318,7 @@ playerFields currentUserPlayerId ( playerId, player ) =
                     , placeholder = Nothing
                     , label = Element.Input.labelHidden "Name"
                     }
-                , NewGame.colorButton player.color (ChangeColorButtonClicked playerId)
+                , NewGame.colorButton player.color ChangeColorButtonClicked
                 ]
 
              else
@@ -304,42 +330,46 @@ playerFields currentUserPlayerId ( playerId, player ) =
                     , Element.Font.color (Colors.lightCharcoal |> Colors.toElementColor)
                     ]
                     (Element.el [ Element.centerY ] (Element.text player.name))
-                , NewGame.colorButton player.color (ChangeColorButtonClicked playerId)
+                , Element.el
+                    [ Element.Background.color (player.color |> Colors.toElementColor)
+                    , Element.width (Element.px 50)
+                    , Element.height (Element.px 50)
+                    ]
+                    Element.none
                 ]
             )
         ]
 
 
-playerColorSelect : Dict.Dict Int Player.NewPlayer -> Maybe Int -> Element.Element Msg
-playerColorSelect players maybePlayerId =
-    case maybePlayerId of
-        Just playerId ->
-            case Dict.get playerId players of
-                Just player ->
-                    ViewHelpers.dialog
-                        ColorSelectBackgroundClicked
-                        [ Element.width Element.shrink, Element.height (Element.px 300) ]
-                        (Element.column
-                            [ Element.padding 20
-                            , Element.Background.color (Colors.white |> Colors.toElementColor)
-                            , Element.spacing 20
-                            , Element.width (Element.px 300)
-                            , Element.height Element.fill
-                            ]
-                            [ Element.text ("Select color for " ++ player.name)
-                            , Element.wrappedRow [ Element.width Element.fill ]
-                                (players
-                                    |> Player.availablePlayerColors
-                                    |> List.map (\color -> Element.el [ Element.height (Element.px 50) ] (NewGame.colorButton color (ColorSelected playerId color)))
-                                )
-                            ]
-                        )
+playerColorSelect : Dict.Dict Int Player.NewPlayer -> Player.Id -> Bool -> Element.Element Msg
+playerColorSelect players (Player.Id playerId) isConfiguringColor =
+    if isConfiguringColor then
+        case Dict.get playerId players of
+            Just player ->
+                ViewHelpers.dialog
+                    ColorSelectBackgroundClicked
+                    [ Element.width Element.shrink, Element.height (Element.px 300) ]
+                    (Element.column
+                        [ Element.padding 20
+                        , Element.Background.color (Colors.white |> Colors.toElementColor)
+                        , Element.spacing 20
+                        , Element.width (Element.px 300)
+                        , Element.height Element.fill
+                        ]
+                        [ Element.text ("Select color for " ++ player.name)
+                        , Element.wrappedRow [ Element.width Element.fill ]
+                            (players
+                                |> Player.availablePlayerColors
+                                |> List.map (\color -> Element.el [ Element.height (Element.px 50) ] (NewGame.colorButton color (ColorSelected playerId color)))
+                            )
+                        ]
+                    )
 
-                Nothing ->
-                    Element.text "Error getting player"
+            Nothing ->
+                Element.text "Error getting player"
 
-        Nothing ->
-            Element.none
+    else
+        Element.none
 
 
 layout : Element.Element Msg -> Element.Element Msg -> Html.Html Msg
