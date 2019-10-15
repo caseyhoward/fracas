@@ -1,5 +1,7 @@
+import { resolvers } from "./resolvers";
+
 describe("resolvers", () => {
-  it("works", () => {
-    expect(1).toEqual(1);
+  it("doesn't blow up", () => {
+    expect(resolvers).toBeDefined();
   });
 });
