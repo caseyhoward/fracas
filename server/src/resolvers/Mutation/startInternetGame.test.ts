@@ -3,7 +3,7 @@ import * as Builders from "../../test/Fixtures";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import startInternetGame from "./startInternetGame";
-import * as TestDatabase from "../../db/TestDatabase";
+import * as TestDatabase from "../../test/TestDatabase";
 
 describe("Mutation.startInternetGame", () => {
   it("starts a game", async () => {

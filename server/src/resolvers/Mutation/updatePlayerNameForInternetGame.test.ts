@@ -2,7 +2,7 @@ import * as Factories from "../../test/Factories";
 import * as Fixtures from "../../test/Fixtures";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import updatePlayerNameForInternetGame from "./updatePlayerNameForInternetGame";
-import * as TestDatabase from "../../db/TestDatabase";
+import * as TestDatabase from "../../test/TestDatabase";
 
 describe("Mutation.updatePlayerNameForInternetGame", () => {
   it("works", async () => {

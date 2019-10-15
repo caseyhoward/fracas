@@ -1,5 +1,5 @@
 import * as Map from "./MapRepository";
-import * as TestDatabase from "../db/TestDatabase";
+import * as TestDatabase from "../test/TestDatabase";
 
 describe("Map", () => {
   describe(".create", () => {

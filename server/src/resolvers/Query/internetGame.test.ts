@@ -1,7 +1,7 @@
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import internetGame from "./internetGame";
-import * as TestDatabase from "../../db/TestDatabase";
+import * as TestDatabase from "../../test/TestDatabase";
 import * as Models from "../../repositories/Models";
 import * as Uuid from "../../Uuid";
 import { defaultHostColor } from "../Mutation/createInternetGame";

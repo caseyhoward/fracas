@@ -4,7 +4,7 @@ import * as InternetGamePlayerRepository from "../../repositories/InternetGamePl
 import { createInternetGame, defaultHostColor } from "./createInternetGame";
 import joinInternetGame from "./joinInternetGame";
 import * as Map from "../../repositories/MapRepository";
-import * as TestDatabase from "../../db/TestDatabase";
+import * as TestDatabase from "../../test/TestDatabase";
 
 describe("Mutation.joinInternetGame", () => {
   it("works", async () => {

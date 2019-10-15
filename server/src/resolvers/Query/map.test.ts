@@ -1,4 +1,4 @@
-import * as TestDatabase from "../../db/TestDatabase";
+import * as TestDatabase from "../../test/TestDatabase";
 import queryMap from "./map";
 import * as MapRepository from "../../repositories/MapRepository";
 import * as Factories from "../../test/Factories";

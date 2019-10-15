@@ -1,4 +1,4 @@
-import * as TestDatabase from "../../db/TestDatabase";
+import * as TestDatabase from "../../test/TestDatabase";
 import createMap from "./createMap";
 import * as MapRepository from "../../repositories/MapRepository";
 import * as Fixtures from "../../test/Fixtures";

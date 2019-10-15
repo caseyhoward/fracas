@@ -1,5 +1,5 @@
 import * as InternetGameConfigurationRepository from "./InternetGameConfigurationRepository";
-import * as TestDatabase from "../db/TestDatabase";
+import * as TestDatabase from "../test/TestDatabase";
 
 import * as Models from "./Models";
 import * as Uuid from "../Uuid";

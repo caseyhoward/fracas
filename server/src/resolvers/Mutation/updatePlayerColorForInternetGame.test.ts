@@ -2,7 +2,7 @@ import * as Factories from "../../test/Factories";
 import * as Fixtures from "../../test/Fixtures";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import updatePlayerColorForInternetGame from "./updatePlayerColorForInternetGame";
-import * as TestDatabase from "../../db/TestDatabase";
+import * as TestDatabase from "../../test/TestDatabase";
 import * as Models from "../../repositories/Models";
 
 describe("Mutation.updatePlayerColorForInternetGame", () => {

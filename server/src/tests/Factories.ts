@@ -2,7 +2,7 @@ import * as Fixtures from "./Fixtures";
 import * as InternetGameConfigurationRepository from "../repositories/InternetGameConfigurationRepository";
 import * as InternetGamePlayerRepository from "../repositories/InternetGamePlayerRepository";
 import * as Map from "../repositories/MapRepository";
-import * as TestDatabase from "./TestDatabase";
+import * as TestDatabase from "../test/TestDatabase";
 import * as Models from "../repositories/Models";
 import * as Uuid from "../Uuid";
 

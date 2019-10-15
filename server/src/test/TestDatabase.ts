@@ -1,4 +1,3 @@
-import { Pool, QueryConfig, QueryResult, QueryResultRow } from "pg";
 import * as Database from "../Database";
 
 export const query: Database.ExecuteQuery = Database.postgres({
