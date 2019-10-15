@@ -1,13 +1,7 @@
-module GameTests exposing (..)
+module MapTest exposing (..)
 
-import Game
-import Color
-import Dict
 import Expect
-import Set
 import Test exposing (..)
-
-
 
 
 

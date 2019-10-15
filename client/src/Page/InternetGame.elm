@@ -224,7 +224,7 @@ update msg model =
                     ( model, Cmd.none )
 
         Playing playingModel ->
-            Debug.todo ""
+            ( model, Cmd.none )
 
 
 view : Model -> { title : String, content : Html.Html Msg }
@@ -237,7 +237,7 @@ view model =
             viewConfiguring configuringModel
 
         Playing playingModel ->
-            Debug.todo ""
+            viewPlaying playingModel
 
 
 viewConfiguring : ConfiguringModel -> { title : String, content : Html.Html Msg }
@@ -286,6 +286,11 @@ viewConfiguring configuringModel =
                 ]
             )
     }
+
+
+viewPlaying : PlayingModel -> { title : String, content : Html.Html Msg }
+viewPlaying playingModel =
+    { title = "game", content = Element.layout [] Element.none }
 
 
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Player.Id -> Element.Element Msg
