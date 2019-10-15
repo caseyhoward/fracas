@@ -24,6 +24,7 @@ import Html.Attributes
 import InternetGame
 import Map
 import NewGame
+import Page.Game
 import Player
 import RemoteData
 import Session
@@ -68,9 +69,8 @@ type alias ConfiguringModel =
 
 
 type alias PlayingModel =
-    { session : Session.Session
-    , game : InternetGame.Game
-    , playerToken : InternetGame.PlayerToken
+    { playerToken : InternetGame.PlayerToken
+    , gameModel : Page.Game.GameLoadedModel
     }
 
 
@@ -111,7 +111,7 @@ toSession model =
             configuringModel.session
 
         Playing playingModel ->
-            playingModel.session
+            playingModel.gameModel.session
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -134,10 +134,16 @@ update msg model =
                                     , Cmd.none
                                     )
 
-                                InternetGame.InternetGame game ->
+                                InternetGame.InternetGame internetGame ->
                                     ( Playing
-                                        { session = loadingModel.session
-                                        , game = game
+                                        { gameModel =
+                                            { activeGame = internetGame.game
+                                            , showAvailableMoves = False
+                                            , session = loadingModel.session
+                                            , error = Nothing
+                                            , playerId = internetGame.currentUserPlayerId
+                                            , countryBorderHelperOutlineStatus = Page.Game.CountryBorderHelperOutlineInactive
+                                            }
                                         , playerToken = loadingModel.playerToken
                                         }
                                     , Cmd.none

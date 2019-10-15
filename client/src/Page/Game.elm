@@ -3,8 +3,8 @@ module Page.Game exposing
     , Msg
     , init
     , subscriptions
-    , toSession
-    , update
+    , toSession, GameLoadedModel
+    , update, CountryBorderHelperOutlineStatus(..)
     , view
     )
 
