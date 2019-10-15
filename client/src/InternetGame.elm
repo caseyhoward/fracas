@@ -13,6 +13,7 @@ module InternetGame exposing
     , playerTokenToString
     , playerTokenUrlParser
     , selectionSet
+    , start
     , updateColor
     , updateMap
     , updatePlayerName
@@ -105,6 +106,13 @@ joinGame apiUrl (JoinToken joinToken) toMsg =
 joinTokenToString : JoinToken -> String
 joinTokenToString (JoinToken joinToken) =
     joinToken
+
+
+start : String -> PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool -> msg) -> Cmd msg
+start apiUrl (PlayerToken playerToken) toMsg =
+    Api.Mutation.startInternetGame { playerToken = playerToken }
+        |> Graphql.Http.mutationRequest apiUrl
+        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 updateColor : String -> PlayerToken -> Colors.Color -> (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool -> msg) -> Cmd msg

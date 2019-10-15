@@ -12,7 +12,7 @@ interface CreateInternetGameConfigurationOptions {
 
 export async function createInternetGameConfiguration(
   options: CreateInternetGameConfigurationOptions
-) {
+): Promise<number> {
   let mapId: number;
   if (typeof options.mapOrMapId === "number") {
     mapId = options.mapOrMapId;

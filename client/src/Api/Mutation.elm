@@ -107,9 +107,9 @@ type alias StartInternetGameRequiredArguments =
   - playerToken -
 
 -}
-startInternetGame : StartInternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootMutation
-startInternetGame requiredArgs object_ =
-    Object.selectionForCompositeField "startInternetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
+startInternetGame : StartInternetGameRequiredArguments -> SelectionSet Bool RootMutation
+startInternetGame requiredArgs =
+    Object.selectionForField "Bool" "startInternetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] Decode.bool
 
 
 type alias UpdateMapForInternetGameRequiredArguments =

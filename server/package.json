@@ -10,12 +10,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "apollo": "^2.19.1",
     "graphql-yoga": "^1.18.3",
-    "pg": "^7.12.1",
-    "typescript": "^3.6.3"
+    "pg": "^7.12.1"
   },
   "devDependencies": {
+    "apollo": "^2.19.1",
+    "typescript": "^3.6.3",
     "@graphql-codegen/cli": "^1.8.1",
     "@types/pg": "^7.11.1",
     "@graphql-codegen/introspection": "^1.8.1",

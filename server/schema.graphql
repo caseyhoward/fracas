@@ -202,7 +202,7 @@ type Mutation {
   joinInternetGame(joinGameToken: String!): String! # Returns player token
   removePlayer(playerToken: String!, playerId: Int!): Game! # Must be host
   saveGame(game: GameInput!): Game! # Local only
-  startInternetGame(playerToken: String!): Game! # Must be host
+  startInternetGame(playerToken: String!): Boolean! # Must be host
   updateMapForInternetGame(
     playerToken: String!
     mapId: String!

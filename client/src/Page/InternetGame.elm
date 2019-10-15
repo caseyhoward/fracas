@@ -8,7 +8,6 @@ module Page.InternetGame exposing
     , view
     )
 
-import Api.Mutation
 import Api.Query
 import Colors
 import Dict
@@ -17,7 +16,6 @@ import Element.Background
 import Element.Border
 import Element.Font
 import Element.Input
-import Game
 import Graphql.Http
 import Graphql.Operation
 import Graphql.SelectionSet
@@ -37,6 +35,7 @@ type Msg
     | ChangeColorButtonClicked
     | ColorSelected Int Colors.Color
     | ColorSelectBackgroundClicked
+    | GameStarted (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatePlayerName String
     | UpdatedColor (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatedPlayerName (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
@@ -148,7 +147,7 @@ update msg model =
                             ( Loading { loadingModel | gameAndMaps = gameRemoteData }, Cmd.none )
 
                 _ ->
-                    Debug.todo ""
+                    ( model, Cmd.none )
 
         Configuring configuringModel ->
             case msg of
@@ -195,6 +194,9 @@ update msg model =
                     ( Configuring { configuringModel | configuration = updatedConfiguringModel }
                     , InternetGame.updateMap configuringModel.session.apiUrl configuringModel.playerToken (Map.Id mapId) MapUpdated
                     )
+
+                StartGameClicked ->
+                    ( model, InternetGame.start configuringModel.session.apiUrl configuringModel.playerToken GameStarted )
 
                 UpdatePlayerName name ->
                     let
