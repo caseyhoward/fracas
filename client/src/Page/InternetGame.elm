@@ -314,13 +314,7 @@ viewConfiguring configuringModel =
                 , Element.spacingXY 0 20
                 , Element.Background.color (Colors.blue |> Colors.toElementColor)
                 ]
-                [ Element.el
-                    [ Element.Background.color (Colors.gray |> Colors.toElementColor)
-                    , Element.Border.rounded 10
-                    , Element.centerX
-                    , Element.padding 20
-                    ]
-                    (Element.text ("/games/internet/join/" ++ (configuringModel.configuration.joinToken |> InternetGame.joinTokenToString)))
+                [ joinUrlView configuringModel.session.origin configuringModel.configuration.joinToken
                 , Element.el [ Element.centerX ]
                     (Element.wrappedRow
                         [ Element.spacing 40, Element.centerX ]
@@ -336,6 +330,19 @@ viewConfiguring configuringModel =
                 ]
             )
     }
+
+
+joinUrlView origin joinToken =
+    Element.column
+        [ Element.Background.color (Colors.gray |> Colors.toElementColor)
+        , Element.Border.rounded 10
+        , Element.centerX
+        , Element.padding 20
+        , Element.spacing 20
+        ]
+        [ Element.el [ Element.Font.size 14 ] (Element.text "Give this URL to the people so they can join the game")
+        , Element.text (origin ++ "/games/internet/join/" ++ (joinToken |> InternetGame.joinTokenToString))
+        ]
 
 
 viewPlaying : PlayingModel -> { title : String, content : Html.Html Msg }

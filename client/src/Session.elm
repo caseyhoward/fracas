@@ -21,22 +21,17 @@ type alias WindowSize =
 type alias Session =
     { windowSize : Maybe WindowSize
     , navKey : Browser.Navigation.Key
-
-    -- , gameMaps : Dict.Dict String Map.Map
+    , origin : String
     , activeGames : Dict.Dict String LocalGame.Game
     , apiUrl : String
     }
 
 
-init : Browser.Navigation.Key -> Session
-init key =
+init : Browser.Navigation.Key -> String -> Session
+init key origin =
     { windowSize = Nothing
     , navKey = key
-
-    -- , gameMaps =
-    --     Dict.fromList
-    --         [ ( "1", Map.parse Maps.Big.map ViewHelpers.pixelsPerMapSquare )
-    --         ]
+    , origin = origin
     , activeGames = Dict.empty
     , apiUrl = "http://192.168.1.7:4000"
     }

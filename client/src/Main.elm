@@ -27,7 +27,15 @@ type Model
     | Redirect Session.Session
 
 
-main : Program {} Model Msg
+type alias Flags =
+    { viewport :
+        { width : Int
+        , height : Int
+        }
+    }
+
+
+main : Program Flags Model Msg
 main =
     Browser.application
         { view = view
@@ -39,10 +47,25 @@ main =
         }
 
 
-init : {} -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+init : Flags -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
 init _ url key =
-    changeRouteTo (Route.fromUrl url |> Debug.log "")
-        (Redirect (Session.init key))
+    let
+        protocol =
+            case url.protocol of
+                Url.Http ->
+                    "http://"
+
+                Url.Https ->
+                    "https://"
+
+        port_ =
+            url.port_ |> Maybe.map (\p -> ":" ++ String.fromInt p) |> Maybe.withDefault ""
+
+        origin =
+            protocol ++ url.host ++ port_
+    in
+    changeRouteTo (Route.fromUrl url)
+        (Redirect (Session.init key origin))
 
 
 
