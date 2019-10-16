@@ -38,7 +38,7 @@ import ViewHelpers
 type Msg
     = GotGameAndMaps (RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet)
     | ChangeColorButtonClicked
-    | ColorSelected String Colors.Color
+    | ColorSelected Colors.Color
     | ColorSelectBackgroundClicked
     | GameMsg Game.Msg
     | GameStarted (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
@@ -180,7 +180,7 @@ update msg model =
                 ColorSelectBackgroundClicked ->
                     ( Configuring { configuringModel | configureColor = False }, Cmd.none )
 
-                ColorSelected playerId color ->
+                ColorSelected color ->
                     let
                         configuration =
                             configuringModel.configuration
@@ -252,11 +252,19 @@ update msg model =
                     let
                         ( updatedGameModel, updatedGameCmd ) =
                             GameController.update gameMsg playingModel.gameModel
+
+                        saveGameCmd =
+                            case gameMsg of
+                                Game.CountryMouseUp _ ->
+                                    saveGame playingModel.session.apiUrl playingModel.playerToken updatedGameModel.activeGame
+
+                                _ ->
+                                    Cmd.none
                     in
                     ( Playing { playingModel | gameModel = updatedGameModel }
                     , Cmd.batch
                         [ updatedGameCmd
-                        , saveGame playingModel.session.apiUrl playingModel.playerToken updatedGameModel.activeGame
+                        , saveGameCmd
                         ]
                     )
 
@@ -409,7 +417,7 @@ playerColorSelect players (Player.Id playerId) isConfiguringColor =
                         , Element.wrappedRow [ Element.width Element.fill ]
                             (players
                                 |> Player.availablePlayerColors
-                                |> List.map (\color -> Element.el [ Element.height (Element.px 50) ] (NewGame.colorButton color (ColorSelected playerId color)))
+                                |> List.map (\color -> Element.el [ Element.height (Element.px 50) ] (NewGame.colorButton color (ColorSelected color)))
                             )
                         ]
                     )

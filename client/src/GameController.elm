@@ -9,6 +9,10 @@ import PlayerTurn
 import TroopCount
 
 
+
+-- This module is pretty much all the stuff that should be done on the server eventually
+
+
 update : Game.Msg -> Game.Model -> ( Game.Model, Cmd msg )
 update msg model =
     case msg of
@@ -272,27 +276,53 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
                                 | countryTroopCounts =
                                     updateTroopCount clickedCountryId neutralTroopCount currentPlayer.countryTroopCounts
                                 , capitolStatus = Player.Capitol clickedCountryId
-
-                                -- , capitolStatus = Capitol clickedCountryId (Map.capitolDotsCoordinates clickedCountry.coordinates ViewHelpers.pixelsPerMapSquare)
                             }
 
                         updatedPlayers =
                             updatePlayer currentPlayerId updatedPlayer activeGame.players
 
-                        -- TODO: This might be the only thing player id as int is used for
                         nextPlayerId =
                             case currentPlayerId of
                                 Player.Id id ->
-                                    Player.Id
-                                        (remainderBy (Dict.size updatedPlayers)
-                                            ((id |> String.toInt |> Maybe.withDefault -100) + 1)
-                                            |> String.fromInt
-                                        )
+                                    let
+                                        numberOfPlayers =
+                                            Dict.size updatedPlayers
+
+                                        playersByIndex : Dict.Dict Int String
+                                        playersByIndex =
+                                            updatedPlayers
+                                                |> Dict.toList
+                                                |> List.indexedMap (\index ( playerId, _ ) -> ( index, playerId ))
+                                                |> Dict.fromList
+
+                                        currentPlayerIndex : Int
+                                        currentPlayerIndex =
+                                            playersByIndex
+                                                |> Dict.foldl
+                                                    (\index playerId result ->
+                                                        if playerId == id then
+                                                            index
+
+                                                        else
+                                                            result
+                                                    )
+                                                    -1
+
+                                        nextPlayerIndex : Int
+                                        nextPlayerIndex =
+                                            remainderBy numberOfPlayers (currentPlayerIndex + 1)
+
+                                        next =
+                                            playersByIndex
+                                                |> Dict.get nextPlayerIndex
+                                                |> Maybe.withDefault "-1"
+                                    in
+                                    Player.Id next
 
                         nextPlayerTurn =
                             case currentPlayerId of
                                 Player.Id id ->
-                                    if String.toInt id == Just (Dict.size updatedPlayers - 1) then
+                                    if Just id == (Dict.keys updatedPlayers |> List.reverse |> List.head) then
                                         PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement nextPlayerId
 
                                     else
