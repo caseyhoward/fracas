@@ -236,7 +236,7 @@ updateLocalGame msg model =
                     ( model, Cmd.none )
 
                 WindowResized width height ->
-                    ( ConfiguringGame newGame { session | windowSize = Just { width = width, height = height } }, Cmd.none )
+                    ( ConfiguringGame newGame { session | windowSize = { width = width, height = height } }, Cmd.none )
 
                 GotMaps maps ->
                     ( ConfiguringGame

@@ -48,7 +48,7 @@ main =
 
 
 init : Flags -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
-init _ url key =
+init flags url key =
     let
         protocol =
             case url.protocol of
@@ -65,7 +65,7 @@ init _ url key =
             protocol ++ url.host ++ port_
     in
     changeRouteTo (Route.fromUrl url)
-        (Redirect (Session.init key origin))
+        (Redirect (Session.init key origin flags.viewport))
 
 
 

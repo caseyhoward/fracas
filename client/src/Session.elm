@@ -19,7 +19,7 @@ type alias WindowSize =
 
 
 type alias Session =
-    { windowSize : Maybe WindowSize
+    { windowSize : WindowSize
     , navKey : Browser.Navigation.Key
     , origin : String
     , activeGames : Dict.Dict String LocalGame.Game
@@ -27,9 +27,9 @@ type alias Session =
     }
 
 
-init : Browser.Navigation.Key -> String -> Session
-init key origin =
-    { windowSize = Nothing
+init : Browser.Navigation.Key -> String -> WindowSize -> Session
+init key origin windowSize =
+    { windowSize = windowSize
     , navKey = key
     , origin = origin
     , activeGames = Dict.empty
@@ -44,7 +44,7 @@ navKey session =
 
 updateWindowSize : WindowSize -> Session -> Session
 updateWindowSize windowSize session =
-    { session | windowSize = Just windowSize }
+    { session | windowSize = windowSize }
 
 
 addGame : LocalGame.Id -> LocalGame.Game -> Session -> Session
