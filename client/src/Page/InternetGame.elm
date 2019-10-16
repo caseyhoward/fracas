@@ -16,6 +16,7 @@ import Element.Background
 import Element.Border
 import Element.Font
 import Element.Input
+import Game
 import Graphql.Http
 import Graphql.Operation
 import Graphql.SelectionSet
@@ -24,7 +25,6 @@ import Html.Attributes
 import InternetGame
 import Map
 import NewGame
-import Page.LocalGame
 import Player
 import RemoteData
 import Session
@@ -36,7 +36,7 @@ type Msg
     | ChangeColorButtonClicked
     | ColorSelected Int Colors.Color
     | ColorSelectBackgroundClicked
-    | GameMsg Page.LocalGame.Msg
+    | GameMsg Game.Msg
     | GameStarted (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatePlayerName String
     | UpdatedColor (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
@@ -71,7 +71,8 @@ type alias ConfiguringModel =
 
 type alias PlayingModel =
     { playerToken : InternetGame.PlayerToken
-    , gameModel : Page.LocalGame.GameLoadedModel
+    , gameModel : Game.Model
+    , session : Session.Session
     }
 
 
@@ -112,7 +113,7 @@ toSession model =
             configuringModel.session
 
         Playing playingModel ->
-            playingModel.gameModel.session
+            playingModel.gameModel |> Game.toSession
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -136,17 +137,28 @@ update msg model =
                                     )
 
                                 InternetGame.InternetGame internetGame ->
-                                    ( Playing
-                                        { gameModel =
-                                            { activeGame = internetGame.game
-                                            , showAvailableMoves = False
+                                    let
+                                        gameModel : Game.Model
+                                        gameModel =
+                                            Game.GameLoaded
+                                                { activeGame = internetGame.game
+                                                , showAvailableMoves = False
+                                                , session = loadingModel.session
+                                                , error = Nothing
+                                                , playerId = internetGame.currentUserPlayerId
+
+                                                -- , currentUserPlayerId = internetGame.currentUserPlayerId
+                                                , countryBorderHelperOutlineStatus = Game.CountryBorderHelperOutlineInactive
+                                                }
+
+                                        updatedPlayingModel : PlayingModel
+                                        updatedPlayingModel =
+                                            { gameModel = gameModel
+                                            , playerToken = loadingModel.playerToken
                                             , session = loadingModel.session
-                                            , error = Nothing
-                                            , playerId = internetGame.currentUserPlayerId
-                                            , countryBorderHelperOutlineStatus = Page.LocalGame.CountryBorderHelperOutlineInactive
                                             }
-                                        , playerToken = loadingModel.playerToken
-                                        }
+                                    in
+                                    ( Playing updatedPlayingModel
                                     , Cmd.none
                                     )
 
@@ -231,7 +243,16 @@ update msg model =
                     ( model, Cmd.none )
 
         Playing playingModel ->
-            ( model, Cmd.none )
+            case msg of
+                GameMsg gameMsg ->
+                    let
+                        ( updatedGameModel, updatedGameCmd ) =
+                            Game.update gameMsg playingModel.gameModel
+                    in
+                    ( Playing { playingModel | gameModel = updatedGameModel }, updatedGameCmd |> Cmd.map GameMsg )
+
+                _ ->
+                    ( model, Cmd.none )
 
 
 view : Model -> { title : String, content : Html.Html Msg }
@@ -297,7 +318,7 @@ viewConfiguring configuringModel =
 
 viewPlaying : PlayingModel -> { title : String, content : Html.Html Msg }
 viewPlaying playingModel =
-    Page.LocalGame.viewGameWrapMessage playingModel.gameModel GameMsg
+    Game.view playingModel.gameModel GameMsg
 
 
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Player.Id -> Element.Element Msg

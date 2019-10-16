@@ -56,8 +56,8 @@ parser : Parser (Route -> a) a
 parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
-        , Parser.map ConfiguringGame (s "games" </> s "new")
-        , Parser.map LocalGame (s "games" </> LocalGame.urlParser </> s "players" </> Player.urlParser)
+        , Parser.map ConfiguringGame (s "games" </> s "local" </> s "new")
+        , Parser.map LocalGame (s "games" </> s "local" </> LocalGame.urlParser </> s "players" </> Player.urlParser)
         , Parser.map InternetGame (s "games" </> s "internet" </> InternetGame.playerTokenUrlParser)
         , Parser.map JoinInternetGame (s "games" </> s "internet" </> s "join" </> InternetGame.joinTokenUrlParser)
         , Parser.map NewMap (s "maps" </> s "new")
@@ -70,7 +70,7 @@ routeToString page =
         pieces =
             case page of
                 ConfiguringGame ->
-                    [ "games", "new" ]
+                    [ "games", "local", "new" ]
 
                 JoinInternetGame joinGameKey ->
                     [ "games", "internet", "join", joinGameKey |> InternetGame.joinTokenToString ]
@@ -79,7 +79,7 @@ routeToString page =
                     [ "games", "internet", playerKey |> InternetGame.playerTokenToString ]
 
                 LocalGame gameId playerId ->
-                    [ "games", LocalGame.idToString gameId, "players", Player.idToString playerId ]
+                    [ "games", "local", LocalGame.idToString gameId, "players", Player.idToString playerId ]
 
                 NewMap ->
                     [ "maps", "new" ]
