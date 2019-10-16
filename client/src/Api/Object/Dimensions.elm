@@ -19,13 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
 width : SelectionSet Int Api.Object.Dimensions
 width =
     Object.selectionForField "Int" "width" [] Decode.int
 
 
-{-| -}
 height : SelectionSet Int Api.Object.Dimensions
 height =
     Object.selectionForField "Int" "height" [] Decode.int

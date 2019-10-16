@@ -22,7 +22,11 @@ export default async function internetGame(
       __typename: "InternetGameConfiguration",
       id: configuration.id,
       players: configuration.players.map(player => {
-        return { ...player, __typename: "InternetGamePlayerConfiguration" };
+        return {
+          ...player,
+          __typename: "InternetGamePlayerConfiguration",
+          playerId: player.playerId
+        };
       }),
       mapId: configuration.mapId.toString(),
       joinToken: configuration.joinToken,

@@ -116,7 +116,7 @@ mapView countries dimensions =
     Map.view 100 countries dimensions |> Element.html
 
 
-removePlayerButton : Int -> (Int -> msg) -> Element.Element msg
+removePlayerButton : String -> (String -> msg) -> Element.Element msg
 removePlayerButton playerId toMsg =
     Element.Input.button
         (ViewHelpers.defaultButtonAttributes

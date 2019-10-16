@@ -40,7 +40,7 @@ type PlayerTurnStage
 input : PlayerTurn -> Api.InputObject.PlayerTurnInput
 input (PlayerTurn playerTurnStage (Player.Id playerId)) =
     Api.InputObject.buildPlayerTurnInput
-        { playerId = playerId |> String.fromInt
+        { playerId = playerId
         , playerTurnStage = playerTurnStage |> playerTurnStageInput
         }
         (\optional ->
@@ -58,7 +58,7 @@ input (PlayerTurn playerTurnStage (Player.Id playerId)) =
 
 firstTurn : PlayerTurn
 firstTurn =
-    PlayerTurn CapitolPlacement (Player.Id 0)
+    PlayerTurn CapitolPlacement (Player.Id "0")
 
 
 getPlayerTurnStageFromPlayerTurn : PlayerTurn -> PlayerTurnStage
@@ -144,7 +144,7 @@ selectionSet =
                     Api.Enum.PlayerTurnStage.GameOver ->
                         GameOver
                 )
-                (playerId |> String.toInt |> Maybe.withDefault 0 |> Player.Id)
+                (playerId |> Player.Id)
         )
         Api.Object.PlayerTurn.playerId
         Api.Object.PlayerTurn.playerTurnStage

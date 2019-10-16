@@ -97,16 +97,16 @@ export type GameInput = {
 export type InternetGame = {
    __typename?: 'InternetGame',
   game: Game,
-  currentUserPlayerId: Scalars['Int'],
+  currentUserPlayerId: Scalars['String'],
 };
 
 export type InternetGameConfiguration = {
    __typename?: 'InternetGameConfiguration',
-  id: Scalars['Int'],
+  id: Scalars['String'],
   players: Array<InternetGamePlayerConfiguration>,
   mapId: Scalars['String'],
   joinToken: Scalars['String'],
-  currentUserPlayerId: Scalars['Int'],
+  currentUserPlayerId: Scalars['String'],
 };
 
 export type InternetGameOrConfiguration = InternetGameConfiguration | InternetGame;
@@ -114,7 +114,7 @@ export type InternetGameOrConfiguration = InternetGameConfiguration | InternetGa
 export type InternetGamePlayerConfiguration = {
    __typename?: 'InternetGamePlayerConfiguration',
   color: Color,
-  playerId: Scalars['Int'],
+  playerId: Scalars['String'],
   name: Scalars['String'],
 };
 
@@ -167,7 +167,7 @@ export type MutationJoinInternetGameArgs = {
 
 export type MutationRemovePlayerArgs = {
   playerToken: Scalars['String'],
-  playerId: Scalars['Int']
+  playerId: Scalars['String']
 };
 
 
@@ -177,6 +177,7 @@ export type MutationSaveGameArgs = {
 
 
 export type MutationSaveInternetGameArgs = {
+  playerToken: Scalars['String'],
   game: GameInput
 };
 
@@ -482,15 +483,15 @@ export type GameResolvers<ContextType = any, ParentType extends ResolversParentT
 
 export type InternetGameResolvers<ContextType = any, ParentType extends ResolversParentTypes['InternetGame'] = ResolversParentTypes['InternetGame']> = {
   game?: Resolver<ResolversTypes['Game'], ParentType, ContextType>,
-  currentUserPlayerId?: Resolver<ResolversTypes['Int'], ParentType, ContextType>,
+  currentUserPlayerId?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
 };
 
 export type InternetGameConfigurationResolvers<ContextType = any, ParentType extends ResolversParentTypes['InternetGameConfiguration'] = ResolversParentTypes['InternetGameConfiguration']> = {
-  id?: Resolver<ResolversTypes['Int'], ParentType, ContextType>,
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
   players?: Resolver<Array<ResolversTypes['InternetGamePlayerConfiguration']>, ParentType, ContextType>,
   mapId?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
   joinToken?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
-  currentUserPlayerId?: Resolver<ResolversTypes['Int'], ParentType, ContextType>,
+  currentUserPlayerId?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
 };
 
 export type InternetGameOrConfigurationResolvers<ContextType = any, ParentType extends ResolversParentTypes['InternetGameOrConfiguration'] = ResolversParentTypes['InternetGameOrConfiguration']> = {
@@ -499,7 +500,7 @@ export type InternetGameOrConfigurationResolvers<ContextType = any, ParentType e
 
 export type InternetGamePlayerConfigurationResolvers<ContextType = any, ParentType extends ResolversParentTypes['InternetGamePlayerConfiguration'] = ResolversParentTypes['InternetGamePlayerConfiguration']> = {
   color?: Resolver<ResolversTypes['Color'], ParentType, ContextType>,
-  playerId?: Resolver<ResolversTypes['Int'], ParentType, ContextType>,
+  playerId?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
   name?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
 };
 
@@ -518,7 +519,7 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   joinInternetGame?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationJoinInternetGameArgs, 'joinGameToken'>>,
   removePlayer?: Resolver<ResolversTypes['Game'], ParentType, ContextType, RequireFields<MutationRemovePlayerArgs, 'playerToken' | 'playerId'>>,
   saveGame?: Resolver<ResolversTypes['Game'], ParentType, ContextType, RequireFields<MutationSaveGameArgs, 'game'>>,
-  saveInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationSaveInternetGameArgs, 'game'>>,
+  saveInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationSaveInternetGameArgs, 'playerToken' | 'game'>>,
   startInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationStartInternetGameArgs, 'playerToken'>>,
   updateMapForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdateMapForInternetGameArgs, 'playerToken' | 'mapId'>>,
   updatePlayerNameForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdatePlayerNameForInternetGameArgs, 'name' | 'playerToken'>>,

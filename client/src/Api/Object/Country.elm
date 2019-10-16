@@ -19,43 +19,36 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
 id : SelectionSet String Api.Object.Country
 id =
     Object.selectionForField "String" "id" [] Decode.string
 
 
-{-| -}
 coordinates : SelectionSet decodesTo Api.Object.Point -> SelectionSet (List decodesTo) Api.Object.Country
 coordinates object_ =
     Object.selectionForCompositeField "coordinates" [] object_ (identity >> Decode.list)
 
 
-{-| -}
 polygon : SelectionSet decodesTo Api.Object.Point -> SelectionSet (List decodesTo) Api.Object.Country
 polygon object_ =
     Object.selectionForCompositeField "polygon" [] object_ (identity >> Decode.list)
 
 
-{-| -}
 waterEdges : SelectionSet decodesTo Api.Object.Segment -> SelectionSet (List decodesTo) Api.Object.Country
 waterEdges object_ =
     Object.selectionForCompositeField "waterEdges" [] object_ (identity >> Decode.list)
 
 
-{-| -}
 center : SelectionSet decodesTo Api.Object.Point -> SelectionSet decodesTo Api.Object.Country
 center object_ =
     Object.selectionForCompositeField "center" [] object_ identity
 
 
-{-| -}
 neighboringCountries : SelectionSet (List String) Api.Object.Country
 neighboringCountries =
     Object.selectionForField "(List String)" "neighboringCountries" [] (Decode.string |> Decode.list)
 
 
-{-| -}
 neighboringBodiesOfWater : SelectionSet (List String) Api.Object.Country
 neighboringBodiesOfWater =
     Object.selectionForField "(List String)" "neighboringBodiesOfWater" [] (Decode.string |> Decode.list)

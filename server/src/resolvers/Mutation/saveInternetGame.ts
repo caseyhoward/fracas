@@ -6,11 +6,11 @@ import * as InternetGamePlayerRepository from "../../repositories/InternetGamePl
 import * as Models from "../../repositories/Models";
 import * as graphql from "../../api/graphql";
 
-export default async function startInternetGame(
+export default async function saveInternetGame(
   executeQuery: Database.ExecuteQuery,
   input: graphql.RequireFields<
-    graphql.MutationStartInternetGameArgs,
-    "playerToken"
+    graphql.MutationSaveInternetGameArgs,
+    "playerToken" | "game"
   >
 ): Promise<boolean> {
   const player = await InternetGamePlayerRepository.findByToken(
@@ -18,25 +18,24 @@ export default async function startInternetGame(
     input.playerToken
   );
 
-  const configuration = await InternetGameConfigurationRepository.findById(
-    executeQuery,
-    player.gameId
-  );
-
-  const game: Models.InternetGame = {
-    __typename: "InternetGame",
-    id: configuration.id,
-    mapId: configuration.mapId,
-    players: configuration.players.map(playerConfigurationToPlayer),
-    neutralCountryTroops: generateRandomTroopCounts(),
-    playerTurn: {
-      __typename: "PlayerTurn",
-      playerId: player.id,
-      playerTurnStage: Models.PlayerTurnStage.CapitolPlacement
-    }
-  };
-
-  await InternetGameRepository.save(executeQuery, game);
+  // await InternetGameRepository.save(executeQuery, {
+  //   ...input.game,
+  //   __typename: "InternetGame",
+  //   id: parseInt(input.game.id, 10),
+  //   mapId: parseInt(input.game.mapId, 10),
+  //   players: input.game.players.map(player => {
+  //     return {
+  //       ...player,
+  //       id: parseInt(player.id, 10),
+  //       __typename: "Player",
+  //       countryTroopCounts: player.countryTroopCounts.map(
+  //         countryTroopCounts => {
+  //           return { ...countryTroopCounts, __typename: "CountryTroopCounts" };
+  //         }
+  //       )
+  //     };
+  //   })
+  // });
 
   return true;
 }
@@ -46,14 +45,14 @@ function generateRandomTroopCounts(): Models.CountryTroopCounts[] {
 }
 
 function playerConfigurationToPlayer(
-  playerConfiguration: Models.PlayerConfiguration
+  playerConfiguraation: Models.PlayerConfiguration
 ): Models.Player {
   return {
     __typename: "Player",
-    id: playerConfiguration.playerId,
-    name: playerConfiguration.name,
+    id: playerConfiguraation.playerId,
+    name: playerConfiguraation.name,
     countryTroopCounts: [],
-    color: playerConfiguration.color,
+    color: playerConfiguraation.color,
     ports: []
   };
 }

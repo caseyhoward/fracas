@@ -19,19 +19,16 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
 red : SelectionSet Int Api.Object.Color
 red =
     Object.selectionForField "Int" "red" [] Decode.int
 
 
-{-| -}
 green : SelectionSet Int Api.Object.Color
 green =
     Object.selectionForField "Int" "green" [] Decode.int
 
 
-{-| -}
 blue : SelectionSet Int Api.Object.Color
 blue =
     Object.selectionForField "Int" "blue" [] Decode.int

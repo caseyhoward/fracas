@@ -2,7 +2,7 @@ import * as Models from "../repositories/Models";
 import * as Uuid from "../Uuid";
 
 export interface InternetGameConfigurationOptions {
-  mapId: number;
+  mapId: string;
   joinToken?: string;
   players?: Models.PlayerConfiguration[];
 }
@@ -35,7 +35,7 @@ export function map(options: MapOptions): Models.NewMap {
 }
 
 interface PlayerOptions {
-  id: number;
+  id: string;
   name?: string;
   color?: Models.Color;
 }
@@ -49,15 +49,15 @@ export function player(options: PlayerOptions): Models.PlayerConfiguration {
   };
 }
 
-export function internetGame(id: number): Models.InternetGame {
+export function internetGame(id: string): Models.InternetGame {
   return {
     __typename: "InternetGame",
     players: [],
-    mapId: 1,
+    mapId: "1",
     id,
     playerTurn: {
       __typename: "PlayerTurn",
-      playerId: 1,
+      playerId: "1",
       playerTurnStage: Models.PlayerTurnStage.CapitolPlacement
     },
     neutralCountryTroops: []

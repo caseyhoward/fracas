@@ -27,7 +27,7 @@ export type Dimensions = {
 
 export type Map = {
   __typename?: "Map";
-  id: number;
+  id: string;
   name: string;
   countries: Array<Country>;
   bodiesOfWater: Array<BodyOfWater>;
@@ -77,16 +77,16 @@ export interface GameJson {
 
 export type InternetGameConfiguration = {
   __typename: "InternetGameConfiguration";
-  id: number;
+  id: string;
   players: Array<PlayerConfiguration>;
-  mapId: number;
+  mapId: string;
   joinToken: string;
 };
 
 export type NewInternetGameConfiguration = {
   __typename: "NewInternetGameConfiguration";
   players: Array<PlayerConfiguration>;
-  mapId: number;
+  mapId: string;
   joinToken: string;
 };
 
@@ -105,7 +105,7 @@ export type Color = {
 
 export type Player = {
   __typename: "Player";
-  id: number;
+  id: string;
   name: string;
   countryTroopCounts: Array<CountryTroopCounts>;
   capitol?: string;
@@ -115,7 +115,7 @@ export type Player = {
 
 export type NewGame = {
   __typename: "NewGame";
-  mapId: number;
+  mapId: string;
   players: Array<Player>;
   neutralCountryTroops: Array<CountryTroopCounts>;
   playerTurn: PlayerTurn;
@@ -123,8 +123,8 @@ export type NewGame = {
 
 export type InternetGame = {
   __typename: "InternetGame";
-  id: number;
-  mapId: number;
+  id: string;
+  mapId: string;
   players: Array<Player>;
   neutralCountryTroops: Array<CountryTroopCounts>;
   playerTurn: PlayerTurn;
@@ -132,7 +132,7 @@ export type InternetGame = {
 
 export type PlayerTurn = {
   __typename: "PlayerTurn";
-  playerId: number;
+  playerId: string;
   playerTurnStage: PlayerTurnStage;
   fromCountryId?: string;
   troopCount?: string;
@@ -141,7 +141,7 @@ export type PlayerTurn = {
 export type PlayerConfiguration = {
   __typename: "PlayerConfiguration";
   color: Color;
-  playerId: number;
+  playerId: string;
   name: string;
 };
 
@@ -155,7 +155,7 @@ export enum PlayerTurnStage {
 }
 
 export interface InternetGamePlayer {
-  id: number;
-  gameId: number;
+  id: string;
+  gameId: string;
   playerToken: string;
 }

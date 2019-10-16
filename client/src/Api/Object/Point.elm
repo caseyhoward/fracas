@@ -19,13 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
 x : SelectionSet Int Api.Object.Point
 x =
     Object.selectionForField "Int" "x" [] Decode.int
 
 
-{-| -}
 y : SelectionSet Int Api.Object.Point
 y =
     Object.selectionForField "Int" "y" [] Decode.int

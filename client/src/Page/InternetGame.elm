@@ -35,7 +35,7 @@ import ViewHelpers
 type Msg
     = GotGameAndMaps (RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet)
     | ChangeColorButtonClicked
-    | ColorSelected Int Colors.Color
+    | ColorSelected String Colors.Color
     | ColorSelectBackgroundClicked
     | GameMsg Game.Msg
     | GameStarted (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
@@ -43,7 +43,7 @@ type Msg
     | UpdatePlayerName String
     | UpdatedColor (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatedPlayerName (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
-    | RemovePlayer Int
+    | RemovePlayer String
     | StartGameClicked
     | SelectMap String
     | MapUpdated (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
@@ -328,7 +328,7 @@ viewPlaying playingModel =
     Game.view playingModel.gameModel GameMsg
 
 
-playerConfiguration : Dict.Dict Int Player.NewPlayer -> Player.Id -> Element.Element Msg
+playerConfiguration : Dict.Dict String Player.NewPlayer -> Player.Id -> Element.Element Msg
 playerConfiguration players currentUserPlayerId =
     Element.column
         [ Element.spacing 20
@@ -383,7 +383,7 @@ playerFields currentUserPlayerId ( playerId, player ) =
         ]
 
 
-playerColorSelect : Dict.Dict Int Player.NewPlayer -> Player.Id -> Bool -> Element.Element Msg
+playerColorSelect : Dict.Dict String Player.NewPlayer -> Player.Id -> Bool -> Element.Element Msg
 playerColorSelect players (Player.Id playerId) isConfiguringColor =
     if isConfiguringColor then
         case Dict.get playerId players of

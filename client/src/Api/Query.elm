@@ -23,11 +23,6 @@ type alias MapRequiredArguments =
     { id : String }
 
 
-{-|
-
-  - id -
-
--}
 map : MapRequiredArguments -> SelectionSet decodesTo Api.Object.Map -> SelectionSet decodesTo RootQuery
 map requiredArgs object_ =
     Object.selectionForCompositeField "map" [ Argument.required "id" requiredArgs.id Encode.string ] object_ identity
@@ -37,11 +32,6 @@ type alias GameRequiredArguments =
     { id : String }
 
 
-{-|
-
-  - id -
-
--}
 game : GameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootQuery
 game requiredArgs object_ =
     Object.selectionForCompositeField "game" [ Argument.required "id" requiredArgs.id Encode.string ] object_ identity
@@ -51,17 +41,11 @@ type alias InternetGameRequiredArguments =
     { playerToken : String }
 
 
-{-|
-
-  - playerToken -
-
--}
 internetGame : InternetGameRequiredArguments -> SelectionSet decodesTo Api.Union.InternetGameOrConfiguration -> SelectionSet decodesTo RootQuery
 internetGame requiredArgs object_ =
     Object.selectionForCompositeField "internetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
 
 
-{-| -}
 maps : SelectionSet decodesTo Api.Object.Map -> SelectionSet (List decodesTo) RootQuery
 maps object_ =
     Object.selectionForCompositeField "maps" [] object_ (identity >> Decode.list)

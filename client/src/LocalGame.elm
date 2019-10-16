@@ -91,7 +91,7 @@ type Id
     = Id String
 
 
-create : String -> String -> Dict.Dict Int Player.NewPlayer -> Dict.Dict String TroopCount.TroopCount -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
+create : String -> String -> Dict.Dict String Player.NewPlayer -> Dict.Dict String TroopCount.TroopCount -> (RemoteData.RemoteData (Graphql.Http.Error Id) Id -> msg) -> Cmd msg
 create apiUrl selectedMapId newPlayers neutralTroopCounts toMsg =
     let
         playerTurnInput : Api.InputObject.PlayerTurnInput
@@ -212,7 +212,7 @@ countryClicked clickedCountryId activeGame =
 --     "Not your turn" |> Error |> Err
 
 
-getAttackStrengthPerPlayer : Map.Map -> Player.Players -> Country.Id -> Dict.Dict Int TroopCount.TroopCount
+getAttackStrengthPerPlayer : Map.Map -> Player.Players -> Country.Id -> Dict.Dict String TroopCount.TroopCount
 getAttackStrengthPerPlayer gameMap players countryId =
     getCountryAttackers gameMap players countryId
         |> Dict.map
@@ -271,7 +271,7 @@ getCountryAttackers gameMap players countryId =
                         )
                     )
 
-        neighboringCountryAttackers : Dict.Dict Int (Dict.Dict String TroopCount.TroopCount)
+        neighboringCountryAttackers : Dict.Dict String (Dict.Dict String TroopCount.TroopCount)
         neighboringCountryAttackers =
             neighborCountryTroopCountsByPlayer
                 |> List.foldl
@@ -328,7 +328,7 @@ getCountryAttackers gameMap players countryId =
                         )
                     )
 
-        waterNeighborAttackers : Dict.Dict Int (Dict.Dict String TroopCount.TroopCount)
+        waterNeighborAttackers : Dict.Dict String (Dict.Dict String TroopCount.TroopCount)
         waterNeighborAttackers =
             waterNeighborCountriesByPlayerTroopCounts
                 |> List.foldl
@@ -482,7 +482,7 @@ getCountryDefenders players gameMap countryId =
                     ownerId
 
                 Nothing ->
-                    Player.Id -1
+                    Player.Id "-1"
 
         defendingCountryTroopCount : TroopCount.TroopCount
         defendingCountryTroopCount =
@@ -710,7 +710,7 @@ type alias CountryDefenders =
 
 
 type alias CountryAttackers =
-    Dict.Dict Int CountryAttackersForPlayer
+    Dict.Dict String CountryAttackersForPlayer
 
 
 type alias CountryAttackersForPlayer =
@@ -807,15 +807,20 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
                         updatedPlayers =
                             updatePlayer currentPlayerId updatedPlayer activeGame.players
 
+                        -- TODO: This might be the only thing player id as int is used for
                         nextPlayerId =
                             case currentPlayerId of
                                 Player.Id id ->
-                                    Player.Id (remainderBy (Dict.size updatedPlayers) (id + 1))
+                                    Player.Id
+                                        (remainderBy (Dict.size updatedPlayers)
+                                            ((id |> String.toInt |> Maybe.withDefault -100) + 1)
+                                            |> String.fromInt
+                                        )
 
                         nextPlayerTurn =
                             case currentPlayerId of
                                 Player.Id id ->
-                                    if id == Dict.size updatedPlayers - 1 then
+                                    if String.toInt id == Just (Dict.size updatedPlayers - 1) then
                                         PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement nextPlayerId
 
                                     else
@@ -874,13 +879,14 @@ attackResult clickedCountryId gameMap players currentPlayerTurn =
                 currentPlayerId =
                     PlayerTurn.getCurrentPlayer currentPlayerTurn
 
-                currentPlayerIdInt =
+                currentPlayerIdString : String
+                currentPlayerIdString =
                     case currentPlayerId of
                         Player.Id playerId ->
                             playerId
 
                 attackStrength =
-                    case Dict.get currentPlayerIdInt countryAttackers of
+                    case Dict.get currentPlayerIdString countryAttackers of
                         Just attack ->
                             attack
 
@@ -1306,9 +1312,21 @@ isCountryReachableFromOtherCountry fromCountryId toCountryId countries players =
             False
 
 
+
+-- TODO
+
+
 nextPlayer : Player.Players -> Player.Id -> Player.Id
 nextPlayer players (Player.Id currentPlayerId) =
-    remainderBy (Dict.size players) (currentPlayerId + 1) |> Player.Id
+    remainderBy (Dict.size players)
+        ((currentPlayerId
+            |> String.toInt
+            |> Maybe.withDefault -100
+         )
+            + 1
+        )
+        |> String.fromInt
+        |> Player.Id
 
 
 nextPlayerCheckForDeadPlayers : Player.Players -> Player.Id -> Player.Id

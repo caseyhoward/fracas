@@ -529,7 +529,7 @@ playerAndTroopCountBorderColor =
     Colors.darkGray |> ViewHelpers.colorToElementColor
 
 
-viewPlayerCountryAndTroopCounts : PlayerTurn.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
+viewPlayerCountryAndTroopCounts : PlayerTurn.PlayerTurn -> Dict.Dict String Player.Player -> Element.Element Msg
 viewPlayerCountryAndTroopCounts currentPlayerTurn players =
     Element.column
         [ Element.spacing 10
@@ -540,7 +540,7 @@ viewPlayerCountryAndTroopCounts currentPlayerTurn players =
         )
 
 
-viewPlayerCountryAndTroopCountsMobile : PlayerTurn.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
+viewPlayerCountryAndTroopCountsMobile : PlayerTurn.PlayerTurn -> Dict.Dict String Player.Player -> Element.Element Msg
 viewPlayerCountryAndTroopCountsMobile currentPlayerTurn players =
     Element.wrappedRow
         [ Element.spacing 10
@@ -551,7 +551,7 @@ viewPlayerCountryAndTroopCountsMobile currentPlayerTurn players =
         )
 
 
-attackerInfo : Player.Id -> LocalGame.Game -> Dict.Dict Int TroopCount.TroopCount -> Element.Element Msg
+attackerInfo : Player.Id -> LocalGame.Game -> Dict.Dict String TroopCount.TroopCount -> Element.Element Msg
 attackerInfo countyOwnerPlayerId activeGame attackerStrengthPerPlayer =
     Element.column
         [ Element.width Element.fill, Element.spacing 3 ]
@@ -765,7 +765,7 @@ viewConfigureTroopCountIfNecessary currentPlayerTurn =
         )
 
 
-viewPlayerTurnStatus : Int -> Int -> PlayerTurn.PlayerTurn -> Dict.Dict Int Player.Player -> Element.Element Msg
+viewPlayerTurnStatus : Int -> Int -> PlayerTurn.PlayerTurn -> Dict.Dict String Player.Player -> Element.Element Msg
 viewPlayerTurnStatus height fontSize playerTurn players =
     Element.el
         [ Element.width Element.fill

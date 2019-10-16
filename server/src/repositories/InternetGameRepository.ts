@@ -19,7 +19,7 @@ export async function save(
 
 export async function findById(
   executeQuery: ExecuteQuery,
-  id: number
+  id: string
 ): Promise<Models.InternetGame> {
   const result = await executeQuery(
     "SELECT * FROM internet_games WHERE id = $1",
@@ -36,8 +36,8 @@ export function rowToInternetGame(row: Row | undefined): Models.InternetGame {
       const game: Models.InternetGame = {
         __typename: "InternetGame",
         players: json.players,
-        id: row.id,
-        mapId: row.map_id,
+        id: row.id.toString(),
+        mapId: row.map_id.toString(),
         neutralCountryTroops: json.neutralCountryTroops,
         playerTurn: json.playerTurn
       };

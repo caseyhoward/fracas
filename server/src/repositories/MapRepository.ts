@@ -8,14 +8,14 @@ export function mapToGraphql(map: Models.Map): Graphql.Map {
 
 export async function findFirstId(
   executeQuery: Database.ExecuteQuery
-): Promise<number> {
+): Promise<string> {
   const result = await executeQuery("SELECT * FROM maps LIMIT 1");
   return result.rows[0].id;
 }
 
 export async function findById(
   executeQuery: Database.ExecuteQuery,
-  id: number
+  id: string
 ): Promise<Models.Map> {
   const result = await executeQuery("SELECT * FROM maps WHERE id = $1", [id]);
   return mapsRowToMap(result.rows[0]);
@@ -55,7 +55,7 @@ function mapsRowToMap(mapsRow: MapsRow | undefined): Models.Map {
   if (mapsRow) {
     const parsedJson = JSON.parse(mapsRow.map_json);
     const map = {
-      id: mapsRow.id,
+      id: mapsRow.id.toString(),
       name: parsedJson.name,
       countries: parsedJson.countries,
       bodiesOfWater: parsedJson.bodiesOfWater,

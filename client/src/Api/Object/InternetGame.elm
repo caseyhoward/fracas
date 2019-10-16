@@ -19,13 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
 game : SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo Api.Object.InternetGame
 game object_ =
     Object.selectionForCompositeField "game" [] object_ identity
 
 
-{-| -}
-currentUserPlayerId : SelectionSet Int Api.Object.InternetGame
+currentUserPlayerId : SelectionSet String Api.Object.InternetGame
 currentUserPlayerId =
-    Object.selectionForField "Int" "currentUserPlayerId" [] Decode.int
+    Object.selectionForField "String" "currentUserPlayerId" [] Decode.string

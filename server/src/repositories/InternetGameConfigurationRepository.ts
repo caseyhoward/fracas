@@ -4,7 +4,7 @@ import * as Models from "./Models";
 export async function create(
   executeQuery: ExecuteQuery,
   newInternetGame: Models.NewInternetGameConfiguration
-): Promise<number> {
+): Promise<string> {
   const configurationJson: Models.ConfigurationJson = {
     __typename: "ConfigurationJson",
     players: newInternetGame.players
@@ -18,12 +18,12 @@ export async function create(
     ]
   );
   const row: Row = internetGameResult.rows[0];
-  return row.id;
+  return row.id.toString();
 }
 
 export async function updateMap(
   executeQuery: ExecuteQuery,
-  id: String,
+  id: string,
   mapId: number
 ): Promise<void> {
   await executeQuery("UPDATE internet_games SET map_id = $1 WHERE id = $2", [
@@ -53,7 +53,7 @@ export async function save(
 
 export async function addPlayer(
   executeQuery: ExecuteQuery,
-  id: number,
+  id: string,
   player: Models.PlayerConfiguration
 ): Promise<void> {
   const configuration = await findById(executeQuery, id);
@@ -79,7 +79,7 @@ export async function findByJoinToken(
 
 export async function findById(
   executeQuery: ExecuteQuery,
-  id: number
+  id: string
 ): Promise<Models.InternetGameConfiguration> {
   const result = await executeQuery(
     "SELECT * FROM internet_games WHERE id = $1",
@@ -99,8 +99,8 @@ export function rowToInternetGameConfiguration(
     } else if (json.__typename === "ConfigurationJson") {
       const configuration: Models.InternetGameConfiguration = {
         __typename: "InternetGameConfiguration",
-        id: row.id,
-        mapId: row.map_id,
+        id: row.id.toString(),
+        mapId: row.map_id.toString(),
         players: json.players,
         joinToken: row.join_token || ""
       };

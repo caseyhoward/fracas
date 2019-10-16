@@ -19,13 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
 id : SelectionSet String Api.Object.BodyOfWater
 id =
     Object.selectionForField "String" "id" [] Decode.string
 
 
-{-| -}
 neighboringCountries : SelectionSet (List String) Api.Object.BodyOfWater
 neighboringCountries =
     Object.selectionForField "(List String)" "neighboringCountries" [] (Decode.string |> Decode.list)

@@ -19,31 +19,26 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
-id : SelectionSet Int Api.Object.InternetGameConfiguration
+id : SelectionSet String Api.Object.InternetGameConfiguration
 id =
-    Object.selectionForField "Int" "id" [] Decode.int
+    Object.selectionForField "String" "id" [] Decode.string
 
 
-{-| -}
 players : SelectionSet decodesTo Api.Object.InternetGamePlayerConfiguration -> SelectionSet (List decodesTo) Api.Object.InternetGameConfiguration
 players object_ =
     Object.selectionForCompositeField "players" [] object_ (identity >> Decode.list)
 
 
-{-| -}
 mapId : SelectionSet String Api.Object.InternetGameConfiguration
 mapId =
     Object.selectionForField "String" "mapId" [] Decode.string
 
 
-{-| -}
 joinToken : SelectionSet String Api.Object.InternetGameConfiguration
 joinToken =
     Object.selectionForField "String" "joinToken" [] Decode.string
 
 
-{-| -}
-currentUserPlayerId : SelectionSet Int Api.Object.InternetGameConfiguration
+currentUserPlayerId : SelectionSet String Api.Object.InternetGameConfiguration
 currentUserPlayerId =
-    Object.selectionForField "Int" "currentUserPlayerId" [] Decode.int
+    Object.selectionForField "String" "currentUserPlayerId" [] Decode.string

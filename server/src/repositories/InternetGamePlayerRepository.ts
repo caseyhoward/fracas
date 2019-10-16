@@ -9,7 +9,7 @@ interface Row {
 
 export async function create(
   executeQuery: Database.ExecuteQuery,
-  gameId: number,
+  gameId: string,
   playerToken: string
 ): Promise<Models.InternetGamePlayer> {
   const result = await executeQuery(
@@ -17,7 +17,7 @@ export async function create(
     [gameId, playerToken]
   );
   const row: Row = result.rows[0];
-  return { id: row.id, gameId: row.internet_game_id, playerToken: row.token };
+  return rowToInternetGamePlayer(row);
 }
 
 export async function findByToken(
@@ -30,8 +30,16 @@ export async function findByToken(
   );
   const row: Row | undefined = result.rows[0];
   if (row) {
-    return { id: row.id, gameId: row.internet_game_id, playerToken: row.token };
+    return rowToInternetGamePlayer(row);
   } else {
     throw "Count not find game player by token";
   }
+}
+
+function rowToInternetGamePlayer(row: Row) {
+  return {
+    id: row.id.toString(),
+    gameId: row.internet_game_id.toString(),
+    playerToken: row.token
+  };
 }

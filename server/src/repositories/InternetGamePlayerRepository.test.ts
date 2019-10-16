@@ -6,7 +6,7 @@ describe("InternetGameConfigurationRepository.create and .findByToken", () => {
   it("creates a new player", async () => {
     const player = await InternetGamePlayerRepository.create(
       TestDatabase.query,
-      123,
+      "123",
       "some token"
     );
     const foundPlayer = await InternetGamePlayerRepository.findByToken(

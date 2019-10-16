@@ -20,12 +20,12 @@ describe("Mutation.updatePlayerColorForInternetGame", () => {
     const updatedConfiguration = {
       ...configuration,
       players: [
-        Builders.player({ id: 1, color: { ...black, red: 0 } }),
+        Builders.player({ id: "1", color: { ...black, red: 0 } }),
         Builders.player({
           id: internetGamePlayer.id,
           color: { ...black, green: 0 }
         }),
-        Builders.player({ id: 3, color: { ...black, blue: 0 } })
+        Builders.player({ id: "3", color: { ...black, blue: 0 } })
       ]
     };
     await InternetGameConfigurationRepository.save(

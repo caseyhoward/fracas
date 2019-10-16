@@ -7,14 +7,14 @@ import * as Models from "../repositories/Models";
 import * as Uuid from "../Uuid";
 
 interface CreateInternetGameConfigurationOptions {
-  mapOrMapId?: number | Models.Map;
+  mapOrMapId?: string | Models.Map;
 }
 
 export async function createInternetGameConfiguration(
   options: CreateInternetGameConfigurationOptions
 ): Promise<Models.InternetGameConfiguration> {
-  let mapId: number;
-  if (typeof options.mapOrMapId === "number") {
+  let mapId: string;
+  if (typeof options.mapOrMapId === "string") {
     mapId = options.mapOrMapId;
   } else if (typeof options.mapOrMapId === "undefined") {
     const map = await createMap();
@@ -41,7 +41,7 @@ export async function createMap(): Promise<Models.Map> {
 }
 
 type InternetGamePlayerOptions = {
-  gameId: number;
+  gameId: string;
   playerToken?: string;
 };
 

@@ -10,7 +10,8 @@ module Player exposing
     , defaultNewPlayers
     , getPlayer
     , getPlayerName
-    , idToString, hostPlayerId
+    , hostPlayerId
+    , idToString
     , input
     , newPlayersInput
     , numberOfTroopsToPlace
@@ -47,24 +48,24 @@ type alias NewPlayer =
     }
 
 
-defaultNewPlayers : Dict.Dict Int NewPlayer
+defaultNewPlayers : Dict.Dict String NewPlayer
 defaultNewPlayers =
-    [ ( 0, { name = "Kevin", color = Colors.darkGreen } )
-    , ( 1, { name = "Jim", color = Colors.lightGreen } )
-    , ( 2, { name = "Lyle", color = Colors.lightYellow } )
-    , ( 3, { name = "Nat", color = Colors.orange } )
-    , ( 4, { name = "Denny", color = Colors.brown } )
-    , ( 5, { name = "Jason", color = Colors.lightPurple } )
+    [ ( "0", { name = "Kevin", color = Colors.darkGreen } )
+    , ( "1", { name = "Jim", color = Colors.lightGreen } )
+    , ( "2", { name = "Lyle", color = Colors.lightYellow } )
+    , ( "3", { name = "Nat", color = Colors.orange } )
+    , ( "4", { name = "Denny", color = Colors.brown } )
+    , ( "5", { name = "Jason", color = Colors.lightPurple } )
     ]
         |> Dict.fromList
 
 
 type alias Players =
-    Dict.Dict Int Player
+    Dict.Dict String Player
 
 
 type Id
-    = Id Int
+    = Id String
 
 
 type CapitolStatus
@@ -74,22 +75,22 @@ type CapitolStatus
 
 idToString : Id -> String
 idToString (Id id) =
-    id |> String.fromInt
+    id
 
 
 urlParser : Url.Parser.Parser (Id -> a) a
 urlParser =
-    Url.Parser.custom "PLAYERID" (\playerId -> playerId |> String.toInt |> Maybe.map Id)
+    Url.Parser.custom "PLAYERID" (\playerId -> playerId |> Id |> Just)
 
 
-hostPlayerId : Dict.Dict Int Player -> Id
+hostPlayerId : Dict.Dict String Player -> Id
 hostPlayerId players =
     case players |> Dict.keys |> List.head of
         Just host ->
             Id host
 
         Nothing ->
-            Id -1
+            Id "-1"
 
 
 addPort : Country.Id -> Player -> Player
@@ -97,7 +98,7 @@ addPort (Country.Id countryId) player =
     { player | ports = player.ports |> Set.insert countryId }
 
 
-availablePlayerColors : Dict.Dict Int NewPlayer -> List Colors.Color
+availablePlayerColors : Dict.Dict String NewPlayer -> List Colors.Color
 availablePlayerColors players =
     let
         takenColors =
@@ -156,7 +157,7 @@ playerSelection =
                         Nothing ->
                             NoCapitol
             in
-            { id = playerId |> String.toInt |> Maybe.withDefault 0 |> Id
+            { id = playerId |> Id
             , name = name
             , countryTroopCounts = countryTroopCounts |> Dict.fromList
             , capitolStatus = capitol
@@ -233,7 +234,7 @@ newPlayerToPlayer newPlayer =
 
 newPlayersInput : List NewPlayer -> List Api.InputObject.PlayerInput
 newPlayersInput newPlayers =
-    newPlayers |> List.map newPlayerToPlayer |> List.indexedMap (\index player -> ( index, player )) |> Dict.fromList |> input
+    newPlayers |> List.map newPlayerToPlayer |> List.indexedMap (\index player -> ( index |> String.fromInt, player )) |> Dict.fromList |> input
 
 
 input : Players -> List Api.InputObject.PlayerInput
@@ -244,7 +245,7 @@ input players =
                 let
                     fields : Api.InputObject.PlayerInputRequiredFields
                     fields =
-                        { id = playerId |> String.fromInt
+                        { id = playerId
                         , countryTroopCounts = player.countryTroopCounts |> TroopCount.troopCountsInput
                         , name = player.name
                         , color = player.color |> Colors.input

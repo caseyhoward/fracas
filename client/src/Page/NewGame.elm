@@ -38,11 +38,11 @@ import ViewHelpers
 
 
 type alias NewGame =
-    { players : Dict.Dict Int Player.NewPlayer
+    { players : Dict.Dict String Player.NewPlayer
     , error : Maybe String
     , selectedMapId : Maybe String
     , maps : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map)
-    , configureColor : Maybe Int
+    , configureColor : Maybe String
     }
 
 
@@ -104,16 +104,16 @@ type Msg
     | InternetGameClicked
     | InternetGameCreated (RemoteData.RemoteData (Graphql.Http.Error InternetGame.PlayerToken) InternetGame.PlayerToken)
     | FocusResult (Result Browser.Dom.Error ())
-    | RemovePlayer Int
+    | RemovePlayer String
     | StartGameClicked
-    | ColorSelected Int Colors.Color
-    | ChangeColorButtonClicked Int
+    | ColorSelected String Colors.Color
+    | ChangeColorButtonClicked String
     | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map))
     | GameCreated (RemoteData.RemoteData (Graphql.Http.Error LocalGame.Id) LocalGame.Id)
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | WindowResized Int Int
     | SelectMap String
-    | UpdatePlayerName Int String
+    | UpdatePlayerName String String
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -178,7 +178,7 @@ updateLocalGame msg model =
                                 updatedPlayers =
                                     (newGame.players |> Dict.values)
                                         ++ [ { name = "", color = color } ]
-                                        |> List.indexedMap (\id player -> ( id, player ))
+                                        |> List.indexedMap (\id player -> ( id |> String.fromInt, player ))
                                         |> Dict.fromList
 
                                 newId =
@@ -320,7 +320,7 @@ updateLocalGame msg model =
                 GameCreated gameIdResult ->
                     case gameIdResult of
                         RemoteData.Success gameId ->
-                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.LocalGame gameId (Player.Id 1)) )
+                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.LocalGame gameId (Player.Id "1")) )
 
                         RemoteData.NotAsked ->
                             ( model, Cmd.none )
@@ -497,7 +497,7 @@ layout overlay body =
         )
 
 
-playerColorSelect : Dict.Dict Int Player.NewPlayer -> Maybe Int -> Element.Element Msg
+playerColorSelect : Dict.Dict String Player.NewPlayer -> Maybe String -> Element.Element Msg
 playerColorSelect players maybePlayerId =
     case maybePlayerId of
         Just playerId ->
@@ -614,7 +614,7 @@ mapSelect maps selectedMapId =
         )
 
 
-playerConfiguration : Dict.Dict Int Player.NewPlayer -> Element.Element Msg
+playerConfiguration : Dict.Dict String Player.NewPlayer -> Element.Element Msg
 playerConfiguration players =
     Element.column
         [ Element.spacing 20
@@ -633,13 +633,13 @@ playerConfiguration players =
         )
 
 
-playerFields : Int -> Player.NewPlayer -> Element.Element Msg
+playerFields : String -> Player.NewPlayer -> Element.Element Msg
 playerFields playerId player =
     Element.row [ Element.spacing 10 ]
         [ Element.row []
             [ Element.Input.text
                 [ Element.width (Element.px 200)
-                , Html.Attributes.id ("player-name-" ++ String.fromInt playerId) |> Element.htmlAttribute
+                , Html.Attributes.id ("player-name-" ++ playerId) |> Element.htmlAttribute
                 ]
                 { onChange = UpdatePlayerName playerId
                 , text = player.name

@@ -7,16 +7,6 @@ module Api.Enum.PlayerTurnStage exposing (..)
 import Json.Decode as Decode exposing (Decoder)
 
 
-{-|
-
-  - CapitolPlacement -
-  - TroopPlacement -
-  - AttackAnnexOrPort -
-  - TroopMovement -
-  - TroopMovementFromSelected -
-  - GameOver -
-
--}
 type PlayerTurnStage
     = CapitolPlacement
     | TroopPlacement

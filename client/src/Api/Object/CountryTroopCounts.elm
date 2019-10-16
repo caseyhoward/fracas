@@ -19,13 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
 countryId : SelectionSet String Api.Object.CountryTroopCounts
 countryId =
     Object.selectionForField "String" "countryId" [] Decode.string
 
 
-{-| -}
 troopCount : SelectionSet Int Api.Object.CountryTroopCounts
 troopCount =
     Object.selectionForField "Int" "troopCount" [] Decode.int

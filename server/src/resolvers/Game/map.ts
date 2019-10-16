@@ -6,9 +6,6 @@ export default async function gameMapResolver(
   executeQuery: Database.ExecuteQuery,
   game: Graphql.Game
 ): Promise<Graphql.Map> {
-  const map = await MapRepository.findById(
-    executeQuery,
-    parseInt(game.map.id, 10)
-  );
+  const map = await MapRepository.findById(executeQuery, game.map.id);
   return MapRepository.mapToGraphql(map);
 }

@@ -19,19 +19,16 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
 color : SelectionSet decodesTo Api.Object.Color -> SelectionSet decodesTo Api.Object.InternetGamePlayerConfiguration
 color object_ =
     Object.selectionForCompositeField "color" [] object_ identity
 
 
-{-| -}
-playerId : SelectionSet Int Api.Object.InternetGamePlayerConfiguration
+playerId : SelectionSet String Api.Object.InternetGamePlayerConfiguration
 playerId =
-    Object.selectionForField "Int" "playerId" [] Decode.int
+    Object.selectionForField "String" "playerId" [] Decode.string
 
 
-{-| -}
 name : SelectionSet String Api.Object.InternetGamePlayerConfiguration
 name =
     Object.selectionForField "String" "name" [] Decode.string

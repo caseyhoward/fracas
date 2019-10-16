@@ -16,6 +16,7 @@ import gameMap from "./resolvers/Game/map";
 import map from "./resolvers/Query/map";
 import maps from "./resolvers/Query/maps";
 import createMap from "./resolvers/Mutation/createMap";
+import saveInternetGame from "./resolvers/Mutation/saveInternetGame";
 import joinInternetGame from "./resolvers/Mutation/joinInternetGame";
 import startInternetGame from "./resolvers/Mutation/startInternetGame";
 import updatePlayerNameForInternetGame from "./resolvers/Mutation/updatePlayerNameForInternetGame";
@@ -47,6 +48,8 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
       updatePlayerColorForInternetGame: (_, input) =>
         updatePlayerColorForInternetGame(executeQuery, input),
       updateMapForInternetGame,
+      saveInternetGame: async (_, input) =>
+        saveInternetGame(executeQuery, input),
       saveGame: async (_, saveGame) => {
         return Game.update(executeQuery, saveGame.game);
       }
@@ -69,7 +72,6 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
       player.gameId.toString(),
       parseInt(input.mapId, 10)
     );
-    throw "todo";
-    // return await InternetGameRepository.findById(executeQuery, player.gameId);
+    return true;
   }
 }

@@ -19,31 +19,26 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
 id : SelectionSet String Api.Object.Map
 id =
     Object.selectionForField "String" "id" [] Decode.string
 
 
-{-| -}
 name : SelectionSet String Api.Object.Map
 name =
     Object.selectionForField "String" "name" [] Decode.string
 
 
-{-| -}
 countries : SelectionSet decodesTo Api.Object.Country -> SelectionSet (List decodesTo) Api.Object.Map
 countries object_ =
     Object.selectionForCompositeField "countries" [] object_ (identity >> Decode.list)
 
 
-{-| -}
 bodiesOfWater : SelectionSet decodesTo Api.Object.BodyOfWater -> SelectionSet (List decodesTo) Api.Object.Map
 bodiesOfWater object_ =
     Object.selectionForCompositeField "bodiesOfWater" [] object_ (identity >> Decode.list)
 
 
-{-| -}
 dimensions : SelectionSet decodesTo Api.Object.Dimensions -> SelectionSet decodesTo Api.Object.Map
 dimensions object_ =
     Object.selectionForCompositeField "dimensions" [] object_ identity

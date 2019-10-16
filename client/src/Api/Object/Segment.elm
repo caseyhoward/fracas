@@ -19,13 +19,11 @@ import Graphql.SelectionSet exposing (SelectionSet)
 import Json.Decode as Decode
 
 
-{-| -}
 point1 : SelectionSet decodesTo Api.Object.Point -> SelectionSet decodesTo Api.Object.Segment
 point1 object_ =
     Object.selectionForCompositeField "point1" [] object_ identity
 
 
-{-| -}
 point2 : SelectionSet decodesTo Api.Object.Point -> SelectionSet decodesTo Api.Object.Segment
 point2 object_ =
     Object.selectionForCompositeField "point2" [] object_ identity
