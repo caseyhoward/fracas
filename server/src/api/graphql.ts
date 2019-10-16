@@ -142,8 +142,9 @@ export type Mutation = {
   joinInternetGame: Scalars['String'],
   removePlayer: Game,
   saveGame: Game,
+  saveInternetGame: Scalars['Boolean'],
   startInternetGame: Scalars['Boolean'],
-  updateMapForInternetGame: InternetGameConfiguration,
+  updateMapForInternetGame: Scalars['Boolean'],
   updatePlayerNameForInternetGame: Scalars['Boolean'],
   updatePlayerColorForInternetGame: Scalars['Boolean'],
 };
@@ -171,6 +172,11 @@ export type MutationRemovePlayerArgs = {
 
 
 export type MutationSaveGameArgs = {
+  game: GameInput
+};
+
+
+export type MutationSaveInternetGameArgs = {
   game: GameInput
 };
 
@@ -512,8 +518,9 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   joinInternetGame?: Resolver<ResolversTypes['String'], ParentType, ContextType, RequireFields<MutationJoinInternetGameArgs, 'joinGameToken'>>,
   removePlayer?: Resolver<ResolversTypes['Game'], ParentType, ContextType, RequireFields<MutationRemovePlayerArgs, 'playerToken' | 'playerId'>>,
   saveGame?: Resolver<ResolversTypes['Game'], ParentType, ContextType, RequireFields<MutationSaveGameArgs, 'game'>>,
+  saveInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationSaveInternetGameArgs, 'game'>>,
   startInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationStartInternetGameArgs, 'playerToken'>>,
-  updateMapForInternetGame?: Resolver<ResolversTypes['InternetGameConfiguration'], ParentType, ContextType, RequireFields<MutationUpdateMapForInternetGameArgs, 'playerToken' | 'mapId'>>,
+  updateMapForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdateMapForInternetGameArgs, 'playerToken' | 'mapId'>>,
   updatePlayerNameForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdatePlayerNameForInternetGameArgs, 'name' | 'playerToken'>>,
   updatePlayerColorForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdatePlayerColorForInternetGameArgs, 'color' | 'playerToken'>>,
 };

@@ -10,6 +10,7 @@ module Page.InternetGame exposing
 
 import Api.Query
 import Colors
+import Country
 import Dict
 import Element
 import Element.Background
@@ -38,13 +39,14 @@ type Msg
     | ColorSelectBackgroundClicked
     | GameMsg Game.Msg
     | GameStarted (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
+    | GameSaved (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatePlayerName String
     | UpdatedColor (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatedPlayerName (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | RemovePlayer Int
     | StartGameClicked
     | SelectMap String
-    | MapUpdated (RemoteData.RemoteData (Graphql.Http.Error InternetGame.Configuration) InternetGame.Configuration)
+    | MapUpdated (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
 
 
 type Model
@@ -247,12 +249,17 @@ update msg model =
                 GameMsg gameMsg ->
                     let
                         ( updatedGameModel, updatedGameCmd ) =
-                            Game.update gameMsg playingModel.gameModel
+                            Game.update gameMsg (saveGame playingModel.session.apiUrl playingModel.playerToken) playingModel.gameModel
                     in
-                    ( Playing { playingModel | gameModel = updatedGameModel }, updatedGameCmd |> Cmd.map GameMsg )
+                    ( Playing { playingModel | gameModel = updatedGameModel }, updatedGameCmd )
 
                 _ ->
                     ( model, Cmd.none )
+
+
+saveGame : String -> InternetGame.PlayerToken -> Country.Id -> Cmd Msg
+saveGame apiUrl playerToken countryClickedId =
+    InternetGame.save apiUrl playerToken GameSaved countryClickedId
 
 
 view : Model -> { title : String, content : Html.Html Msg }

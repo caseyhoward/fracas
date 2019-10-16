@@ -12,6 +12,7 @@ module InternetGame exposing
     , joinTokenUrlParser
     , playerTokenToString
     , playerTokenUrlParser
+    , save
     , selectionSet
     , start
     , updateColor
@@ -28,9 +29,10 @@ import Api.Query
 import Api.Union
 import Api.Union.InternetGameOrConfiguration
 import Colors
-import LocalGame
+import Country
 import Graphql.Http
 import Graphql.SelectionSet
+import LocalGame
 import Map
 import Player
 import RemoteData
@@ -115,6 +117,17 @@ start apiUrl (PlayerToken playerToken) toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
+save : String -> PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool -> msg) -> Country.Id -> Cmd msg
+save apiUrl (PlayerToken playerToken) toMsg =
+    Debug.todo ""
+
+
+
+-- Api.Mutation.startInternetGame { playerToken = playerToken }
+--     |> Graphql.Http.mutationRequest apiUrl
+--     |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
 updateColor : String -> PlayerToken -> Colors.Color -> (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool -> msg) -> Cmd msg
 updateColor apiUrl playerToken color toMsg =
     Api.Mutation.updatePlayerColorForInternetGame
@@ -131,11 +144,10 @@ updatePlayerName apiUrl playerToken name toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-updateMap : String -> PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error Configuration) Configuration -> msg) -> Cmd msg
+updateMap : String -> PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool -> msg) -> Cmd msg
 updateMap apiUrl playerToken mapId toMsg =
     Api.Mutation.updateMapForInternetGame
         { playerToken = playerToken |> playerTokenToString, mapId = mapId |> Map.idToString }
-        configurationSelectionSet1
         |> Graphql.Http.mutationRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 

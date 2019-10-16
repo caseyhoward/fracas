@@ -59,7 +59,7 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
       MutationUpdateMapForInternetGameArgs,
       "playerToken" | "mapId"
     >
-  ): Promise<graphql.InternetGameConfiguration> {
+  ): Promise<boolean> {
     const player = await InternetGamePlayerRepository.findByToken(
       executeQuery,
       input.playerToken

@@ -98,6 +98,20 @@ saveGame requiredArgs object_ =
     Object.selectionForCompositeField "saveGame" [ Argument.required "game" requiredArgs.game Api.InputObject.encodeGameInput ] object_ identity
 
 
+type alias SaveInternetGameRequiredArguments =
+    { game : Api.InputObject.GameInput }
+
+
+{-|
+
+  - game -
+
+-}
+saveInternetGame : SaveInternetGameRequiredArguments -> SelectionSet Bool RootMutation
+saveInternetGame requiredArgs =
+    Object.selectionForField "Bool" "saveInternetGame" [ Argument.required "game" requiredArgs.game Api.InputObject.encodeGameInput ] Decode.bool
+
+
 type alias StartInternetGameRequiredArguments =
     { playerToken : String }
 
@@ -124,9 +138,9 @@ type alias UpdateMapForInternetGameRequiredArguments =
   - mapId -
 
 -}
-updateMapForInternetGame : UpdateMapForInternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.InternetGameConfiguration -> SelectionSet decodesTo RootMutation
-updateMapForInternetGame requiredArgs object_ =
-    Object.selectionForCompositeField "updateMapForInternetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string, Argument.required "mapId" requiredArgs.mapId Encode.string ] object_ identity
+updateMapForInternetGame : UpdateMapForInternetGameRequiredArguments -> SelectionSet Bool RootMutation
+updateMapForInternetGame requiredArgs =
+    Object.selectionForField "Bool" "updateMapForInternetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string, Argument.required "mapId" requiredArgs.mapId Encode.string ] Decode.bool
 
 
 type alias UpdatePlayerNameForInternetGameRequiredArguments =

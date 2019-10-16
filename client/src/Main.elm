@@ -41,7 +41,7 @@ main =
 
 init : {} -> Url.Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
 init _ url key =
-    changeRouteTo (Route.fromUrl url)
+    changeRouteTo (Route.fromUrl url |> Debug.log "")
         (Redirect (Session.init key))
 
 
