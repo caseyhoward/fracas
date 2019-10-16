@@ -1,4 +1,12 @@
-module Page.NewGame exposing (Model, Msg, init, subscriptions, toSession, update, view)
+module Page.NewGame exposing
+    ( Model
+    , Msg
+    , init
+    , subscriptions
+    , toSession
+    , update
+    , view
+    )
 
 import Browser.Dom
 import Browser.Events
@@ -10,11 +18,11 @@ import Element.Border
 import Element.Font
 import Element.Input
 import Element.Lazy
-import Game
 import Graphql.Http
 import Html
 import Html.Attributes
 import InternetGame
+import LocalGame
 import Map
 import NewGame
 import Player
@@ -101,7 +109,7 @@ type Msg
     | ColorSelected Int Colors.Color
     | ChangeColorButtonClicked Int
     | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map))
-    | GameCreated (RemoteData.RemoteData (Graphql.Http.Error Game.Id) Game.Id)
+    | GameCreated (RemoteData.RemoteData (Graphql.Http.Error LocalGame.Id) LocalGame.Id)
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | WindowResized Int Int
     | SelectMap String
@@ -274,7 +282,7 @@ updateLocalGame msg model =
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
                     case newGame.selectedMapId of
                         Just mapId ->
-                            ( model, Game.create session.apiUrl mapId newGame.players neutralCountryTroopCounts GameCreated )
+                            ( model, LocalGame.create session.apiUrl mapId newGame.players neutralCountryTroopCounts GameCreated )
 
                         Nothing ->
                             ( model, Cmd.none )
@@ -312,7 +320,7 @@ updateLocalGame msg model =
                 GameCreated gameIdResult ->
                     case gameIdResult of
                         RemoteData.Success gameId ->
-                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.Game gameId (Player.Id 1)) )
+                            ( Redirecting newGame session, Route.pushUrl (Session.navKey session) (Route.LocalGame gameId (Player.Id 1)) )
 
                         RemoteData.NotAsked ->
                             ( model, Cmd.none )

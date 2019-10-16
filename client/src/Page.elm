@@ -8,7 +8,7 @@ import Html
 
 
 type Page
-    = Game
+    = LocalGame
     | NewGame
     | InternetGame
     | NewMap

@@ -4,9 +4,9 @@ import Browser
 import Browser.Navigation
 import Html
 import Page
-import Page.Game
 import Page.InternetGame
 import Page.JoinInternetGame
+import Page.LocalGame
 import Page.NewGame
 import Page.NewMap
 import Route
@@ -20,7 +20,7 @@ import Url
 
 type Model
     = NewGame Page.NewGame.Model
-    | Game Page.Game.Model
+    | LocalGame Page.LocalGame.Model
     | NewMap Page.NewMap.Model
     | InternetGame Page.InternetGame.Model
     | JoinInternetGame Page.JoinInternetGame.Model
@@ -54,7 +54,7 @@ type
     -- = ChangedRoute (Maybe Route.Route)
     = ChangedUrl Url.Url
     | ClickedLink Browser.UrlRequest
-    | GotGameMsg Page.Game.Msg
+    | GotGameMsg Page.LocalGame.Msg
     | GotNewGameMsg Page.NewGame.Msg
     | GotNewMapMsg Page.NewMap.Msg
     | GotInternetGameMsg Page.InternetGame.Msg
@@ -79,9 +79,9 @@ update msg model =
 
         -- ( ChangedRoute route, _ ) ->
         --     changeRouteTo route model
-        ( GotGameMsg subMsg, Game activeGame ) ->
-            Page.Game.update subMsg activeGame
-                |> updateWith Game GotGameMsg
+        ( GotGameMsg subMsg, LocalGame activeGame ) ->
+            Page.LocalGame.update subMsg activeGame
+                |> updateWith LocalGame GotGameMsg
 
         ( GotNewMapMsg subMsg, NewMap newMap ) ->
             Page.NewMap.update subMsg newMap
@@ -122,9 +122,9 @@ changeRouteTo maybeRoute model =
             Page.NewGame.init session
                 |> updateWith NewGame GotNewGameMsg
 
-        Just (Route.Game gameId playerId) ->
-            Page.Game.init session gameId playerId
-                |> updateWith Game GotGameMsg
+        Just (Route.LocalGame gameId playerId) ->
+            Page.LocalGame.init session gameId playerId
+                |> updateWith LocalGame GotGameMsg
 
         Just Route.NewMap ->
             Page.NewMap.init session
@@ -148,8 +148,8 @@ toSession model =
         NewGame newGame ->
             newGame |> Page.NewGame.toSession
 
-        Game activeGame ->
-            activeGame |> Page.Game.toSession
+        LocalGame activeGame ->
+            activeGame |> Page.LocalGame.toSession
 
         InternetGame internetGame ->
             internetGame |> Page.InternetGame.toSession
@@ -184,8 +184,8 @@ view model =
         NewGame newGame ->
             viewPage Page.NewGame GotNewGameMsg (Page.NewGame.view newGame)
 
-        Game activeGame ->
-            viewPage Page.Game GotGameMsg (Page.Game.view activeGame)
+        LocalGame activeGame ->
+            viewPage Page.LocalGame GotGameMsg (Page.LocalGame.view activeGame)
 
         InternetGame internetGame ->
             viewPage Page.InternetGame GotInternetGameMsg (Page.InternetGame.view internetGame)
@@ -210,8 +210,8 @@ subscriptions model =
         NewGame newGame ->
             Sub.map GotNewGameMsg (Page.NewGame.subscriptions newGame)
 
-        Game activeGame ->
-            Sub.map GotGameMsg (Page.Game.subscriptions activeGame)
+        LocalGame activeGame ->
+            Sub.map GotGameMsg (Page.LocalGame.subscriptions activeGame)
 
         InternetGame internetGame ->
             Sub.map GotInternetGameMsg (Page.InternetGame.subscriptions internetGame)

@@ -28,7 +28,7 @@ import Api.Query
 import Api.Union
 import Api.Union.InternetGameOrConfiguration
 import Colors
-import Game
+import LocalGame
 import Graphql.Http
 import Graphql.SelectionSet
 import Map
@@ -72,7 +72,7 @@ type GameOrConfiguration
 
 
 type alias Game =
-    { game : Game.Game
+    { game : LocalGame.Game
     , currentUserPlayerId : Player.Id
     }
 
@@ -173,7 +173,7 @@ playerConfigurationSelectionSet =
 gameSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGame
 gameSelectionSet =
     Graphql.SelectionSet.map2 (\game currentUserPlayerId -> InternetGame { game = game, currentUserPlayerId = Player.Id currentUserPlayerId })
-        (Api.Object.InternetGame.game Game.selectionSet)
+        (Api.Object.InternetGame.game LocalGame.selectionSet)
         Api.Object.InternetGame.currentUserPlayerId
 
 

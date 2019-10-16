@@ -9,7 +9,7 @@ module Session exposing
 
 import Browser.Navigation
 import Dict
-import Game
+import LocalGame
 
 
 type alias WindowSize =
@@ -23,7 +23,7 @@ type alias Session =
     , navKey : Browser.Navigation.Key
 
     -- , gameMaps : Dict.Dict String Map.Map
-    , activeGames : Dict.Dict String Game.Game
+    , activeGames : Dict.Dict String LocalGame.Game
     , apiUrl : String
     }
 
@@ -52,6 +52,6 @@ updateWindowSize windowSize session =
     { session | windowSize = Just windowSize }
 
 
-addGame : Game.Id -> Game.Game -> Session -> Session
-addGame (Game.Id id) activeGame session =
+addGame : LocalGame.Id -> LocalGame.Game -> Session -> Session
+addGame (LocalGame.Id id) activeGame session =
     { session | activeGames = Dict.insert id activeGame session.activeGames }

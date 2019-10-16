@@ -24,7 +24,7 @@ import Html.Attributes
 import InternetGame
 import Map
 import NewGame
-import Page.Game
+import Page.LocalGame
 import Player
 import RemoteData
 import Session
@@ -36,7 +36,7 @@ type Msg
     | ChangeColorButtonClicked
     | ColorSelected Int Colors.Color
     | ColorSelectBackgroundClicked
-    | GameMsg Page.Game.Msg
+    | GameMsg Page.LocalGame.Msg
     | GameStarted (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatePlayerName String
     | UpdatedColor (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
@@ -71,7 +71,7 @@ type alias ConfiguringModel =
 
 type alias PlayingModel =
     { playerToken : InternetGame.PlayerToken
-    , gameModel : Page.Game.GameLoadedModel
+    , gameModel : Page.LocalGame.GameLoadedModel
     }
 
 
@@ -143,7 +143,7 @@ update msg model =
                                             , session = loadingModel.session
                                             , error = Nothing
                                             , playerId = internetGame.currentUserPlayerId
-                                            , countryBorderHelperOutlineStatus = Page.Game.CountryBorderHelperOutlineInactive
+                                            , countryBorderHelperOutlineStatus = Page.LocalGame.CountryBorderHelperOutlineInactive
                                             }
                                         , playerToken = loadingModel.playerToken
                                         }
@@ -234,9 +234,6 @@ update msg model =
             ( model, Cmd.none )
 
 
-
-
-
 view : Model -> { title : String, content : Html.Html Msg }
 view model =
     case model of
@@ -300,7 +297,7 @@ viewConfiguring configuringModel =
 
 viewPlaying : PlayingModel -> { title : String, content : Html.Html Msg }
 viewPlaying playingModel =
-    Page.Game.viewGameWrapMessage playingModel.gameModel GameMsg
+    Page.LocalGame.viewGameWrapMessage playingModel.gameModel GameMsg
 
 
 playerConfiguration : Dict.Dict Int Player.NewPlayer -> Player.Id -> Element.Element Msg

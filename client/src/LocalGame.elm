@@ -1,4 +1,4 @@
-module Game exposing
+module LocalGame exposing
     ( CountryToRender
     , Error
     , Game
@@ -11,7 +11,7 @@ module Game exposing
     , get
     , getAttackStrengthPerPlayer
     , getCountriesToRender
-    , getCountryAttackers,selectionSet
+    , getCountryAttackers
     , getCountryDefenders
     , getCountryDefenseStrength
     , getCountryHasPort
@@ -25,6 +25,7 @@ module Game exposing
     , isCountryIdCapitol
     , pass
     , save
+    , selectionSet
     , updateNumberOfTroopsToMove
     , urlParser
     )
@@ -121,7 +122,7 @@ create apiUrl selectedMapId newPlayers neutralTroopCounts toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-save : String ->  Game -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
+save : String -> Game -> (RemoteData.RemoteData (Graphql.Http.Error Game) Game -> msg) -> Cmd msg
 save apiUrl game toMsg =
     let
         input : Api.Mutation.SaveGameRequiredArguments
@@ -182,7 +183,7 @@ errorToString (Error error) =
 
 
 countryClicked : Country.Id -> Game -> Result Error Game
-countryClicked clickedCountryId  activeGame =
+countryClicked clickedCountryId activeGame =
     -- if PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn userId then
     case activeGame.currentPlayerTurn of
         PlayerTurn.PlayerTurn playerTurnStage currentPlayerId ->

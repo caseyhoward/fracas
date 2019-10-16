@@ -7,10 +7,10 @@ module Route exposing
     )
 
 import Browser.Navigation as Nav
-import Game
 import Html exposing (Attribute)
 import Html.Attributes as Attr
 import InternetGame
+import LocalGame
 import Player
 import Url exposing (Url)
 import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
@@ -23,7 +23,7 @@ import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
 type Route
     = ConfiguringGame
     | NewMap
-    | Game Game.Id Player.Id
+    | LocalGame LocalGame.Id Player.Id
     | InternetGame InternetGame.PlayerToken
     | JoinInternetGame InternetGame.JoinToken
 
@@ -57,7 +57,7 @@ parser =
     oneOf
         [ Parser.map ConfiguringGame Parser.top
         , Parser.map ConfiguringGame (s "games" </> s "new")
-        , Parser.map Game (s "games" </> Game.urlParser </> s "players" </> Player.urlParser)
+        , Parser.map LocalGame (s "games" </> LocalGame.urlParser </> s "players" </> Player.urlParser)
         , Parser.map InternetGame (s "games" </> s "internet" </> InternetGame.playerTokenUrlParser)
         , Parser.map JoinInternetGame (s "games" </> s "internet" </> s "join" </> InternetGame.joinTokenUrlParser)
         , Parser.map NewMap (s "maps" </> s "new")
@@ -78,8 +78,8 @@ routeToString page =
                 InternetGame playerKey ->
                     [ "games", "internet", playerKey |> InternetGame.playerTokenToString ]
 
-                Game gameId playerId ->
-                    [ "games", Game.idToString gameId, "players", Player.idToString playerId ]
+                LocalGame gameId playerId ->
+                    [ "games", LocalGame.idToString gameId, "players", Player.idToString playerId ]
 
                 NewMap ->
                     [ "maps", "new" ]
