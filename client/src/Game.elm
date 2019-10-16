@@ -1,14 +1,20 @@
 module Game exposing
     ( CountryBorderHelperOutlineStatus(..)
+    , Error
+    , Game
     , GameLoadedModel
-    , Model(..)
-    , Msg
-    , handleCountryMouseUpFromPlayer
-    -- , init
-    , subscriptions, idToString
-    , toSession, GameWithCurrentUser
-    , update, Game
+    , GameWithCurrentUser
     , Id(..)
+    , Model(..)
+    , Msg(..)
+    , countryClicked
+    ,  handleCountryMouseUpFromPlayer
+       -- , init
+
+    , idToString
+    , subscriptions
+    , toSession
+    , update
     , view
     , viewGameWrapMessage
     )
@@ -86,6 +92,7 @@ type alias Game =
     }
 
 
+
 type Id
     = Id String
 
@@ -100,6 +107,7 @@ type CountryBorderHelperOutlineStatus
     = CountryBorderHelperOutlineWaitingForDelay Country.Id
     | CountryBorderHelperOutlineInactive
     | CountryBorderHelperOutlineActive Country.Id
+
 
 
 -- init : Session.Session -> Id -> Player.Id -> ( Model, Cmd Msg )
@@ -142,11 +150,13 @@ type Msg
     | CancelMovingTroops
     | ShowCountryBorderHelper
     | ShowAvailableMovesCheckboxToggled Bool
-    | WindowResized Int Int
+    -- | WindowResized Int Int
 
 
-update : Msg -> (GameLoadedModel -> Country.Id -> Cmd msg) -> Model -> ( Model, Cmd msg )
-update msg toCountryClickedCommand model =
+
+
+update : Msg -> Model -> ( Model, Cmd msg )
+update msg model =
     case model of
         GameLoading gameLoadingModel ->
             case msg of
@@ -160,8 +170,6 @@ update msg toCountryClickedCommand model =
                                 , error = Nothing
                                 , playerId = gameLoadingModel.playerId
                                 , countryBorderHelperOutlineStatus = CountryBorderHelperOutlineInactive
-
-                                -- , currentUserPlayerId = gameLoadingModel.playerId
                                 }
                             , Cmd.none
                             )
@@ -172,8 +180,6 @@ update msg toCountryClickedCommand model =
                         _ ->
                             ( model, Cmd.none )
 
-                WindowResized width height ->
-                    ( GameLoading { gameLoadingModel | session = gameLoadingModel.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -188,8 +194,6 @@ update msg toCountryClickedCommand model =
                         _ ->
                             ( model, Cmd.none )
 
-                WindowResized width height ->
-                    ( GameSaving { gameLoadedModel | session = gameLoadedModel.session |> Session.updateWindowSize { width = width, height = height } } savingGame, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -197,7 +201,7 @@ update msg toCountryClickedCommand model =
         GameLoaded gameLoadedModel ->
             case msg of
                 CountryMouseUp clickedCountryId ->
-                    (GameLoaded  (handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel toCountryClickedCommand), Cmd.none)
+                    ( GameLoaded (handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel), Cmd.none )
 
                 CountryMouseDown clickedCountryId ->
                     ( handleCountryMouseDown clickedCountryId gameLoadedModel |> GameLoaded, Cmd.none )
@@ -223,9 +227,6 @@ update msg toCountryClickedCommand model =
                 ShowCountryBorderHelper ->
                     ( makeCountryHelperOutlinesActive gameLoadedModel |> GameLoaded, Cmd.none )
 
-                WindowResized width height ->
-                    ( GameLoaded { gameLoadedModel | session = gameLoadedModel.session |> Session.updateWindowSize { width = width, height = height } }, Cmd.none )
-
                 GotGame _ ->
                     ( model, Cmd.none )
 
@@ -240,18 +241,18 @@ updateModelWithGameResult result model =
             { model | error = Just (errorToString error) }
 
 
-handleCountryMouseUpFromPlayer : Country.Id -> GameLoadedModel -> (GameLoadedModel -> Country.Id -> Cmd msg) -> GameLoadedModel
-handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel toCmd =
+handleCountryMouseUpFromPlayer : Country.Id -> GameLoadedModel -> GameLoadedModel
+handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel  =
     case gameLoadedModel.countryBorderHelperOutlineStatus of
         CountryBorderHelperOutlineActive _ ->
-            (  gameLoadedModel )
+            gameLoadedModel
 
         CountryBorderHelperOutlineInactive ->
-            (  gameLoadedModel )
+            gameLoadedModel
 
         CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
             if clickedCountryId == countryToShowInfoForId then
-                (  gameLoadedModel)
+                gameLoadedModel
                 -- case countryClicked clickedCountryId gameLoadedModel.activeGame of
                 --     Ok updatedGame ->
                 --         ( GameSaving
@@ -266,7 +267,7 @@ handleCountryMouseUpFromPlayer clickedCountryId gameLoadedModel toCmd =
                 --     ( GameLoaded { gameLoadedModel | error = Just (errorToString error) }, Cmd.none )
 
             else
-                (  gameLoadedModel)
+                gameLoadedModel
 
 
 handleCountryMouseDown : Country.Id -> GameLoadedModel -> GameLoadedModel
@@ -1150,26 +1151,10 @@ countryOutlineDelayMilliseconds =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model of
-        GameLoaded gameLoadedModel ->
-            [ if waitingToShowCountryHelperOutlines gameLoadedModel.countryBorderHelperOutlineStatus then
-                Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
-
-              else
-                Sub.none
-            , Browser.Events.onResize (\x y -> WindowResized x y)
-            ]
-                |> Sub.batch
-
-        GameLoading _ ->
-            Browser.Events.onResize (\x y -> WindowResized x y)
-
-        GameSaving _ _ ->
-            Browser.Events.onResize (\x y -> WindowResized x y)
+    Sub.none
 
 
 -------------------------------------------
-
 
 
 errorToString : Error -> String
@@ -2484,6 +2469,6 @@ updateTroopCount :
 updateTroopCount (Country.Id countryId) troopCount troopCounts =
     Dict.insert countryId troopCount troopCounts
 
+
 type Error
     = Error String
-

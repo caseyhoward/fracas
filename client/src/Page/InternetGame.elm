@@ -248,21 +248,19 @@ update msg model =
         Playing playingModel ->
             case msg of
                 GameMsg gameMsg ->
+                    
                     let
                         ( updatedGameModel, updatedGameCmd ) =
-                            Game.update
-                                gameMsg
-                                (\gameLoadedModel countryId ->
-                                    saveGame
-                                        playingModel.session.apiUrl
-                                        countryId
-                                        playingModel.playerToken
-                                        gameLoadedModel
-                                )
-                                playingModel.gameModel
+                            Game.update gameMsg playingModel.gameModel
                     in
                     ( Playing { playingModel | gameModel = updatedGameModel }, updatedGameCmd )
 
+                -- GameSaved game ->
+                -- let
+                --     gameModel =
+                --         playingModel.gameModel
+                -- in
+                -- ( Playing { playingModel | gameModel = { gameModel | activeGame = game } }, Cmd.none )
                 _ ->
                     ( model, Cmd.none )
 
@@ -270,11 +268,16 @@ update msg model =
 saveGame : String -> Country.Id -> InternetGame.PlayerToken -> Game.GameLoadedModel -> Cmd Msg
 saveGame apiUrl countryId playerToken game =
     let
-        updatedGame : Game.GameLoadedModel
-        updatedGame =
-            Game.handleCountryMouseUpFromPlayer countryId game (\_ _ -> Cmd.none)
+        updatedGameResult : Result Game.Error Game.Game
+        updatedGameResult =
+            Game.countryClicked countryId game.activeGame
     in
-    InternetGame.save apiUrl playerToken updatedGame.activeGame GameSaved
+    case updatedGameResult of
+        Ok updatedGame ->
+            InternetGame.save apiUrl playerToken updatedGame GameSaved
+
+        Err _ ->
+            Cmd.none
 
 
 view : Model -> { title : String, content : Html.Html Msg }
