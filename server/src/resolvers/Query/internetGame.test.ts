@@ -1,45 +1,12 @@
-import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import internetGame from "./internetGame";
 import * as TestDatabase from "../../test/TestDatabase";
 import * as Models from "../../repositories/Models";
-import * as Uuid from "../../Uuid";
 import * as Factories from "../../test/Factories";
 import * as Builders from "../../test/Builders";
-import { defaultHostColor } from "../Mutation/createInternetGame";
 
 describe("Query.internetGame", () => {
-  it("returns configuration", async () => {
-    const configuration = await Factories.createInternetGameConfiguration({});
-    const internetGamePlayer = await Factories.createInternetGamePlayer({
-      gameId: configuration.id
-    });
-    const player: Models.PlayerConfiguration = {
-      __typename: "PlayerConfiguration",
-      color: { __typename: "Color", red: 0, green: 255, blue: 0 },
-      name: "test name",
-      playerId: internetGamePlayer.id
-    };
-
-    await InternetGameConfigurationRepository.addPlayer(
-      TestDatabase.query,
-      configuration.id,
-      player
-    );
-
-    const gameOrConfiguration = await internetGame(TestDatabase.query, {
-      playerToken: internetGamePlayer.playerToken
-    });
-
-    if (gameOrConfiguration.__typename === "InternetGameConfiguration") {
-      expect(gameOrConfiguration.players.length).toEqual(1);
-      expect(gameOrConfiguration.players[0].color).toEqual(defaultHostColor);
-    } else {
-      fail("Must be Confguration");
-    }
-  });
-
   it("returns internet game", async () => {
     const configuration = await Factories.createInternetGameConfiguration({});
 
@@ -74,11 +41,7 @@ describe("Query.internetGame", () => {
       playerToken: internetGamePlayer.playerToken
     });
 
-    if (gameOrConfiguration.__typename === "InternetGame") {
-      expect(gameOrConfiguration.game.players.length).toEqual(1);
-      expect(gameOrConfiguration.game.players[0].name).toEqual("test name");
-    } else {
-      fail("Must be InternetGame");
-    }
+    expect(gameOrConfiguration.game.players.length).toEqual(1);
+    expect(gameOrConfiguration.game.players[0].name).toEqual("test name");
   });
 });

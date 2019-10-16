@@ -37,11 +37,20 @@ game requiredArgs object_ =
     Object.selectionForCompositeField "game" [ Argument.required "id" requiredArgs.id Encode.string ] object_ identity
 
 
+type alias InternetGameOrConfigurationRequiredArguments =
+    { playerToken : String }
+
+
+internetGameOrConfiguration : InternetGameOrConfigurationRequiredArguments -> SelectionSet decodesTo Api.Union.InternetGameOrConfiguration -> SelectionSet decodesTo RootQuery
+internetGameOrConfiguration requiredArgs object_ =
+    Object.selectionForCompositeField "internetGameOrConfiguration" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
+
+
 type alias InternetGameRequiredArguments =
     { playerToken : String }
 
 
-internetGame : InternetGameRequiredArguments -> SelectionSet decodesTo Api.Union.InternetGameOrConfiguration -> SelectionSet decodesTo RootQuery
+internetGame : InternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.InternetGame -> SelectionSet decodesTo RootQuery
 internetGame requiredArgs object_ =
     Object.selectionForCompositeField "internetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
 

@@ -11,7 +11,7 @@ module TroopCount exposing
     , random
     , subtractTroopCounts
     , toString
-    , troopCountsInput
+    , troopCountsInput, toInt
     , troopCountsSelection
     )
 

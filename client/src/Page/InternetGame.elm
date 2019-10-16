@@ -24,6 +24,7 @@ import Graphql.SelectionSet
 import Html
 import Html.Attributes
 import InternetGame
+import LocalGame
 import Map
 import NewGame
 import Player
@@ -87,7 +88,7 @@ type alias SelectionSet =
 selectionSet : InternetGame.PlayerToken -> Graphql.SelectionSet.SelectionSet SelectionSet Graphql.Operation.RootQuery
 selectionSet playerToken =
     Graphql.SelectionSet.map2 SelectionSet
-        (Api.Query.internetGame { playerToken = playerToken |> InternetGame.playerTokenToString } InternetGame.selectionSet)
+        (Api.Query.internetGameOrConfiguration { playerToken = playerToken |> InternetGame.playerTokenToString } InternetGame.gameOrConfigurationSelectionSet)
         (Api.Query.maps Map.mapSelection)
 
 
@@ -138,16 +139,16 @@ update msg model =
                                     , Cmd.none
                                     )
 
-                                InternetGame.InternetGame internetGame ->
+                                InternetGame.InternetGame internetGameWithUser ->
                                     let
                                         gameModel : Game.Model
                                         gameModel =
                                             Game.GameLoaded
-                                                { activeGame = internetGame.game
+                                                { activeGame = internetGameWithUser.game
                                                 , showAvailableMoves = False
                                                 , session = loadingModel.session
                                                 , error = Nothing
-                                                , playerId = internetGame.currentUserPlayerId
+                                                , playerId = internetGameWithUser.currentUserPlayerId
 
                                                 -- , currentUserPlayerId = internetGame.currentUserPlayerId
                                                 , countryBorderHelperOutlineStatus = Game.CountryBorderHelperOutlineInactive
@@ -249,7 +250,16 @@ update msg model =
                 GameMsg gameMsg ->
                     let
                         ( updatedGameModel, updatedGameCmd ) =
-                            Game.update gameMsg (saveGame playingModel.session.apiUrl playingModel.playerToken) playingModel.gameModel
+                            Game.update
+                                gameMsg
+                                (\gameLoadedModel countryId ->
+                                    saveGame
+                                        playingModel.session.apiUrl
+                                        countryId
+                                        playingModel.playerToken
+                                        gameLoadedModel
+                                )
+                                playingModel.gameModel
                     in
                     ( Playing { playingModel | gameModel = updatedGameModel }, updatedGameCmd )
 
@@ -257,9 +267,14 @@ update msg model =
                     ( model, Cmd.none )
 
 
-saveGame : String -> InternetGame.PlayerToken -> Country.Id -> Cmd Msg
-saveGame apiUrl playerToken countryClickedId =
-    InternetGame.save apiUrl playerToken GameSaved countryClickedId
+saveGame : String -> Country.Id -> InternetGame.PlayerToken -> Game.GameLoadedModel -> Cmd Msg
+saveGame apiUrl countryId playerToken game =
+    let
+        updatedGame : Game.GameLoadedModel
+        updatedGame =
+            Game.handleCountryMouseUpFromPlayer countryId game (\_ _ -> Cmd.none)
+    in
+    InternetGame.save apiUrl playerToken updatedGame.activeGame GameSaved
 
 
 view : Model -> { title : String, content : Html.Html Msg }

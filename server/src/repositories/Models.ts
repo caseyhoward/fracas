@@ -2,6 +2,8 @@
  * MAP
  *************/
 
+import * as Graphql from "../api/graphql";
+
 export type BodyOfWater = {
   __typename?: "BodyOfWater";
   id: string;
@@ -158,4 +160,26 @@ export interface InternetGamePlayer {
   id: string;
   gameId: string;
   playerToken: string;
+}
+
+export function internetGameToGraphql(
+  internetGame: InternetGame
+): Graphql.Game {
+  return {
+    __typename: "Game",
+    id: internetGame.id.toString(),
+    map: <any>{ id: internetGame.mapId.toString() },
+    neutralCountryTroops: internetGame.neutralCountryTroops,
+    playerTurn: {
+      ...internetGame.playerTurn,
+      playerId: internetGame.playerTurn.playerId.toString()
+    },
+    players: internetGame.players.map(player => {
+      return {
+        ...player,
+        id: player.id.toString(),
+        __typename: "Player"
+      };
+    })
+  };
 }

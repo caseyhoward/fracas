@@ -269,7 +269,8 @@ export type Query = {
    __typename?: 'Query',
   map: Map,
   game: Game,
-  internetGame: InternetGameOrConfiguration,
+  internetGameOrConfiguration: InternetGameOrConfiguration,
+  internetGame: InternetGame,
   maps: Array<Map>,
 };
 
@@ -281,6 +282,11 @@ export type QueryMapArgs = {
 
 export type QueryGameArgs = {
   id: Scalars['String']
+};
+
+
+export type QueryInternetGameOrConfigurationArgs = {
+  playerToken: Scalars['String']
 };
 
 
@@ -550,7 +556,8 @@ export type PointResolvers<ContextType = any, ParentType extends ResolversParent
 export type QueryResolvers<ContextType = any, ParentType extends ResolversParentTypes['Query'] = ResolversParentTypes['Query']> = {
   map?: Resolver<ResolversTypes['Map'], ParentType, ContextType, RequireFields<QueryMapArgs, 'id'>>,
   game?: Resolver<ResolversTypes['Game'], ParentType, ContextType, RequireFields<QueryGameArgs, 'id'>>,
-  internetGame?: Resolver<ResolversTypes['InternetGameOrConfiguration'], ParentType, ContextType, RequireFields<QueryInternetGameArgs, 'playerToken'>>,
+  internetGameOrConfiguration?: Resolver<ResolversTypes['InternetGameOrConfiguration'], ParentType, ContextType, RequireFields<QueryInternetGameOrConfigurationArgs, 'playerToken'>>,
+  internetGame?: Resolver<ResolversTypes['InternetGame'], ParentType, ContextType, RequireFields<QueryInternetGameArgs, 'playerToken'>>,
   maps?: Resolver<Array<ResolversTypes['Map']>, ParentType, ContextType>,
 };
 

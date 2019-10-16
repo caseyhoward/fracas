@@ -11,7 +11,7 @@ import {
 } from "./api/graphql";
 
 import { createInternetGame } from "./resolvers/Mutation/createInternetGame";
-import internetGame from "./resolvers/Query/internetGame";
+import internetGameOrConfiguration from "./resolvers/Query/internetGameOrConfiguration";
 import gameMap from "./resolvers/Game/map";
 import map from "./resolvers/Query/map";
 import maps from "./resolvers/Query/maps";
@@ -30,7 +30,8 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
         return Game.get(executeQuery, parseInt(game.id, 10));
       },
       maps: async () => maps(executeQuery),
-      internetGame: async (_, game) => internetGame(executeQuery, game)
+      internetGameOrConfiguration: async (_, game) =>
+        internetGameOrConfiguration(executeQuery, game)
     },
     Game: {
       map: (game, _) => gameMap(executeQuery, game)

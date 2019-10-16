@@ -191,7 +191,10 @@ type InternetGameConfiguration {
 type Query {
   map(id: String!): Map!
   game(id: String!): Game!
-  internetGame(playerToken: String!): InternetGameOrConfiguration!
+  internetGameOrConfiguration(
+    playerToken: String!
+  ): InternetGameOrConfiguration!
+  internetGame(playerToken: String!): InternetGame!
   maps: [Map!]!
 }
 
