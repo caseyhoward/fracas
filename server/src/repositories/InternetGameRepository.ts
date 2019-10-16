@@ -11,10 +11,10 @@ export async function save(
     neutralCountryTroops: internetGame.neutralCountryTroops,
     playerTurn: internetGame.playerTurn
   };
-  await executeQuery("UPDATE internet_games SET game_json = $1 WHERE id = $2", [
-    JSON.stringify(gameJson),
-    internetGame.id
-  ]);
+  await executeQuery(
+    "UPDATE internet_games SET map_id = $1, game_json = $2 WHERE id = $3",
+    [internetGame.mapId, JSON.stringify(gameJson), internetGame.id]
+  );
 }
 
 export async function findById(

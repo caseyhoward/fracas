@@ -18,24 +18,38 @@ export default async function saveInternetGame(
     input.playerToken
   );
 
-  // await InternetGameRepository.save(executeQuery, {
-  //   ...input.game,
-  //   __typename: "InternetGame",
-  //   id: parseInt(input.game.id, 10),
-  //   mapId: parseInt(input.game.mapId, 10),
-  //   players: input.game.players.map(player => {
-  //     return {
-  //       ...player,
-  //       id: parseInt(player.id, 10),
-  //       __typename: "Player",
-  //       countryTroopCounts: player.countryTroopCounts.map(
-  //         countryTroopCounts => {
-  //           return { ...countryTroopCounts, __typename: "CountryTroopCounts" };
-  //         }
-  //       )
-  //     };
-  //   })
-  // });
+  const playerTurn: Models.PlayerTurn = {
+    ...input.game.playerTurn,
+    __typename: "PlayerTurn",
+    fromCountryId: input.game.playerTurn.fromCountryId || undefined,
+    troopCount: input.game.playerTurn.troopCount || undefined
+  };
+  await InternetGameRepository.save(executeQuery, {
+    ...input.game,
+    __typename: "InternetGame",
+    id: input.game.id,
+    mapId: input.game.mapId,
+    playerTurn: playerTurn,
+    neutralCountryTroops: input.game.neutralCountryTroops.map(
+      neutralCountryTroops => {
+        return { ...neutralCountryTroops, __typename: "CountryTroopCounts" };
+      }
+    ),
+    players: input.game.players.map(player => {
+      return {
+        ...player,
+        id: player.id,
+        color: { ...player.color, __typename: "Color" },
+        __typename: "Player",
+        countryTroopCounts: player.countryTroopCounts.map(
+          countryTroopCounts => {
+            return { ...countryTroopCounts, __typename: "CountryTroopCounts" };
+          }
+        ),
+        capitol: player.capitol || undefined
+      };
+    })
+  });
 
   return true;
 }

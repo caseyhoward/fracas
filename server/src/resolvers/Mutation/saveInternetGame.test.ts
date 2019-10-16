@@ -4,7 +4,7 @@ import saveInternetGame from "./saveInternetGame";
 import * as Models from "../../repositories/Models";
 import * as TestDatabase from "../../test/TestDatabase";
 
-describe("Mutation.startInternetGame", () => {
+describe("Mutation.saveInternetGame", () => {
   it("starts a game", async () => {
     const configuration = await Factories.createInternetGameConfiguration({});
 
@@ -25,20 +25,16 @@ describe("Mutation.startInternetGame", () => {
       }
     };
 
-    // await saveInternetGame(TestDatabase.query, {
-    //   playerToken: player.playerToken,
-    //   game: {
-    //     ...internetGameToSave,
-    //     id: internetGameToSave.id.toString(),
-    //     mapId: internetGameToSave.mapId.toString()
-    //   }
-    // });
+    await saveInternetGame(TestDatabase.query, {
+      playerToken: player.playerToken,
+      game: internetGameToSave
+    });
 
     const game = await InternetGameRepository.findById(
       TestDatabase.query,
       configuration.id
     );
 
-    expect(game.mapId).toEqual(1234);
+    expect(game.mapId).toEqual("1234");
   });
 });
