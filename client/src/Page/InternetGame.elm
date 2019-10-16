@@ -9,6 +9,7 @@ module Page.InternetGame exposing
     )
 
 import Api.Query
+import Browser.Events
 import Colors
 import Country
 import Dict
@@ -18,18 +19,19 @@ import Element.Border
 import Element.Font
 import Element.Input
 import Game
+import GameController
 import Graphql.Http
 import Graphql.Operation
 import Graphql.SelectionSet
 import Html
 import Html.Attributes
 import InternetGame
-import LocalGame
 import Map
 import NewGame
 import Player
 import RemoteData
 import Session
+import Time
 import ViewHelpers
 
 
@@ -47,6 +49,9 @@ type Msg
     | RemovePlayer String
     | StartGameClicked
     | SelectMap String
+    | ShowCountryBorderHelper
+    | ShowAvailableMovesCheckboxToggled Bool
+    | WindowResized Int Int
     | MapUpdated (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
 
 
@@ -116,7 +121,7 @@ toSession model =
             configuringModel.session
 
         Playing playingModel ->
-            playingModel.gameModel |> Game.toSession
+            playingModel.session
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -143,16 +148,12 @@ update msg model =
                                     let
                                         gameModel : Game.Model
                                         gameModel =
-                                            Game.GameLoaded
-                                                { activeGame = internetGameWithUser.game
-                                                , showAvailableMoves = False
-                                                , session = loadingModel.session
-                                                , error = Nothing
-                                                , playerId = internetGameWithUser.currentUserPlayerId
-
-                                                -- , currentUserPlayerId = internetGame.currentUserPlayerId
-                                                , countryBorderHelperOutlineStatus = Game.CountryBorderHelperOutlineInactive
-                                                }
+                                            { activeGame = internetGameWithUser.game
+                                            , showAvailableMoves = False
+                                            , error = Nothing
+                                            , playerId = internetGameWithUser.currentUserPlayerId
+                                            , countryBorderHelperOutlineStatus = Game.CountryBorderHelperOutlineInactive
+                                            }
 
                                         updatedPlayingModel : PlayingModel
                                         updatedPlayingModel =
@@ -248,36 +249,24 @@ update msg model =
         Playing playingModel ->
             case msg of
                 GameMsg gameMsg ->
-                    
                     let
                         ( updatedGameModel, updatedGameCmd ) =
-                            Game.update gameMsg playingModel.gameModel
+                            GameController.update gameMsg playingModel.gameModel
                     in
-                    ( Playing { playingModel | gameModel = updatedGameModel }, updatedGameCmd )
+                    ( Playing { playingModel | gameModel = updatedGameModel }
+                    , Cmd.batch
+                        [ updatedGameCmd
+                        , saveGame playingModel.session.apiUrl playingModel.playerToken updatedGameModel.activeGame
+                        ]
+                    )
 
-                -- GameSaved game ->
-                -- let
-                --     gameModel =
-                --         playingModel.gameModel
-                -- in
-                -- ( Playing { playingModel | gameModel = { gameModel | activeGame = game } }, Cmd.none )
                 _ ->
                     ( model, Cmd.none )
 
 
-saveGame : String -> Country.Id -> InternetGame.PlayerToken -> Game.GameLoadedModel -> Cmd Msg
-saveGame apiUrl countryId playerToken game =
-    let
-        updatedGameResult : Result Game.Error Game.Game
-        updatedGameResult =
-            Game.countryClicked countryId game.activeGame
-    in
-    case updatedGameResult of
-        Ok updatedGame ->
-            InternetGame.save apiUrl playerToken updatedGame GameSaved
-
-        Err _ ->
-            Cmd.none
+saveGame : String -> InternetGame.PlayerToken -> Game.Game -> Cmd Msg
+saveGame apiUrl playerToken game =
+    InternetGame.save apiUrl playerToken game GameSaved
 
 
 view : Model -> { title : String, content : Html.Html Msg }
@@ -343,7 +332,7 @@ viewConfiguring configuringModel =
 
 viewPlaying : PlayingModel -> { title : String, content : Html.Html Msg }
 viewPlaying playingModel =
-    Game.view playingModel.gameModel GameMsg
+    Game.view playingModel.gameModel { width = 800, height = 600 } GameMsg
 
 
 playerConfiguration : Dict.Dict String Player.NewPlayer -> Player.Id -> Element.Element Msg
@@ -452,5 +441,33 @@ layout overlay body =
         )
 
 
+subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    [ if waitingToShowCountryHelperOutlines model then
+        Time.every countryOutlineDelayMilliseconds (always ShowCountryBorderHelper)
+
+      else
+        Sub.none
+    , Browser.Events.onResize (\x y -> WindowResized x y)
+    ]
+        |> Sub.batch
+
+
+waitingToShowCountryHelperOutlines : Model -> Bool
+waitingToShowCountryHelperOutlines model =
+    case model of
+        Playing playingModel ->
+            case playingModel.gameModel.countryBorderHelperOutlineStatus of
+                Game.CountryBorderHelperOutlineWaitingForDelay _ ->
+                    True
+
+                _ ->
+                    False
+
+        _ ->
+            False
+
+
+countryOutlineDelayMilliseconds : Float
+countryOutlineDelayMilliseconds =
+    300
