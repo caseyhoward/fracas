@@ -3,6 +3,8 @@
  *************/
 
 import * as Graphql from "../api/graphql";
+import * as Player from "../models/Player";
+import * as Color from "../models/Color";
 
 export type BodyOfWater = {
   __typename?: "BodyOfWater";
@@ -67,7 +69,7 @@ export type Json = ConfigurationJson | GameJson;
 
 export interface ConfigurationJson {
   __typename: "ConfigurationJson";
-  players: Array<PlayerConfiguration>;
+  players: Array<Player.PlayerConfiguration>;
 }
 
 export interface GameJson {
@@ -80,14 +82,14 @@ export interface GameJson {
 export type InternetGameConfiguration = {
   __typename: "InternetGameConfiguration";
   id: string;
-  players: Array<PlayerConfiguration>;
+  players: Array<Player.PlayerConfiguration>;
   mapId: string;
   joinToken: string;
 };
 
 export type NewInternetGameConfiguration = {
   __typename: "NewInternetGameConfiguration";
-  players: Array<PlayerConfiguration>;
+  players: Array<Player.PlayerConfiguration>;
   mapId: string;
   joinToken: string;
 };
@@ -98,20 +100,13 @@ export type CountryTroopCounts = {
   troopCount: number;
 };
 
-export type Color = {
-  __typename: "Color";
-  red: number;
-  green: number;
-  blue: number;
-};
-
 export type Player = {
   __typename: "Player";
   id: string;
   name: string;
   countryTroopCounts: Array<CountryTroopCounts>;
   capitol?: string;
-  color: Color;
+  color: Color.Color;
   ports: string[];
 };
 
@@ -138,13 +133,6 @@ export type PlayerTurn = {
   playerTurnStage: PlayerTurnStage;
   fromCountryId?: string;
   troopCount?: string;
-};
-
-export type PlayerConfiguration = {
-  __typename: "PlayerConfiguration";
-  color: Color;
-  playerId: string;
-  name: string;
 };
 
 export enum PlayerTurnStage {

@@ -3,6 +3,7 @@ import * as TestDatabase from "../test/TestDatabase";
 
 import * as Models from "./Models";
 import * as Uuid from "../Uuid";
+import * as Player from "../models/Player";
 
 describe("InternetGameConfigurationRepository.addPlayer", () => {
   it("adds a new player", async () => {
@@ -16,7 +17,7 @@ describe("InternetGameConfigurationRepository.addPlayer", () => {
       TestDatabase.query,
       newConfiguration
     );
-    const player: Models.PlayerConfiguration = {
+    const player: Player.PlayerConfiguration = {
       __typename: "PlayerConfiguration",
       color: { __typename: "Color", red: 0, green: 255, blue: 0 },
       name: "test name",
@@ -54,7 +55,7 @@ describe("InternetGameConfigurationRepository.create", () => {
       TestDatabase.query,
       configurationId
     );
-    expect(savedConfiguration.mapId).toEqual(1);
+    expect(savedConfiguration.mapId).toEqual("1");
   });
 });
 

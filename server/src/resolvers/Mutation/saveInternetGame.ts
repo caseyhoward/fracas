@@ -24,7 +24,7 @@ export default async function saveInternetGame(
     fromCountryId: input.game.playerTurn.fromCountryId || undefined,
     troopCount: input.game.playerTurn.troopCount || undefined
   };
-  await InternetGameRepository.save(executeQuery, {
+  const internetGame: Models.InternetGame = {
     ...input.game,
     __typename: "InternetGame",
     id: input.game.id,
@@ -49,24 +49,13 @@ export default async function saveInternetGame(
         capitol: player.capitol || undefined
       };
     })
-  });
+  };
+
+  await InternetGameRepository.save(executeQuery, internetGame);
 
   return true;
 }
 
 function generateRandomTroopCounts(): Models.CountryTroopCounts[] {
   return [];
-}
-
-function playerConfigurationToPlayer(
-  playerConfiguraation: Models.PlayerConfiguration
-): Models.Player {
-  return {
-    __typename: "Player",
-    id: playerConfiguraation.playerId,
-    name: playerConfiguraation.name,
-    countryTroopCounts: [],
-    color: playerConfiguraation.color,
-    ports: []
-  };
 }

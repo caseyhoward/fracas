@@ -5,6 +5,7 @@ import * as InternetGamePlayerRepository from "../../repositories/InternetGamePl
 import * as Uuid from "../../Uuid";
 import * as Models from "../../repositories/Models";
 import * as graphql from "../../api/graphql";
+import * as Player from "../../models/Player";
 
 export default async function joinInternetGame(
   executeQuery: Database.ExecuteQuery,
@@ -29,7 +30,7 @@ export default async function joinInternetGame(
       __typename: "PlayerConfiguration",
       playerId: newPlayer.id,
       name: "",
-      color: { __typename: "Color", red: 0, green: 0, blue: 0 }
+      color: getNextAvailablePlayerColor(internetGame.players)
     }
   ];
   const updatedGame: Models.InternetGameConfiguration = {
@@ -39,4 +40,10 @@ export default async function joinInternetGame(
   await InternetGameConfigurationRepository.save(executeQuery, updatedGame);
 
   return playerToken;
+}
+
+function getNextAvailablePlayerColor(
+  players: Models.PlayerConfiguration[]
+): Models.Color {
+  return Player.allowedColors[0];
 }

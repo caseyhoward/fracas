@@ -13,7 +13,7 @@ describe("InternetGameConfigurationRepository.create and .findByToken", () => {
       TestDatabase.query,
       "some token"
     );
-    expect(foundPlayer.gameId).toEqual(123);
+    expect(foundPlayer.gameId).toEqual("123");
     expect(foundPlayer.playerToken).toEqual("some token");
   });
 });
