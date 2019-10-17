@@ -271,10 +271,18 @@ update msg model =
                         ]
                     )
 
+                ShowCountryBorderHelper ->
+                    let
+                        ( updatedGameModel, updatedGameCmd ) =
+                            GameController.update Game.ShowCountryBorderHelper playingModel.gameModel
+                    in
+                    ( Playing { playingModel | gameModel = updatedGameModel }, updatedGameCmd )
+
                 _ ->
                     ( model, Cmd.none )
 
 
+saveIfChanged : PlayingModel -> Game.Model -> Cmd Msg
 saveIfChanged playingModel updatedGameModel =
     if updatedGameModel == playingModel.gameModel then
         Cmd.none

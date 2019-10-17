@@ -1,7 +1,5 @@
 module InternetGame exposing
-    (  Configuration
-       -- , Game
-
+    ( Configuration
     , GameOrConfiguration(..)
     , InternetGameTokens
     , JoinToken
@@ -23,7 +21,6 @@ module InternetGame exposing
     , updatePlayerName
     )
 
-
 import Api.InputObject
 import Api.Mutation
 import Api.Object
@@ -35,7 +32,6 @@ import Api.Query
 import Api.Union
 import Api.Union.InternetGameOrConfiguration
 import Colors
-import Country
 import Dict
 import Game
 import Graphql.Http
@@ -83,16 +79,6 @@ type GameOrConfiguration
     | InternetGameConfiguration Configuration
 
 
-
--- type alias Game =
---     { id : Id
---     , currentPlayerTurn : PlayerTurn.PlayerTurn
---     , map : Map.Map
---     , players : Player.Players
---     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
---     }
-
-
 create : String -> (RemoteData.RemoteData (Graphql.Http.Error PlayerToken) PlayerToken -> msg) -> Cmd msg
 create apiUrl toMsg =
     (Api.Mutation.createInternetGame
@@ -129,12 +115,6 @@ start apiUrl (PlayerToken playerToken) toMsg =
     Api.Mutation.startInternetGame { playerToken = playerToken }
         |> Graphql.Http.mutationRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
-
-
-
--- countryClicked : String -> PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool -> msg) -> Country.Id -> Cmd msg
--- countryClicked apiUrl (PlayerToken playerToken) toMsg =
---     Debug.todo ""
 
 
 save : String -> PlayerToken -> Game.Game -> (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool -> msg) -> Cmd msg
@@ -201,12 +181,10 @@ internetGameSelectionSet =
         Api.Object.InternetGame.currentUserPlayerId
 
 
-
-
 configurationSelectionSet1 : Graphql.SelectionSet.SelectionSet Configuration Api.Object.InternetGameConfiguration
 configurationSelectionSet1 =
     Graphql.SelectionSet.map5
-        (\players mapId joinToken currentUserPlayerId isCurrentUserHost->
+        (\players mapId joinToken currentUserPlayerId isCurrentUserHost ->
             { players = players
             , mapId = mapId
             , currentUserPlayerId = Player.Id currentUserPlayerId
