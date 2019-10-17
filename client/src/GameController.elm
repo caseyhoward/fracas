@@ -10,14 +10,14 @@ import TroopCount
 
 
 
--- This module is pretty much all the stuff that should be done on the server eventually
+-- This module is pretty much all the stuff that should be validated/executed on the server
 
 
 update : Game.Msg -> Game.Model -> ( Game.Model, Cmd msg )
 update msg model =
     case msg of
         Game.CountryMouseUp clickedCountryId ->
-            ( handleCountryMouseUpFromPlayer clickedCountryId model, Cmd.none )
+            ( handleCountryMouseUpFromPlayer clickedCountryId model.playerId model, Cmd.none )
 
         Game.CountryMouseDown clickedCountryId ->
             ( handleCountryMouseDown clickedCountryId model, Cmd.none )
@@ -54,8 +54,8 @@ updateModelWithGameResult result model =
             { model | error = Just (errorToString error) }
 
 
-handleCountryMouseUpFromPlayer : Country.Id -> Game.Model -> Game.Model
-handleCountryMouseUpFromPlayer clickedCountryId model =
+handleCountryMouseUpFromPlayer : Country.Id -> Player.Id -> Game.Model -> Game.Model
+handleCountryMouseUpFromPlayer clickedCountryId currentUserPlayerId model =
     case model.countryBorderHelperOutlineStatus of
         Game.CountryBorderHelperOutlineActive _ ->
             model
@@ -65,7 +65,7 @@ handleCountryMouseUpFromPlayer clickedCountryId model =
 
         Game.CountryBorderHelperOutlineWaitingForDelay countryToShowInfoForId ->
             if clickedCountryId == countryToShowInfoForId then
-                case countryClicked clickedCountryId model.activeGame of
+                case countryClicked clickedCountryId currentUserPlayerId model.activeGame of
                     Ok updatedGame ->
                         { model
                             | activeGame = updatedGame
@@ -118,29 +118,32 @@ errorToString (Error error) =
     error
 
 
-countryClicked : Country.Id -> Game.Game -> Result Error Game.Game
-countryClicked clickedCountryId activeGame =
-    -- if PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn userId then
-    case activeGame.currentPlayerTurn of
-        PlayerTurn.PlayerTurn playerTurnStage currentPlayerId ->
-            case playerTurnStage of
-                PlayerTurn.CapitolPlacement ->
-                    attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
+countryClicked : Country.Id -> Player.Id -> Game.Game -> Result Error Game.Game
+countryClicked clickedCountryId currentUserPlayerId activeGame =
+    if PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn currentUserPlayerId then
+        case activeGame.currentPlayerTurn of
+            PlayerTurn.PlayerTurn playerTurnStage currentPlayerId ->
+                case playerTurnStage of
+                    PlayerTurn.CapitolPlacement ->
+                        attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame
 
-                PlayerTurn.TroopPlacement ->
-                    attemptTroopPlacement clickedCountryId currentPlayerId (Player.numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
+                    PlayerTurn.TroopPlacement ->
+                        attemptTroopPlacement clickedCountryId currentPlayerId (Player.numberOfTroopsToPlace currentPlayerId activeGame.players) activeGame
 
-                PlayerTurn.AttackAnnexOrPort ->
-                    attackAnnexOrPort clickedCountryId currentPlayerId activeGame
+                    PlayerTurn.AttackAnnexOrPort ->
+                        attackAnnexOrPort clickedCountryId currentPlayerId activeGame
 
-                PlayerTurn.TroopMovement ->
-                    attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
+                    PlayerTurn.TroopMovement ->
+                        attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGame
 
-                PlayerTurn.TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
-                    attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString activeGame
+                    PlayerTurn.TroopMovementFromSelected fromCountryId numberOfTroopsToMoveString ->
+                        attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString activeGame
 
-                PlayerTurn.GameOver ->
-                    Ok activeGame
+                    PlayerTurn.GameOver ->
+                        Ok activeGame
+
+    else
+        Ok activeGame
 
 
 
@@ -281,52 +284,14 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
                         updatedPlayers =
                             updatePlayer currentPlayerId updatedPlayer activeGame.players
 
-                        nextPlayerId =
-                            case currentPlayerId of
-                                Player.Id id ->
-                                    let
-                                        numberOfPlayers =
-                                            Dict.size updatedPlayers
-
-                                        playersByIndex : Dict.Dict Int String
-                                        playersByIndex =
-                                            updatedPlayers
-                                                |> Dict.toList
-                                                |> List.indexedMap (\index ( playerId, _ ) -> ( index, playerId ))
-                                                |> Dict.fromList
-
-                                        currentPlayerIndex : Int
-                                        currentPlayerIndex =
-                                            playersByIndex
-                                                |> Dict.foldl
-                                                    (\index playerId result ->
-                                                        if playerId == id then
-                                                            index
-
-                                                        else
-                                                            result
-                                                    )
-                                                    -1
-
-                                        nextPlayerIndex : Int
-                                        nextPlayerIndex =
-                                            remainderBy numberOfPlayers (currentPlayerIndex + 1)
-
-                                        next =
-                                            playersByIndex
-                                                |> Dict.get nextPlayerIndex
-                                                |> Maybe.withDefault "-1"
-                                    in
-                                    Player.Id next
-
                         nextPlayerTurn =
                             case currentPlayerId of
                                 Player.Id id ->
                                     if Just id == (Dict.keys updatedPlayers |> List.reverse |> List.head) then
-                                        PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement nextPlayerId
+                                        PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement (nextPlayerId updatedPlayers currentPlayerId)
 
                                     else
-                                        PlayerTurn.PlayerTurn PlayerTurn.CapitolPlacement nextPlayerId
+                                        PlayerTurn.PlayerTurn PlayerTurn.CapitolPlacement (nextPlayerId updatedPlayers currentPlayerId)
                     in
                     Ok
                         { activeGame
@@ -337,6 +302,44 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
 
                 Nothing ->
                     "Something bad happened" |> Error |> Err
+
+
+nextPlayerId : Player.Players -> Player.Id -> Player.Id
+nextPlayerId players (Player.Id currentTurnPlayerId) =
+    let
+        numberOfPlayers =
+            Dict.size players
+
+        playersByIndex : Dict.Dict Int String
+        playersByIndex =
+            players
+                |> Dict.toList
+                |> List.indexedMap (\index ( playerId, _ ) -> ( index, playerId ))
+                |> Dict.fromList
+
+        currentPlayerIndex : Int
+        currentPlayerIndex =
+            playersByIndex
+                |> Dict.foldl
+                    (\index playerId result ->
+                        if playerId == currentTurnPlayerId then
+                            index
+
+                        else
+                            result
+                    )
+                    -1
+
+        nextPlayerIndex : Int
+        nextPlayerIndex =
+            remainderBy numberOfPlayers (currentPlayerIndex + 1)
+
+        next =
+            playersByIndex
+                |> Dict.get nextPlayerIndex
+                |> Maybe.withDefault "-1"
+    in
+    Player.Id next
 
 
 attemptTroopPlacement : Country.Id -> Player.Id -> TroopCount.TroopCount -> Game.Game -> Result Error Game.Game
@@ -496,34 +499,21 @@ destroyTroops (Country.Id countryId) neutralTroopCounts =
 -- TODO
 
 
-nextPlayer : Player.Players -> Player.Id -> Player.Id
-nextPlayer players (Player.Id currentPlayerId) =
-    remainderBy (Dict.size players)
-        ((currentPlayerId
-            |> String.toInt
-            |> Maybe.withDefault -100
-         )
-            + 1
-        )
-        |> String.fromInt
-        |> Player.Id
-
-
 nextPlayerCheckForDeadPlayers : Player.Players -> Player.Id -> Player.Id
 nextPlayerCheckForDeadPlayers players currentPlayerId =
     -- This doesn't work during capitol placement because nobody will have a capitol except player 1 after player 1 places their capitol
     let
-        nextPlayerId =
-            currentPlayerId |> nextPlayer players
+        playerId =
+            currentPlayerId |> nextPlayerId players
     in
-    case Player.getPlayer nextPlayerId players of
+    case Player.getPlayer playerId players of
         Just newCurrentPlayer ->
             case newCurrentPlayer |> .capitolStatus of
                 Player.Capitol _ ->
-                    nextPlayerId
+                    playerId
 
                 Player.NoCapitol ->
-                    nextPlayerId |> nextPlayerCheckForDeadPlayers players
+                    playerId |> nextPlayerCheckForDeadPlayers players
 
         Nothing ->
             currentPlayerId
