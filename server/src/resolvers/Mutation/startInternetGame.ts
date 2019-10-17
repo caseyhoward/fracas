@@ -22,23 +22,26 @@ export default async function startInternetGame(
     executeQuery,
     player.gameId
   );
+  if (Player.isCurrentUserHost(player.id, configuration.players)) {
+    const game: Models.InternetGame = {
+      __typename: "InternetGame",
+      id: configuration.id,
+      mapId: configuration.mapId,
+      players: configuration.players.map(playerConfigurationToPlayer),
+      neutralCountryTroops: generateRandomTroopCounts(),
+      playerTurn: {
+        __typename: "PlayerTurn",
+        playerId: player.id,
+        playerTurnStage: Models.PlayerTurnStage.CapitolPlacement
+      }
+    };
 
-  const game: Models.InternetGame = {
-    __typename: "InternetGame",
-    id: configuration.id,
-    mapId: configuration.mapId,
-    players: configuration.players.map(playerConfigurationToPlayer),
-    neutralCountryTroops: generateRandomTroopCounts(),
-    playerTurn: {
-      __typename: "PlayerTurn",
-      playerId: player.id,
-      playerTurnStage: Models.PlayerTurnStage.CapitolPlacement
-    }
-  };
+    await InternetGameRepository.save(executeQuery, game);
 
-  await InternetGameRepository.save(executeQuery, game);
-
-  return true;
+    return true;
+  } else {
+    return false;
+  }
 }
 
 function generateRandomTroopCounts(): Models.CountryTroopCounts[] {
