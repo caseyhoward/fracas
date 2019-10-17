@@ -32,9 +32,9 @@ export function fromColorInput(colorInput: Graphql.ColorInput): Color {
 
 export const lightRed: Color = {
   __typename: "Color",
-  name: "light red",
+  name: "lightRed",
   red: 239,
-  green: 239,
+  green: 41,
   blue: 41
 };
 
@@ -42,160 +42,160 @@ export const red: Color = {
   __typename: "Color",
   name: "red",
   red: 204,
-  green: 204,
+  green: 0,
   blue: 0
 };
 
 export const darkRed: Color = {
   __typename: "Color",
-  name: "dark red",
+  name: "darkRed",
   red: 164,
-  green: 164,
+  green: 0,
   blue: 0
 };
 
 export const lightOrange: Color = {
   __typename: "Color",
-  name: "light orange",
+  name: "lightOrange",
   red: 252,
-  green: 252,
-  blue: 175
+  green: 175,
+  blue: 62
 };
 
 export const orange: Color = {
   __typename: "Color",
   name: "orange",
   red: 245,
-  green: 245,
-  blue: 121
+  green: 121,
+  blue: 0
 };
 
 export const darkOrange: Color = {
   __typename: "Color",
-  name: "dark orange",
+  name: "darkOrange",
   red: 206,
-  green: 206,
-  blue: 92
+  green: 92,
+  blue: 0
 };
 
 export const lightYellow: Color = {
   __typename: "Color",
-  name: "light yellow",
+  name: "lightYellow",
   red: 255,
-  green: 255,
-  blue: 233
+  green: 233,
+  blue: 79
 };
 
 export const yellow: Color = {
   __typename: "Color",
   name: "yellow",
   red: 237,
-  green: 237,
-  blue: 212
+  green: 212,
+  blue: 0
 };
 
 export const darkYellow: Color = {
   __typename: "Color",
-  name: "dark yellow",
+  name: "darkYellow",
   red: 196,
-  green: 196,
-  blue: 160
+  green: 160,
+  blue: 0
 };
 
 export const lightGreen: Color = {
   __typename: "Color",
-  name: "light green",
+  name: "lightGreen",
   red: 138,
-  green: 138,
-  blue: 226
+  green: 226,
+  blue: 52
 };
 
 export const green: Color = {
   __typename: "Color",
   name: "green",
   red: 115,
-  green: 115,
-  blue: 210
+  green: 210,
+  blue: 22
 };
 
 export const darkGreen: Color = {
   __typename: "Color",
-  name: "dark green",
+  name: "darkGreen",
   red: 78,
-  green: 78,
-  blue: 154
+  green: 154,
+  blue: 6
 };
 
 export const lightBlue: Color = {
   __typename: "Color",
-  name: "light blue",
+  name: "lightBlue",
   red: 114,
-  green: 114,
-  blue: 159
+  green: 159,
+  blue: 207
 };
 
 export const blue: Color = {
   __typename: "Color",
   name: "blue",
   red: 52,
-  green: 52,
-  blue: 101
+  green: 101,
+  blue: 164
 };
 
 export const darkBlue: Color = {
   __typename: "Color",
-  name: "dark blue",
+  name: "darkBlue",
   red: 32,
-  green: 32,
-  blue: 74
+  green: 74,
+  blue: 135
 };
 
 export const lightPurple: Color = {
   __typename: "Color",
-  name: "light purple",
+  name: "lightPurple",
   red: 173,
-  green: 173,
-  blue: 127
+  green: 127,
+  blue: 168
 };
 
 export const purple: Color = {
   __typename: "Color",
   name: "purple",
   red: 117,
-  green: 117,
-  blue: 80
+  green: 80,
+  blue: 123
 };
 
 export const darkPurple: Color = {
   __typename: "Color",
-  name: "dark purple",
+  name: "darkPurple",
   red: 92,
-  green: 92,
-  blue: 53
+  green: 53,
+  blue: 102
 };
 
 export const lightBrown: Color = {
   __typename: "Color",
-  name: "light brown",
+  name: "lightBrown",
   red: 233,
-  green: 233,
-  blue: 185
+  green: 185,
+  blue: 110
 };
 
 export const brown: Color = {
   __typename: "Color",
   name: "brown",
   red: 193,
-  green: 193,
-  blue: 125
+  green: 125,
+  blue: 17
 };
 
 export const darkBrown: Color = {
   __typename: "Color",
-  name: "dark brown",
+  name: "darkBrown",
   red: 143,
-  green: 143,
-  blue: 89
+  green: 89,
+  blue: 2
 };
 
 export const black: Color = {
@@ -216,50 +216,50 @@ export const white: Color = {
 
 export const lightGray: Color = {
   __typename: "Color",
-  name: "light gray",
+  name: "lightGray",
   red: 238,
   green: 238,
-  blue: 238
+  blue: 236
 };
 
 export const gray: Color = {
   __typename: "Color",
   name: "gray",
   red: 211,
-  green: 211,
-  blue: 215
+  green: 215,
+  blue: 207
 };
 
 export const darkGray: Color = {
   __typename: "Color",
-  name: "dark gray",
+  name: "darkGray",
   red: 186,
-  green: 186,
-  blue: 189
+  green: 189,
+  blue: 182
 };
 
 export const lightCharcoal: Color = {
   __typename: "Color",
-  name: "light charcoal",
+  name: "lightCharcoal",
   red: 136,
-  green: 136,
-  blue: 138
+  green: 138,
+  blue: 133
 };
 
 export const charcoal: Color = {
   __typename: "Color",
   name: "charcoal",
   red: 85,
-  green: 85,
-  blue: 87
+  green: 87,
+  blue: 83
 };
 
 export const darkCharcoal: Color = {
   __typename: "Color",
-  name: "dark charcoal",
+  name: "darkCharcoal",
   red: 46,
-  green: 46,
-  blue: 52
+  green: 52,
+  blue: 54
 };
 
 const allColors = [
