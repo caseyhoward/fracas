@@ -186,6 +186,7 @@ type InternetGameConfiguration {
   mapId: String!
   joinToken: String!
   currentUserPlayerId: String!
+  isCurrentUserHost: Boolean!
 }
 
 type Query {

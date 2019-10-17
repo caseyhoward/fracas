@@ -1,6 +1,7 @@
 module NewGame exposing
     ( addPlayerButton
     , colorButton
+    , configurationSectionAttributes
     , mapConfiguration
     , mapView
     , removePlayerButton
@@ -47,6 +48,15 @@ colorButton color message =
         { onPress = Just message, label = Element.text "" }
 
 
+configurationSectionAttributes : List (Element.Attribute msg)
+configurationSectionAttributes =
+    [ Element.Background.color (Colors.gray |> Colors.toElementColor)
+    , Element.Border.rounded 10
+    , Element.padding 20
+    , Element.spacing 20,Element.centerX
+    ]
+
+
 mapConfiguration : List Map.Map -> Maybe String -> (String -> msg) -> Element.Element msg
 mapConfiguration maps selectedMapId toMessage =
     Element.Lazy.lazy3 mapSelect maps selectedMapId toMessage
@@ -55,11 +65,7 @@ mapConfiguration maps selectedMapId toMessage =
 mapSelect : List Map.Map -> Maybe String -> (String -> msg) -> Element.Element msg
 mapSelect maps selectedMapId toMsg =
     Element.el
-        [ Element.centerX
-        , Element.Background.color (Colors.gray |> Colors.toElementColor)
-        , Element.Border.rounded 10
-        , Element.padding 20
-        ]
+        configurationSectionAttributes
         (Element.Input.radio
             [ Element.padding 8
             , Element.spacing 20

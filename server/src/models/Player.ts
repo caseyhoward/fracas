@@ -59,4 +59,11 @@ export function createHost(id: string): PlayerConfiguration {
   };
 }
 
+export function isCurrentUserHost(
+  playerId: string,
+  players: PlayerConfiguration[]
+): boolean {
+  return players[0].playerId === playerId;
+}
+
 const defaultHostColor: Color.Color = Color.lightGreen;

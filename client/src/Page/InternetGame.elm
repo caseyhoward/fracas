@@ -74,6 +74,7 @@ type alias ConfiguringModel =
     , maps : List Map.Map
     , configureColor : Bool
     , playerToken : InternetGame.PlayerToken
+    , isCurrentUserHost : Bool
     }
 
 
@@ -140,6 +141,7 @@ update msg model =
                                         , maps = gameAndMaps.maps
                                         , playerToken = loadingModel.playerToken
                                         , configureColor = False
+                                        , isCurrentUserHost = configuration.isCurrentUserHost
                                         }
                                     , Cmd.none
                                     )
@@ -293,6 +295,7 @@ view model =
 viewConfiguring : ConfiguringModel -> { title : String, content : Html.Html Msg }
 viewConfiguring configuringModel =
     let
+        p : Dict.Dict String { color : Colors.Color, name : String }
         p =
             configuringModel.configuration.players
                 |> List.map
@@ -314,8 +317,8 @@ viewConfiguring configuringModel =
                 , Element.spacingXY 0 20
                 , Element.Background.color (Colors.blue |> Colors.toElementColor)
                 ]
-                [ joinUrlView configuringModel.session.origin configuringModel.configuration.joinToken
-                , Element.el [ Element.centerX ]
+                ([ joinUrlView configuringModel.session.origin configuringModel.configuration.joinToken
+                 , Element.el [ Element.centerX ]
                     (Element.wrappedRow
                         [ Element.spacing 40, Element.centerX ]
                         [ Element.el
@@ -326,8 +329,14 @@ viewConfiguring configuringModel =
                             (NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap)
                         ]
                     )
-                , Element.el [ Element.width Element.fill ] (NewGame.startGameButton StartGameClicked)
-                ]
+                 ]
+                    ++ (if configuringModel.isCurrentUserHost then
+                            [ Element.el [ Element.width Element.fill ] (NewGame.startGameButton StartGameClicked) ]
+
+                        else
+                            [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for host to start the game ...") ]
+                       )
+                )
             )
     }
 
@@ -335,12 +344,7 @@ viewConfiguring configuringModel =
 joinUrlView : String -> InternetGame.JoinToken -> Element.Element Msg
 joinUrlView origin joinToken =
     Element.column
-        [ Element.Background.color (Colors.gray |> Colors.toElementColor)
-        , Element.Border.rounded 10
-        , Element.centerX
-        , Element.padding 20
-        , Element.spacing 20
-        ]
+        NewGame.configurationSectionAttributes
         [ Element.el [ Element.Font.size 14 ] (Element.text "Give this URL to the people so they can join the game")
         , Element.text (origin ++ "/games/internet/join/" ++ (joinToken |> InternetGame.joinTokenToString))
         ]
@@ -354,12 +358,7 @@ viewPlaying playingModel =
 playerConfiguration : Dict.Dict String Player.NewPlayer -> Player.Id -> Element.Element Msg
 playerConfiguration players currentUserPlayerId =
     Element.column
-        [ Element.spacing 20
-        , Element.centerX
-        , Element.Background.color (Colors.gray |> Colors.toElementColor)
-        , Element.padding 20
-        , Element.Border.rounded 10
-        ]
+        NewGame.configurationSectionAttributes
         (Element.el [ Element.Font.bold ] (Element.text "Players")
             :: (players
                     |> Dict.toList

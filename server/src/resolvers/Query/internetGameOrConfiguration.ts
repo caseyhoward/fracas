@@ -4,6 +4,7 @@ import * as InternetGameConfigurationRepository from "../../repositories/Interne
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import * as Models from "../../repositories/Models";
+import * as Player from "../../models/Player";
 
 export default async function internetGame(
   executeQuery: Database.ExecuteQuery,
@@ -19,19 +20,26 @@ export default async function internetGame(
       executeQuery,
       player.gameId
     );
-    return {
-      __typename: "InternetGameConfiguration",
-      id: configuration.id,
-      players: configuration.players.map(player => {
+    const players: graphql.InternetGamePlayerConfiguration[] = configuration.players.map(
+      player => {
         return {
           ...player,
           __typename: "InternetGamePlayerConfiguration",
           playerId: player.playerId
         };
-      }),
+      }
+    );
+    return {
+      __typename: "InternetGameConfiguration",
+      id: configuration.id,
+      players: players,
       mapId: configuration.mapId.toString(),
       joinToken: configuration.joinToken,
-      currentUserPlayerId: player.id
+      currentUserPlayerId: player.id,
+      isCurrentUserHost: Player.isCurrentUserHost(
+        player.id,
+        configuration.players
+      )
     };
   } catch (error) {
     const internetGame = await InternetGameRepository.findById(

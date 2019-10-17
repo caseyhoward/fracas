@@ -61,6 +61,7 @@ type alias Configuration =
     , mapId : Map.Id
     , joinToken : JoinToken
     , currentUserPlayerId : Player.Id
+    , isCurrentUserHost : Bool
     }
 
 
@@ -202,26 +203,23 @@ internetGameSelectionSet =
 
 
 
--- internetGameSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGame
--- internetGameSelectionSet =
---     Graphql.SelectionSet.map2 (\game currentUserPlayerId -> InternetGame { game = game, currentUserPlayerId = Player.Id currentUserPlayerId })
---         (Api.Object.InternetGame.game gameSelectionSet)
-
 
 configurationSelectionSet1 : Graphql.SelectionSet.SelectionSet Configuration Api.Object.InternetGameConfiguration
 configurationSelectionSet1 =
-    Graphql.SelectionSet.map4
-        (\players mapId joinToken currentUserPlayerId ->
+    Graphql.SelectionSet.map5
+        (\players mapId joinToken currentUserPlayerId isCurrentUserHost->
             { players = players
             , mapId = mapId
             , currentUserPlayerId = Player.Id currentUserPlayerId
             , joinToken = JoinToken joinToken
+            , isCurrentUserHost = isCurrentUserHost
             }
         )
         (Api.Object.InternetGameConfiguration.players playerConfigurationSelectionSet)
         (Graphql.SelectionSet.map Map.Id Api.Object.InternetGameConfiguration.mapId)
         Api.Object.InternetGameConfiguration.joinToken
         Api.Object.InternetGameConfiguration.currentUserPlayerId
+        Api.Object.InternetGameConfiguration.isCurrentUserHost
 
 
 configurationSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGameConfiguration

@@ -42,3 +42,8 @@ joinToken =
 currentUserPlayerId : SelectionSet String Api.Object.InternetGameConfiguration
 currentUserPlayerId =
     Object.selectionForField "String" "currentUserPlayerId" [] Decode.string
+
+
+isCurrentUserHost : SelectionSet Bool Api.Object.InternetGameConfiguration
+isCurrentUserHost =
+    Object.selectionForField "Bool" "isCurrentUserHost" [] Decode.bool
