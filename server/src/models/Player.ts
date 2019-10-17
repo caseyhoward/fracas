@@ -1,34 +1,32 @@
 import * as Color from "./Color";
 
 export const allowedColors = [
-  Color.lightBrown,
-  Color.brown,
-  Color.darkBrown,
   Color.lightGreen,
-  Color.green,
+  Color.lightYellow,
   Color.darkGreen,
+  Color.orange,
+  Color.brown,
+  Color.lightPurple,
+  Color.green,
   Color.lightBlue,
   Color.lightGray,
   Color.gray,
   Color.darkGray,
   Color.charcoal,
+  Color.lightBrown,
   Color.darkCharcoal,
   Color.lightOrange,
-  Color.orange,
+  Color.darkRed,
   Color.darkOrange,
-  Color.lightPurple,
   Color.purple,
+  Color.darkBrown,
   Color.darkPurple,
   Color.lightRed,
   Color.red,
-  Color.darkRed,
-  Color.lightYellow,
   Color.darkYellow,
   Color.yellow,
   Color.white
 ];
-
-// getNextAvailablePlayerColor(players)
 
 export type PlayerConfiguration = {
   __typename: "PlayerConfiguration";
@@ -36,3 +34,29 @@ export type PlayerConfiguration = {
   playerId: string;
   name: string;
 };
+
+export function getNextAvailablePlayerColor(
+  players: PlayerConfiguration[]
+): Color.Color {
+  const playerColors = players.map(player => player.color);
+  const availableColor = allowedColors.find(
+    color =>
+      !playerColors.find(playerColor => Color.isEqual(color, playerColor))
+  );
+  if (availableColor) {
+    return availableColor;
+  } else {
+    throw "All colors used. There must be a bug checking for too many players.";
+  }
+}
+
+export function createHost(id: string): PlayerConfiguration {
+  return {
+    __typename: "PlayerConfiguration",
+    color: defaultHostColor,
+    name: "Host",
+    playerId: id
+  };
+}
+
+const defaultHostColor: Color.Color = Color.lightGreen;

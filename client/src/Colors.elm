@@ -12,21 +12,18 @@ module Colors exposing
     , darkCharcoal
     , darkGray
     , darkGreen
-    , darkGrey
     , darkOrange
     , darkPurple
     , darkRed
     , darkYellow
     , gray
     , green
-    , grey
     , input
     , lightBlue
     , lightBrown
     , lightCharcoal
     , lightGray
     , lightGreen
-    , lightGrey
     , lightOrange
     , lightPurple
     , lightRed
@@ -205,20 +202,6 @@ white : Color
 white =
     Color 255 255 255
 
-
-lightGrey : Color
-lightGrey =
-    Color 238 238 236
-
-
-grey : Color
-grey =
-    Color 211 215 207
-
-
-darkGrey : Color
-darkGrey =
-    Color 186 189 182
 
 
 lightGray : Color

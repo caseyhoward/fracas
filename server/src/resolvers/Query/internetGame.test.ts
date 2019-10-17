@@ -2,6 +2,7 @@ import * as InternetGameConfigurationRepository from "../../repositories/Interne
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import internetGame from "./internetGame";
 import * as TestDatabase from "../../test/TestDatabase";
+import * as Color from "../../models/Color";
 import * as Models from "../../repositories/Models";
 import * as Factories from "../../test/Factories";
 import * as Builders from "../../test/Builders";
@@ -16,7 +17,7 @@ describe("Query.internetGame", () => {
 
     const player: Models.Player = {
       __typename: "Player",
-      color: { __typename: "Color", red: 0, green: 255, blue: 0 },
+      color: Color.lightGreen,
       name: "test name",
       id: internetGamePlayer.id,
       countryTroopCounts: [],

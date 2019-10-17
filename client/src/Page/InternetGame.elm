@@ -332,6 +332,7 @@ viewConfiguring configuringModel =
     }
 
 
+joinUrlView : String -> InternetGame.JoinToken -> Element.Element Msg
 joinUrlView origin joinToken =
     Element.column
         [ Element.Background.color (Colors.gray |> Colors.toElementColor)

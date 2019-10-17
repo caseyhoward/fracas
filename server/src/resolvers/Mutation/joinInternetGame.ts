@@ -24,13 +24,13 @@ export default async function joinInternetGame(
     internetGame.id,
     playerToken
   );
-  const updatedPlayers: Models.PlayerConfiguration[] = [
+  const updatedPlayers: Player.PlayerConfiguration[] = [
     ...internetGame.players,
     {
       __typename: "PlayerConfiguration",
       playerId: newPlayer.id,
       name: "",
-      color: getNextAvailablePlayerColor(internetGame.players)
+      color: Player.getNextAvailablePlayerColor(internetGame.players)
     }
   ];
   const updatedGame: Models.InternetGameConfiguration = {
@@ -40,10 +40,4 @@ export default async function joinInternetGame(
   await InternetGameConfigurationRepository.save(executeQuery, updatedGame);
 
   return playerToken;
-}
-
-function getNextAvailablePlayerColor(
-  players: Models.PlayerConfiguration[]
-): Models.Color {
-  return Player.allowedColors[0];
 }

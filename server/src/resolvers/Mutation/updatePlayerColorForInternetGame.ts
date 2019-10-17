@@ -3,6 +3,7 @@ import * as InternetGameConfigurationRepository from "../../repositories/Interne
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import * as Graphql from "../../api/graphql";
 import * as Models from "../../repositories/Models";
+import * as Color from "../../models/Color";
 
 export default async function updatePlayerNameForInternetGame(
   executeQuery: Database.ExecuteQuery,
@@ -23,7 +24,7 @@ export default async function updatePlayerNameForInternetGame(
     ...configuration,
     players: configuration.players.map(player => {
       if (player.playerId == internetGamePlayer.id) {
-        return { ...player, color: { ...input.color, __typename: "Color" } };
+        return { ...player, color: Color.fromColorInput(input.color) };
       } else {
         return player;
       }

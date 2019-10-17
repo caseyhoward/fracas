@@ -1,15 +1,14 @@
 import * as Database from "../../Database";
-import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
-
 import * as Models from "../../repositories/Models";
-import * as graphql from "../../api/graphql";
+import * as Color from "../../models/Color";
+import * as Graphql from "../../api/graphql";
 
 export default async function saveInternetGame(
   executeQuery: Database.ExecuteQuery,
-  input: graphql.RequireFields<
-    graphql.MutationSaveInternetGameArgs,
+  input: Graphql.RequireFields<
+    Graphql.MutationSaveInternetGameArgs,
     "playerToken" | "game"
   >
 ): Promise<boolean> {
@@ -39,7 +38,7 @@ export default async function saveInternetGame(
       return {
         ...player,
         id: player.id,
-        color: { ...player.color, __typename: "Color" },
+        color: Color.fromColorInput(player.color),
         __typename: "Player",
         countryTroopCounts: player.countryTroopCounts.map(
           countryTroopCounts => {
@@ -54,8 +53,4 @@ export default async function saveInternetGame(
   await InternetGameRepository.save(executeQuery, internetGame);
 
   return true;
-}
-
-function generateRandomTroopCounts(): Models.CountryTroopCounts[] {
-  return [];
 }

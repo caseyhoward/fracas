@@ -2,7 +2,7 @@ import * as Database from "../../Database";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
-
+import * as Player from "../../models/Player";
 import * as Models from "../../repositories/Models";
 import * as graphql from "../../api/graphql";
 
@@ -46,7 +46,7 @@ function generateRandomTroopCounts(): Models.CountryTroopCounts[] {
 }
 
 function playerConfigurationToPlayer(
-  playerConfiguration: Models.PlayerConfiguration
+  playerConfiguration: Player.PlayerConfiguration
 ): Models.Player {
   return {
     __typename: "Player",

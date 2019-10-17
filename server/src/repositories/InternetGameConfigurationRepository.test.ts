@@ -4,6 +4,7 @@ import * as TestDatabase from "../test/TestDatabase";
 import * as Models from "./Models";
 import * as Uuid from "../Uuid";
 import * as Player from "../models/Player";
+import * as Builders from "../test/Builders";
 
 describe("InternetGameConfigurationRepository.addPlayer", () => {
   it("adds a new player", async () => {
@@ -17,12 +18,10 @@ describe("InternetGameConfigurationRepository.addPlayer", () => {
       TestDatabase.query,
       newConfiguration
     );
-    const player: Player.PlayerConfiguration = {
-      __typename: "PlayerConfiguration",
-      color: { __typename: "Color", red: 0, green: 255, blue: 0 },
-      name: "test name",
-      playerId: "123"
-    };
+    const player: Player.PlayerConfiguration = Builders.playerConfiguration({
+      id: "123",
+      name: "test name"
+    });
     await InternetGameConfigurationRepository.addPlayer(
       TestDatabase.query,
       configurationId,

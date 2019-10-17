@@ -1,5 +1,6 @@
 import { ExecuteQuery } from "../Database";
 import * as Models from "./Models";
+import * as Player from "../models/Player";
 
 export async function create(
   executeQuery: ExecuteQuery,
@@ -54,7 +55,7 @@ export async function save(
 export async function addPlayer(
   executeQuery: ExecuteQuery,
   id: string,
-  player: Models.PlayerConfiguration
+  player: Player.PlayerConfiguration
 ): Promise<void> {
   const configuration = await findById(executeQuery, id);
   const updatedConfiguration = {

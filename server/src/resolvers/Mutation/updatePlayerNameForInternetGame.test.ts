@@ -19,9 +19,9 @@ describe("Mutation.updatePlayerNameForInternetGame", () => {
     const updatedConfiguration = {
       ...configuration,
       players: [
-        Builders.player({ id: "1", name: "some name 1" }),
-        Builders.player({ id: internetGamePlayer.id, name: "some name 2" }),
-        Builders.player({ id: "3", name: "some name 3" })
+        Builders.playerConfiguration({ id: "1", name: "some name 1" }),
+        Builders.playerConfiguration({ id: internetGamePlayer.id, name: "some name 2" }),
+        Builders.playerConfiguration({ id: "3", name: "some name 3" })
       ]
     };
     await InternetGameConfigurationRepository.save(

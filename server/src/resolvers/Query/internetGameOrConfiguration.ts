@@ -43,7 +43,6 @@ export default async function internetGame(
       internetGame
     );
 
-    console.log("graphqlGame", graphqlGame);
     return {
       __typename: "InternetGame",
       game: graphqlGame,

@@ -3,7 +3,7 @@ import * as Builders from "../../test/Builders";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import updatePlayerColorForInternetGame from "./updatePlayerColorForInternetGame";
 import * as TestDatabase from "../../test/TestDatabase";
-import * as Models from "../../repositories/Models";
+import * as Color from "../../models/Color";
 
 describe("Mutation.updatePlayerColorForInternetGame", () => {
   it("works", async () => {
@@ -20,12 +20,18 @@ describe("Mutation.updatePlayerColorForInternetGame", () => {
     const updatedConfiguration = {
       ...configuration,
       players: [
-        Builders.player({ id: "1", color: { ...black, red: 0 } }),
-        Builders.player({
-          id: internetGamePlayer.id,
-          color: { ...black, green: 0 }
+        Builders.playerConfiguration({
+          id: "1",
+          color: Color.red
         }),
-        Builders.player({ id: "3", color: { ...black, blue: 0 } })
+        Builders.playerConfiguration({
+          id: internetGamePlayer.id,
+          color: Color.green
+        }),
+        Builders.playerConfiguration({
+          id: "3",
+          color: Color.blue
+        })
       ]
     };
     await InternetGameConfigurationRepository.save(
@@ -34,14 +40,12 @@ describe("Mutation.updatePlayerColorForInternetGame", () => {
     );
     await updatePlayerColorForInternetGame(TestDatabase.query, {
       playerToken: internetGamePlayer.playerToken,
-      color: black
+      color: Color.black
     });
     const retrievedConfiguration = await InternetGameConfigurationRepository.findById(
       TestDatabase.query,
       internetGameConfiguration.id
     );
-    expect(retrievedConfiguration.players[1].color).toEqual(black);
+    expect(retrievedConfiguration.players[1].color).toEqual(Color.black);
   });
 });
-
-const black: Models.Color = { __typename: "Color", red: 0, green: 0, blue: 0 };

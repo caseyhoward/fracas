@@ -1,4 +1,3 @@
-import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import internetGameOrConfiguration from "./internetGameOrConfiguration";
@@ -6,20 +5,19 @@ import * as TestDatabase from "../../test/TestDatabase";
 import * as Models from "../../repositories/Models";
 import * as Factories from "../../test/Factories";
 import * as Builders from "../../test/Builders";
-import { defaultHostColor } from "../Mutation/createInternetGame";
+import * as Player from "../../models/Player";
+import * as Color from "../../models/Color";
 
 describe("Query.internetGameOrConfiguration", () => {
   it("returns configuration", async () => {
     const configuration = await Factories.createInternetGameConfiguration({});
+
     const internetGamePlayer = await Factories.createInternetGamePlayer({
       gameId: configuration.id
     });
-    const player: Models.PlayerConfiguration = {
-      __typename: "PlayerConfiguration",
-      color: { __typename: "Color", red: 0, green: 255, blue: 0 },
-      name: "test name",
-      playerId: internetGamePlayer.id
-    };
+    const player: Player.PlayerConfiguration = Player.createHost(
+      internetGamePlayer.id
+    );
 
     await InternetGameConfigurationRepository.addPlayer(
       TestDatabase.query,
@@ -36,9 +34,9 @@ describe("Query.internetGameOrConfiguration", () => {
 
     if (gameOrConfiguration.__typename === "InternetGameConfiguration") {
       expect(gameOrConfiguration.players.length).toEqual(1);
-      expect(gameOrConfiguration.players[0].color).toEqual(defaultHostColor);
+      expect(gameOrConfiguration.players[0].color).toEqual(Color.lightGreen);
     } else {
-      fail("Must be Confguration");
+      fail("Query.internetGameOrConfiguration: Must be Configuration");
     }
   });
 
@@ -51,7 +49,7 @@ describe("Query.internetGameOrConfiguration", () => {
 
     const player: Models.Player = {
       __typename: "Player",
-      color: { __typename: "Color", red: 0, green: 255, blue: 0 },
+      color: Color.lightGreen,
       name: "test name",
       id: internetGamePlayer.id,
       countryTroopCounts: [],

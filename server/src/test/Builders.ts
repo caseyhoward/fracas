@@ -1,10 +1,12 @@
 import * as Models from "../repositories/Models";
 import * as Uuid from "../Uuid";
+import * as Color from "../models/Color";
+import * as Player from "../models/Player";
 
 export interface InternetGameConfigurationOptions {
   mapId: string;
   joinToken?: string;
-  players?: Models.PlayerConfiguration[];
+  players?: Player.PlayerConfiguration[];
 }
 
 export type MapOptions = {
@@ -37,14 +39,16 @@ export function map(options: MapOptions): Models.NewMap {
 interface PlayerOptions {
   id: string;
   name?: string;
-  color?: Models.Color;
+  color?: Color.Color;
 }
 
-export function player(options: PlayerOptions): Models.PlayerConfiguration {
+export function playerConfiguration(
+  options: PlayerOptions
+): Player.PlayerConfiguration {
   return {
     __typename: "PlayerConfiguration",
     name: options.name || "Player " + Uuid.generate(),
-    color: { __typename: "Color", red: 0, green: 0, blue: 0 },
+    color: options.color || Color.black,
     playerId: options.id
   };
 }

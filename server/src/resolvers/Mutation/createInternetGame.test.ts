@@ -1,12 +1,13 @@
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
-import { createInternetGame, defaultHostColor } from "./createInternetGame";
-import * as Map from "../../repositories/MapRepository";
+import { createInternetGame } from "./createInternetGame";
+import * as MapRepository from "../../repositories/MapRepository";
+import * as Player from "../../models/Player";
 import * as TestDatabase from "../../test/TestDatabase";
 
 describe("Mutation.createInternetGame", () => {
   it("works", async () => {
-    await Map.create(TestDatabase.query, {
+    await MapRepository.create(TestDatabase.query, {
       name: "blah",
       countries: [],
       bodiesOfWater: [],
@@ -25,6 +26,6 @@ describe("Mutation.createInternetGame", () => {
     );
 
     expect(configuration.players.length).toEqual(1);
-    expect(configuration.players[0].color).toEqual(defaultHostColor);
+    expect(configuration.players[0]).toEqual(Player.createHost(player.id));
   });
 });
