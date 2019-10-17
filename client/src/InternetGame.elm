@@ -23,7 +23,6 @@ module InternetGame exposing
     , updatePlayerName
     )
 
--- import LocalGame
 
 import Api.InputObject
 import Api.Mutation

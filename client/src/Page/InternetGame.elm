@@ -11,11 +11,9 @@ module Page.InternetGame exposing
 import Api.Query
 import Browser.Events
 import Colors
-import Country
 import Dict
 import Element
 import Element.Background
-import Element.Border
 import Element.Font
 import Element.Input
 import Game
@@ -258,7 +256,10 @@ update msg model =
                         saveGameCmd =
                             case gameMsg of
                                 Game.CountryMouseUp _ ->
-                                    saveGame playingModel.session.apiUrl playingModel.playerToken updatedGameModel.activeGame
+                                    saveIfChanged playingModel updatedGameModel
+
+                                Game.Pass ->
+                                    saveIfChanged playingModel updatedGameModel
 
                                 _ ->
                                     Cmd.none
@@ -272,6 +273,14 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+
+
+saveIfChanged playingModel updatedGameModel =
+    if updatedGameModel == playingModel.gameModel then
+        Cmd.none
+
+    else
+        saveGame playingModel.session.apiUrl playingModel.playerToken updatedGameModel.activeGame
 
 
 saveGame : String -> InternetGame.PlayerToken -> Game.Game -> Cmd Msg
