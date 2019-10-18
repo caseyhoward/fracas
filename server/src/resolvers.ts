@@ -2,10 +2,8 @@ import * as Database from "./Database";
 import * as InternetGamePlayerRepository from "./repositories/InternetGamePlayerRepository";
 import * as InternetGameConfigurationRepository from "./repositories/InternetGameConfigurationRepository";
 import * as Game from "./Game";
-import * as graphql from "./api/graphql";
 
 import {
-  Resolvers,
   MutationUpdateMapForInternetGameArgs,
   RequireFields
 } from "./api/graphql";
@@ -21,8 +19,14 @@ import joinInternetGame from "./resolvers/Mutation/joinInternetGame";
 import startInternetGame from "./resolvers/Mutation/startInternetGame";
 import updatePlayerNameForInternetGame from "./resolvers/Mutation/updatePlayerNameForInternetGame";
 import updatePlayerColorForInternetGame from "./resolvers/Mutation/updatePlayerColorForInternetGame";
+import subscriptionInternetGame from "./resolvers/Subscription/internetGame";
+import { IResolvers } from "graphql-tools";
+import * as PubSub from "./PubSub";
 
-export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
+export function resolvers(
+  executeQuery: Database.ExecuteQuery,
+  pubsub: PubSub.PubSub
+): IResolvers<any, any> {
   return {
     Query: {
       map: async (_, query) => map(executeQuery, query),
@@ -50,10 +54,13 @@ export function resolvers(executeQuery: Database.ExecuteQuery): Resolvers {
         updatePlayerColorForInternetGame(executeQuery, input),
       updateMapForInternetGame,
       saveInternetGame: async (_, input) =>
-        saveInternetGame(executeQuery, input),
+        saveInternetGame(executeQuery, pubsub, input),
       saveGame: async (_, saveGame) => {
         return Game.update(executeQuery, saveGame.game);
       }
+    },
+    Subscription: {
+      internetGame: subscriptionInternetGame(executeQuery, pubsub)
     }
   };
 

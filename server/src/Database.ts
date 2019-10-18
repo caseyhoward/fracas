@@ -10,8 +10,8 @@ export type ExecutePostgresQuery = <
 
 export type ExecuteQuery = ExecutePostgresQuery;
 
-export function postgres(config: PoolConfig): ExecuteQuery {
+export async function postgres(config: PoolConfig): Promise<Pool> {
   const pool = new Pool(config);
-
-  return pool.query.bind(pool);
+  await pool.connect();
+  return pool;
 }

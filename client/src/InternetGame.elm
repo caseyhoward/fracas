@@ -16,6 +16,7 @@ module InternetGame exposing
     , save
     , selectionSet
     , start
+    , subscriptionDocument
     , updateColor
     , updateMap
     , updatePlayerName
@@ -29,12 +30,14 @@ import Api.Object.InternetGame
 import Api.Object.InternetGameConfiguration
 import Api.Object.InternetGamePlayerConfiguration
 import Api.Query
+import Api.Subscription
 import Api.Union
 import Api.Union.InternetGameOrConfiguration
 import Colors
 import Dict
 import Game
 import Graphql.Http
+import Graphql.Operation
 import Graphql.SelectionSet
 import Map
 import Player
@@ -157,6 +160,11 @@ updateMap apiUrl playerToken mapId toMsg =
         { playerToken = playerToken |> playerTokenToString, mapId = mapId |> Map.idToString }
         |> Graphql.Http.mutationRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+
+
+subscriptionDocument : PlayerToken -> Graphql.SelectionSet.SelectionSet Game.Game Graphql.Operation.RootSubscription
+subscriptionDocument (PlayerToken playerToken) =
+    Api.Subscription.internetGame { playerToken = playerToken } gameSelectionSet
 
 
 selectionSet : Graphql.SelectionSet.SelectionSet Game.GameWithCurrentUser Api.Object.InternetGame

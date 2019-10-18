@@ -1,4 +1,4 @@
-module Page.InternetGame exposing
+port module Page.InternetGame exposing
     ( Model
     , Msg
     , init
@@ -18,12 +18,14 @@ import Element.Font
 import Element.Input
 import Game
 import GameController
+import Graphql.Document
 import Graphql.Http
 import Graphql.Operation
 import Graphql.SelectionSet
 import Html
 import Html.Attributes
 import InternetGame
+import Json.Decode
 import Map
 import NewGame
 import Player
@@ -51,6 +53,9 @@ type Msg
     | ShowAvailableMovesCheckboxToggled Bool
     | WindowResized Int Int
     | MapUpdated (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
+    | SubscriptionDataReceived Json.Decode.Value
+      -- | SentMessage (Result (Graphql.Http.Error ()) ())
+    | NewSubscriptionStatus SubscriptionStatus ()
 
 
 type Model
@@ -76,9 +81,16 @@ type alias ConfiguringModel =
     }
 
 
+type SubscriptionStatus
+    = NotConnected
+    | Connected
+    | Reconnecting
+
+
 type alias PlayingModel =
     { playerToken : InternetGame.PlayerToken
     , gameModel : Game.Model
+    , subscriptionStatus : SubscriptionStatus
     , session : Session.Session
     }
 
@@ -87,6 +99,9 @@ type alias SelectionSet =
     { gameOrConfiguration : InternetGame.GameOrConfiguration
     , maps : List Map.Map
     }
+
+
+port createSubscriptions : String -> Cmd msg
 
 
 selectionSet : InternetGame.PlayerToken -> Graphql.SelectionSet.SelectionSet SelectionSet Graphql.Operation.RootQuery
@@ -106,7 +121,7 @@ getGameAndMaps apiUrl playerToken toMsg =
 init : Session.Session -> InternetGame.PlayerToken -> ( Model, Cmd Msg )
 init session playerToken =
     ( Loading { session = session, gameAndMaps = RemoteData.Loading, playerToken = playerToken }
-    , getGameAndMaps session.apiUrl playerToken GotGameAndMaps
+    , Cmd.batch [ createSubscriptions (InternetGame.subscriptionDocument playerToken |> Graphql.Document.serializeSubscription), getGameAndMaps session.apiUrl playerToken GotGameAndMaps ]
     )
 
 
@@ -160,6 +175,7 @@ update msg model =
                                             { gameModel = gameModel
                                             , playerToken = loadingModel.playerToken
                                             , session = loadingModel.session
+                                            , subscriptionStatus = NotConnected
                                             }
                                     in
                                     ( Playing updatedPlayingModel
@@ -277,6 +293,21 @@ update msg model =
                             GameController.update Game.ShowCountryBorderHelper playingModel.gameModel
                     in
                     ( Playing { playingModel | gameModel = updatedGameModel }, updatedGameCmd )
+
+                SubscriptionDataReceived newData ->
+                    case Json.Decode.decodeValue (InternetGame.subscriptionDocument playingModel.playerToken |> Graphql.Document.decoder) newData of
+                        Ok game ->
+                            let
+                                gameModel =
+                                    playingModel.gameModel
+                            in
+                            ( Playing { playingModel | gameModel = { gameModel | activeGame = game } }, Cmd.none )
+
+                        Err error ->
+                            ( model, Cmd.none )
+
+                NewSubscriptionStatus newStatus () ->
+                    ( Playing { playingModel | subscriptionStatus = newStatus }, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -481,6 +512,9 @@ subscriptions model =
       else
         Sub.none
     , Browser.Events.onResize (\x y -> WindowResized x y)
+    , gotSubscriptionData SubscriptionDataReceived
+    , socketStatusConnected (NewSubscriptionStatus Connected)
+    , socketStatusReconnecting (NewSubscriptionStatus Reconnecting)
     ]
         |> Sub.batch
 
@@ -503,3 +537,12 @@ waitingToShowCountryHelperOutlines model =
 countryOutlineDelayMilliseconds : Float
 countryOutlineDelayMilliseconds =
     300
+
+
+port gotSubscriptionData : (Json.Decode.Value -> msg) -> Sub msg
+
+
+port socketStatusConnected : (() -> msg) -> Sub msg
+
+
+port socketStatusReconnecting : (() -> msg) -> Sub msg

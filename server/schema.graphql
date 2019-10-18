@@ -215,3 +215,7 @@ type Mutation {
     playerToken: String!
   ): Boolean!
 }
+
+type Subscription {
+  internetGame(playerToken: String!): Game!
+}

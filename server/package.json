@@ -11,20 +11,24 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@udia/graphql-postgres-subscriptions": "^1.1.0",
+    "graphql": "^14.5.8",
+    "graphql-subscriptions": "^1.1.0",
     "graphql-yoga": "^1.18.3",
-    "pg": "^7.12.1"
+    "pg": "^7.12.1",
+    "subscriptions-transport-ws": "^0.9.16"
   },
   "devDependencies": {
-    "apollo": "^2.19.1",
-    "typescript": "^3.6.3",
     "@graphql-codegen/cli": "^1.8.1",
-    "@types/pg": "^7.11.1",
     "@graphql-codegen/introspection": "^1.8.1",
     "@graphql-codegen/typescript": "1.8.1",
     "@graphql-codegen/typescript-resolvers": "1.8.1",
-    "@types/jest": "^24.0.18",
+    "@types/jest": "^24.0.19",
+    "@types/pg": "^7.11.2",
     "@types/ws": "^6.0.3",
+    "apollo": "^2.19.1",
     "jest": "^24.9.0",
-    "ts-jest": "^24.1.0"
+    "ts-jest": "^24.1.0",
+    "typescript": "^3.6.4"
   }
 }
