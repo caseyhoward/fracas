@@ -1,5 +1,7 @@
 # Fracas
 
+[![Build Status](https://travis-ci.org/caseyhoward/fracas.svg?branch=master)](https://travis-ci.org/caseyhoward/fracas)
+
 An attempt to remake [this game](http://www.smozzie.com/fracas.html)
 
 Try the early terrible version [here](http://fracas.caseyhoward.net)
