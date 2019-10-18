@@ -5,7 +5,6 @@ import * as PubSub from "./src/PubSub";
 import * as Database from "./src/Database";
 import { Client, ClientConfig } from "pg";
 import { PubSub as PS } from "graphql-subscriptions";
-// import PostgresPubSub from "@udia/graphql-postgres-subscriptions";
 
 // PGHOST='localhost'
 // PGUSER=process.env.USER

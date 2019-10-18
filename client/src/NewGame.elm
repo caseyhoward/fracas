@@ -5,6 +5,7 @@ module NewGame exposing
     , mapConfiguration
     , mapView
     , removePlayerButton
+    , removePlayerButtonWidth
     , startGameButton
     , title
     )
@@ -53,7 +54,8 @@ configurationSectionAttributes =
     [ Element.Background.color (Colors.gray |> Colors.toElementColor)
     , Element.Border.rounded 10
     , Element.padding 20
-    , Element.spacing 20,Element.centerX
+    , Element.spacing 20
+    , Element.centerX
     ]
 
 
@@ -122,16 +124,24 @@ mapView countries dimensions =
     Map.view 100 countries dimensions |> Element.html
 
 
+removePlayerButtonWidth : Element.Attribute msg
+removePlayerButtonWidth =
+    Element.width (Element.px 60)
+
+
 removePlayerButton : String -> (String -> msg) -> Element.Element msg
 removePlayerButton playerId toMsg =
-    Element.Input.button
-        (ViewHelpers.defaultButtonAttributes
-            ++ [ Element.Background.color (Colors.red |> Colors.toElementColor)
-               , Element.Font.color (Colors.white |> Colors.toElementColor)
-               , Element.Font.size 10
-               ]
+    Element.el [ removePlayerButtonWidth ]
+        (Element.Input.button
+            (ViewHelpers.defaultButtonAttributes
+                ++ [ Element.Background.color (Colors.red |> Colors.toElementColor)
+                   , Element.Font.color (Colors.white |> Colors.toElementColor)
+                   , Element.Font.size 10
+                   , Element.width Element.shrink
+                   ]
+            )
+            { onPress = Just (toMsg playerId), label = ViewHelpers.centerText "Delete" }
         )
-        { onPress = Just (toMsg playerId), label = Element.text "Delete" }
 
 
 startGameButton : msg -> Element.Element msg

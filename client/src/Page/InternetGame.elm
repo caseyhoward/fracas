@@ -379,7 +379,11 @@ viewConfiguring configuringModel =
                     )
                  ]
                     ++ (if configuringModel.isCurrentUserHost then
-                            [ Element.el [ Element.width Element.fill ] (NewGame.startGameButton StartGameClicked) ]
+                            if List.length configuringModel.configuration.players >= 2 then
+                                [ Element.el [ Element.width Element.fill ] (NewGame.startGameButton StartGameClicked) ]
+
+                            else
+                                [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for at least one other player to join ...") ]
 
                         else
                             [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for host to start the game ...") ]
@@ -431,6 +435,7 @@ playerFields currentUserPlayerId ( playerId, player ) =
                     , label = Element.Input.labelHidden "Name"
                     }
                 , NewGame.colorButton player.color ChangeColorButtonClicked
+                , Element.el [ NewGame.removePlayerButtonWidth ] Element.none
                 ]
 
              else
@@ -448,6 +453,7 @@ playerFields currentUserPlayerId ( playerId, player ) =
                     , Element.height (Element.px 50)
                     ]
                     Element.none
+                , Element.el [ NewGame.removePlayerButtonWidth ] Element.none
                 ]
             )
         ]

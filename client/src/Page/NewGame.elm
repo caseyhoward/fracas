@@ -625,7 +625,7 @@ playerConfiguration players =
         ]
         ((Element.el [ Element.Font.bold ] (Element.text "Players")
             :: (players
-                    |> Dict.map playerFields
+                    |> Dict.map (playerFields (Dict.size players))
                     |> Dict.values
                )
          )
@@ -633,8 +633,8 @@ playerConfiguration players =
         )
 
 
-playerFields : String -> Player.NewPlayer -> Element.Element Msg
-playerFields playerId player =
+playerFields : Int -> String -> Player.NewPlayer -> Element.Element Msg
+playerFields numberOfPlayers playerId player =
     Element.row [ Element.spacing 10 ]
         [ Element.row []
             [ Element.Input.text
@@ -648,7 +648,11 @@ playerFields playerId player =
                 }
             , NewGame.colorButton player.color (ChangeColorButtonClicked playerId)
             ]
-        , NewGame.removePlayerButton playerId RemovePlayer
+        , if numberOfPlayers >= 3 then
+            NewGame.removePlayerButton playerId RemovePlayer
+
+          else
+            Element.el [ NewGame.removePlayerButtonWidth ] (Element.text "")
         ]
 
 
