@@ -29,7 +29,6 @@ function buildSubscribe(pubSub: PubSub.PubSub) {
     any,
     Graphql.RequireFields<Graphql.SubscriptionInternetGameArgs, "playerToken">
   > = (_, input) => {
-    console.log("subscribing", input);
     return (<any>pubSub).asyncIterator(INTERNET_GAME_CHANGED);
   };
 
@@ -43,7 +42,6 @@ function buildResolve(executeQuery: Database.ExecuteQuery) {
     any,
     Graphql.RequireFields<Graphql.SubscriptionInternetGameArgs, "playerToken">
   > = async (_, input): Promise<Graphql.Game> => {
-    console.log("resolve");
     const player = await InternetGamePlayerRepository.findByToken(
       executeQuery,
       input.playerToken

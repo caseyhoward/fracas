@@ -58,7 +58,6 @@ export default async function saveInternetGame(
   const message = {
     internetGame: Models.internetGameToGraphql(internetGame)
   };
-  console.log("publishing");
   pubSub.publish(INTERNET_GAME_CHANGED, message);
 
   return true;

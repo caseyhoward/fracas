@@ -23,10 +23,9 @@ const postgresConfiguration: ClientConfig = {
 
 async function startServer() {
   const postgresDatabase = await Database.postgres(postgresConfiguration);
-  const client = new Client(postgresConfiguration);
   const executeQuery = postgresDatabase.query.bind(postgresDatabase);
-  const pubSub: PubSub.PubSub = new PS();
-  // const pubSub: PubSub.PubSub = new PostgresPubSub(client);
+  const pubSub: PubSub.PubSub = PubSub.inMemory();
+  // const pubSub: PubSub.PubSub = PubSub.postgres(postgresConfiguration);
 
   fs.readFile("schema.graphql", async (_, typeDefsData) => {
     const options: Options = {
@@ -35,10 +34,10 @@ async function startServer() {
       subscriptions: {
         path: "/",
         onConnect: (_: any, __: any, ___: any) => {
-          console.log("onConnect");
+          console.log("Connected");
         },
         onDisconnect: (_: any, __: any) => {
-          console.log("onDisconnect");
+          console.log("Disconnected");
           // ...
         }
       }

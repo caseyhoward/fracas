@@ -49,7 +49,6 @@ document.addEventListener("DOMContentLoaded", function() {
   });
 
   app.ports.createSubscriptions.subscribe(subscription => {
-    console.log("createSubscriptions called with", subscription);
     notifiers = [subscription].map(operation => {
       apolloClient
         .subscribe({
@@ -59,14 +58,10 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .subscribe({
           next(data) {
-            console.log("subscribe", data);
             app.ports.gotSubscriptionData.send(data);
           },
           error(error) {
             console.log(error);
-          },
-          complete(x) {
-            console.log(x);
           }
         });
     });
