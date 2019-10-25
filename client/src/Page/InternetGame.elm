@@ -68,11 +68,6 @@ getGame apiUrl playerToken toMsg =
     InternetGame.get apiUrl playerToken toMsg
 
 
-
--- |> Graphql.Http.queryRequest apiUrl
--- |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
-
-
 init : Session.Session -> InternetGame.PlayerToken -> ( Model, Cmd Msg )
 init session playerToken =
     ( Loading { session = session, gameAndMaps = RemoteData.Loading, playerToken = playerToken }
