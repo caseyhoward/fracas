@@ -1,4 +1,4 @@
-port module Page.InternetGame exposing
+module Page.InternetGame exposing
     ( Model
     , Msg
     , init
@@ -8,51 +8,30 @@ port module Page.InternetGame exposing
     , view
     )
 
-import Api.Query
 import Browser.Events
 import Colors
-import Dict
 import Element
 import Element.Background
-import Element.Font
-import Element.Input
 import Game
 import GameController
 import Graphql.Document
 import Graphql.Http
-import Graphql.Operation
-import Graphql.SelectionSet
 import Html
-import Html.Attributes
 import InternetGame
 import Json.Decode
-import Map
 import NewGame
-import Player
+import Ports
 import RemoteData
 import Session
 import Time
-import ViewHelpers
 
 
 type Msg
-    = GotGameAndMaps (RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet)
-    | ChangeColorButtonClicked
-    | ColorSelected Colors.Color
-    | ColorSelectBackgroundClicked
+    = GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.GameWithCurrentUser) Game.GameWithCurrentUser)
     | GameMsg Game.Msg
-    | GameStarted (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | GameSaved (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
-    | UpdatePlayerName String
-    | UpdatedColor (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
-    | UpdatedPlayerName (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
-    | RemovePlayer String
-    | StartGameClicked
-    | SelectMap String
     | ShowCountryBorderHelper
-    | ShowAvailableMovesCheckboxToggled Bool
     | WindowResized Int Int
-    | MapUpdated (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | SubscriptionDataReceived Json.Decode.Value
       -- | SentMessage (Result (Graphql.Http.Error ()) ())
     | NewSubscriptionStatus SubscriptionStatus ()
@@ -60,24 +39,13 @@ type Msg
 
 type Model
     = Loading LoadingModel
-    | Configuring ConfiguringModel
     | Playing PlayingModel
 
 
 type alias LoadingModel =
     { session : Session.Session
-    , gameAndMaps : RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet
+    , gameAndMaps : RemoteData.RemoteData (Graphql.Http.Error Game.GameWithCurrentUser) Game.GameWithCurrentUser
     , playerToken : InternetGame.PlayerToken
-    }
-
-
-type alias ConfiguringModel =
-    { session : Session.Session
-    , configuration : InternetGame.Configuration
-    , maps : List Map.Map
-    , configureColor : Bool
-    , playerToken : InternetGame.PlayerToken
-    , isCurrentUserHost : Bool
     }
 
 
@@ -95,33 +63,23 @@ type alias PlayingModel =
     }
 
 
-type alias SelectionSet =
-    { gameOrConfiguration : InternetGame.GameOrConfiguration
-    , maps : List Map.Map
-    }
+getGame : String -> InternetGame.PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error Game.GameWithCurrentUser) Game.GameWithCurrentUser -> msg) -> Cmd msg
+getGame apiUrl playerToken toMsg =
+    InternetGame.get apiUrl playerToken toMsg
 
 
-port createSubscriptions : String -> Cmd msg
 
-
-selectionSet : InternetGame.PlayerToken -> Graphql.SelectionSet.SelectionSet SelectionSet Graphql.Operation.RootQuery
-selectionSet playerToken =
-    Graphql.SelectionSet.map2 SelectionSet
-        (Api.Query.internetGameOrConfiguration { playerToken = playerToken |> InternetGame.playerTokenToString } InternetGame.gameOrConfigurationSelectionSet)
-        (Api.Query.maps Map.mapSelection)
-
-
-getGameAndMaps : String -> InternetGame.PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet -> msg) -> Cmd msg
-getGameAndMaps apiUrl playerToken toMsg =
-    selectionSet playerToken
-        |> Graphql.Http.queryRequest apiUrl
-        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
+-- |> Graphql.Http.queryRequest apiUrl
+-- |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
 init : Session.Session -> InternetGame.PlayerToken -> ( Model, Cmd Msg )
 init session playerToken =
     ( Loading { session = session, gameAndMaps = RemoteData.Loading, playerToken = playerToken }
-    , Cmd.batch [ createSubscriptions (InternetGame.subscriptionDocument playerToken |> Graphql.Document.serializeSubscription), getGameAndMaps session.apiUrl playerToken GotGameAndMaps ]
+    , Cmd.batch
+        [ Ports.createSubscriptions (InternetGame.subscriptionDocument playerToken |> Graphql.Document.serializeSubscription)
+        , getGame session.apiUrl playerToken GotGame
+        ]
     )
 
 
@@ -130,9 +88,6 @@ toSession model =
     case model of
         Loading loadingModel ->
             loadingModel.session
-
-        Configuring configuringModel ->
-            configuringModel.session
 
         Playing playingModel ->
             playingModel.session
@@ -143,121 +98,33 @@ update msg model =
     case model of
         Loading loadingModel ->
             case msg of
-                GotGameAndMaps gameRemoteData ->
+                GotGame gameRemoteData ->
                     case gameRemoteData of
-                        RemoteData.Success gameAndMaps ->
-                            case gameAndMaps.gameOrConfiguration of
-                                InternetGame.InternetGameConfiguration configuration ->
-                                    ( Configuring
-                                        { session = loadingModel.session
-                                        , configuration = configuration
-                                        , maps = gameAndMaps.maps
-                                        , playerToken = loadingModel.playerToken
-                                        , configureColor = False
-                                        , isCurrentUserHost = configuration.isCurrentUserHost
-                                        }
-                                    , Cmd.none
-                                    )
+                        RemoteData.Success internetGameWithUser ->
+                            let
+                                gameModel : Game.Model
+                                gameModel =
+                                    { activeGame = internetGameWithUser.game
+                                    , showAvailableMoves = False
+                                    , error = Nothing
+                                    , playerId = internetGameWithUser.currentUserPlayerId
+                                    , countryBorderHelperOutlineStatus = Game.CountryBorderHelperOutlineInactive
+                                    }
 
-                                InternetGame.InternetGame internetGameWithUser ->
-                                    let
-                                        gameModel : Game.Model
-                                        gameModel =
-                                            { activeGame = internetGameWithUser.game
-                                            , showAvailableMoves = False
-                                            , error = Nothing
-                                            , playerId = internetGameWithUser.currentUserPlayerId
-                                            , countryBorderHelperOutlineStatus = Game.CountryBorderHelperOutlineInactive
-                                            }
-
-                                        updatedPlayingModel : PlayingModel
-                                        updatedPlayingModel =
-                                            { gameModel = gameModel
-                                            , playerToken = loadingModel.playerToken
-                                            , session = loadingModel.session
-                                            , subscriptionStatus = NotConnected
-                                            }
-                                    in
-                                    ( Playing updatedPlayingModel
-                                    , Cmd.none
-                                    )
+                                updatedPlayingModel : PlayingModel
+                                updatedPlayingModel =
+                                    { gameModel = gameModel
+                                    , playerToken = loadingModel.playerToken
+                                    , session = loadingModel.session
+                                    , subscriptionStatus = NotConnected
+                                    }
+                            in
+                            ( Playing updatedPlayingModel
+                            , Cmd.none
+                            )
 
                         _ ->
                             ( Loading { loadingModel | gameAndMaps = gameRemoteData }, Cmd.none )
-
-                _ ->
-                    ( model, Cmd.none )
-
-        Configuring configuringModel ->
-            case msg of
-                ChangeColorButtonClicked ->
-                    ( Configuring { configuringModel | configureColor = True }, Cmd.none )
-
-                ColorSelectBackgroundClicked ->
-                    ( Configuring { configuringModel | configureColor = False }, Cmd.none )
-
-                ColorSelected color ->
-                    let
-                        configuration =
-                            configuringModel.configuration
-
-                        updatedPlayers =
-                            configuration.players
-                                |> List.map
-                                    (\player ->
-                                        if player.id == configuration.currentUserPlayerId then
-                                            { player | color = color }
-
-                                        else
-                                            player
-                                    )
-
-                        updatedConfiguringModel : InternetGame.Configuration
-                        updatedConfiguringModel =
-                            { configuration | players = updatedPlayers }
-                    in
-                    ( Configuring { configuringModel | configuration = updatedConfiguringModel, configureColor = False }, InternetGame.updateColor configuringModel.session.apiUrl configuringModel.playerToken color UpdatedColor )
-
-                MapUpdated _ ->
-                    ( model, Cmd.none )
-
-                SelectMap mapId ->
-                    let
-                        configuration =
-                            configuringModel.configuration
-
-                        updatedConfiguringModel : InternetGame.Configuration
-                        updatedConfiguringModel =
-                            { configuration | mapId = mapId |> Map.Id }
-                    in
-                    ( Configuring { configuringModel | configuration = updatedConfiguringModel }
-                    , InternetGame.updateMap configuringModel.session.apiUrl configuringModel.playerToken (Map.Id mapId) MapUpdated
-                    )
-
-                StartGameClicked ->
-                    ( model, InternetGame.start configuringModel.session.apiUrl configuringModel.playerToken GameStarted )
-
-                UpdatePlayerName name ->
-                    let
-                        configuration =
-                            configuringModel.configuration
-
-                        updatedPlayers =
-                            configuration.players
-                                |> List.map
-                                    (\player ->
-                                        if player.id == configuration.currentUserPlayerId then
-                                            { player | name = name }
-
-                                        else
-                                            player
-                                    )
-
-                        updatedConfiguringModel : InternetGame.Configuration
-                        updatedConfiguringModel =
-                            { configuration | players = updatedPlayers }
-                    in
-                    ( Configuring { configuringModel | configuration = updatedConfiguringModel }, InternetGame.updatePlayerName configuringModel.session.apiUrl configuringModel.playerToken name UpdatedPlayerName )
 
                 _ ->
                     ( model, Cmd.none )
@@ -303,7 +170,7 @@ update msg model =
                             in
                             ( Playing { playingModel | gameModel = { gameModel | activeGame = game } }, Cmd.none )
 
-                        Err error ->
+                        Err _ ->
                             ( model, Cmd.none )
 
                 NewSubscriptionStatus newStatus () ->
@@ -333,227 +200,13 @@ view model =
         Loading _ ->
             { title = "Loading", content = Html.div [] [ Html.text "Loading" ] }
 
-        Configuring configuringModel ->
-            viewConfiguring configuringModel
-
         Playing playingModel ->
             viewPlaying playingModel
-
-
-viewConfiguring : ConfiguringModel -> { title : String, content : Html.Html Msg }
-viewConfiguring configuringModel =
-    let
-        p : Dict.Dict String { color : Colors.Color, name : String }
-        p =
-            configuringModel.configuration.players
-                |> List.map
-                    (\player ->
-                        case player.id of
-                            Player.Id id ->
-                                ( id
-                                , { name = player.name, color = player.color }
-                                )
-                    )
-                |> Dict.fromList
-    in
-    { title = "Configure Internet Game"
-    , content =
-        layout
-            (playerColorSelect p configuringModel.configuration.currentUserPlayerId configuringModel.configureColor)
-            (Element.column
-                [ Element.width Element.fill
-                , Element.spacingXY 0 20
-                , Element.Background.color (Colors.blue |> Colors.toElementColor)
-                ]
-                ([ joinUrlView configuringModel.session.origin configuringModel.configuration.joinToken
-                 , Element.el [ Element.centerX ]
-                    (Element.wrappedRow
-                        [ Element.spacing 40, Element.centerX ]
-                        [ Element.el
-                            [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
-                            (playerConfiguration (p |> Dict.toList) configuringModel.configuration.currentUserPlayerId)
-                        , Element.el
-                            [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
-                            (NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap)
-                        ]
-                    )
-                 ]
-                    ++ (if configuringModel.isCurrentUserHost then
-                            if List.length configuringModel.configuration.players >= 2 then
-                                [ Element.el [ Element.width Element.fill ] (NewGame.startGameButton StartGameClicked) ]
-
-                            else
-                                [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for at least one other player to join ...") ]
-
-                        else
-                            [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for host to start the game ...") ]
-                       )
-                )
-            )
-    }
-
-
-joinUrlView : String -> InternetGame.JoinToken -> Element.Element Msg
-joinUrlView origin joinToken =
-    Element.column
-        NewGame.configurationSectionAttributes
-        [ Element.el [ Element.Font.size 14 ] (Element.text "Give this URL to the people so they can join the game")
-        , Element.text (origin ++ "/games/internet/join/" ++ (joinToken |> InternetGame.joinTokenToString))
-        ]
 
 
 viewPlaying : PlayingModel -> { title : String, content : Html.Html Msg }
 viewPlaying playingModel =
     Game.view playingModel.gameModel { width = 800, height = 600 } GameMsg
-
-
-playerConfiguration : List ( String, Player.NewPlayer ) -> Player.Id -> Element.Element Msg
-playerConfiguration players currentUserPlayerId =
-    let
-        newPlayersToRender : List ( Player.Id, Player.NewPlayer )
-        newPlayersToRender =
-            players
-                |> List.map (Tuple.mapFirst Player.Id)
-    in
-    Element.column
-        NewGame.configurationSectionAttributes
-        [ Element.el
-            [ Element.Font.bold ]
-            (Element.text "Players")
-        , playersFields newPlayersToRender currentUserPlayerId
-        ]
-
-
-playersFields : List ( Player.Id, Player.NewPlayer ) -> Player.Id -> Element.Element Msg
-playersFields newPlayersToRender currentUserPlayerId =
-    newPlayersToRender
-        |> toPlayerFields currentUserPlayerId
-        |> playerFieldsView
-
-
-
--- |> List.map (playerFields currentUserPlayerId)
--- |> List.map (playerFields2 currentUserPlayerId)
--- (if currentUserPlayerId == playerId then
---  else
--- )
-
-
-toPlayerFields : Player.Id -> List ( Player.Id, Player.NewPlayer ) -> PlayerFields
-toPlayerFields currentUserPlayerId players =
-    let
-        addPlayerField : ( Player.Id, Player.NewPlayer ) -> PlayerFields -> PlayerFields
-        addPlayerField ( playerId, player ) fields =
-            case fields of
-                PlayerFieldsWithCurrentUserCase playerFields ->
-                    PlayerFieldsWithCurrentUserCase { playerFields | playersAfter = ( playerId, player ) :: playerFields.playersAfter }
-
-                PlayerFieldsWithoutCurrentUserCase playerFields ->
-                    if currentUserPlayerId == playerId then
-                        PlayerFieldsWithCurrentUserCase { playersBefore = playerFields, currentUserPlayer = ( playerId, player ), playersAfter = [] }
-
-                    else
-                        PlayerFieldsWithoutCurrentUserCase (( playerId, player ) :: playerFields)
-    in
-    players
-        |> List.foldl
-            addPlayerField
-            (PlayerFieldsWithoutCurrentUserCase [])
-
-
-type alias PlayerFieldsWithCurrentUser =
-    { playersBefore : List ( Player.Id, Player.NewPlayer )
-    , currentUserPlayer : ( Player.Id, Player.NewPlayer )
-    , playersAfter : List ( Player.Id, Player.NewPlayer )
-    }
-
-
-type PlayerFields
-    = PlayerFieldsWithCurrentUserCase PlayerFieldsWithCurrentUser
-    | PlayerFieldsWithoutCurrentUserCase (List ( Player.Id, Player.NewPlayer ))
-
-
-playerFieldsView : PlayerFields -> Element.Element Msg
-playerFieldsView fields =
-    let
-        currentPlayerField : ( Player.Id, Player.NewPlayer ) -> Element.Element Msg
-        currentPlayerField ( playerId, player ) =
-            Element.row []
-                [ Element.Input.text
-                    [ Element.width (Element.px 200)
-                    , Html.Attributes.id ("player-name-" ++ (playerId |> Player.idToString)) |> Element.htmlAttribute
-                    ]
-                    { onChange = UpdatePlayerName
-                    , text = player.name
-                    , placeholder = Nothing
-                    , label = Element.Input.labelHidden "Name"
-                    }
-                , NewGame.colorButton player.color ChangeColorButtonClicked
-                , Element.el [ NewGame.removePlayerButtonWidth ] Element.none
-                ]
-
-        otherPlayerField : ( Player.Id, Player.NewPlayer ) -> Element.Element Msg
-        otherPlayerField ( _, player ) =
-            Element.row []
-                [ Element.el
-                    [ Element.width (Element.px 200)
-                    , Element.paddingXY 5 0
-                    , Element.height (Element.px 50)
-                    , Element.Background.color (Colors.lightGray |> Colors.toElementColor)
-                    , Element.Font.color (Colors.lightCharcoal |> Colors.toElementColor)
-                    ]
-                    (Element.el [ Element.centerY ] (Element.text player.name))
-                , Element.el
-                    [ Element.Background.color (player.color |> Colors.toElementColor)
-                    , Element.width (Element.px 50)
-                    , Element.height (Element.px 50)
-                    ]
-                    Element.none
-                , Element.el [ NewGame.removePlayerButtonWidth ] Element.none
-                ]
-    in
-    case fields of
-        PlayerFieldsWithCurrentUserCase playerFields ->
-            [ playerFields.playersBefore |> List.map otherPlayerField
-            , playerFields.currentUserPlayer |> currentPlayerField |> List.singleton
-            , playerFields.playersAfter |> List.map otherPlayerField
-            ]
-                |> List.concat
-                |> Element.column [ Element.spacing 10 ]
-
-        PlayerFieldsWithoutCurrentUserCase _ ->
-            Element.text "Error: Couldn't find fields for current user"
-
-
-playerColorSelect : Dict.Dict String Player.NewPlayer -> Player.Id -> Bool -> Element.Element Msg
-playerColorSelect players (Player.Id playerId) isConfiguringColor =
-    if isConfiguringColor then
-        case Dict.get playerId players of
-            Just player ->
-                ViewHelpers.dialog
-                    ColorSelectBackgroundClicked
-                    [ Element.width Element.shrink, Element.height (Element.px 300) ]
-                    (Element.column
-                        [ Element.padding 20
-                        , Element.Background.color (Colors.white |> Colors.toElementColor)
-                        , Element.spacing 20
-                        , Element.width (Element.px 300)
-                        , Element.height Element.fill
-                        ]
-                        [ Element.text ("Select color for " ++ player.name)
-                        , Element.wrappedRow [ Element.width Element.fill ]
-                            (players
-                                |> Player.availablePlayerColors
-                                |> List.map (\color -> Element.el [ Element.height (Element.px 50) ] (NewGame.colorButton color (ColorSelected color)))
-                            )
-                        ]
-                    )
-
-            Nothing ->
-                Element.text "Error getting player"
-
-    else
-        Element.none
 
 
 layout : Element.Element Msg -> Element.Element Msg -> Html.Html Msg
@@ -584,9 +237,9 @@ subscriptions model =
       else
         Sub.none
     , Browser.Events.onResize (\x y -> WindowResized x y)
-    , gotSubscriptionData SubscriptionDataReceived
-    , socketStatusConnected (NewSubscriptionStatus Connected)
-    , socketStatusReconnecting (NewSubscriptionStatus Reconnecting)
+    , Ports.gotSubscriptionData SubscriptionDataReceived
+    , Ports.socketStatusConnected (NewSubscriptionStatus Connected)
+    , Ports.socketStatusReconnecting (NewSubscriptionStatus Reconnecting)
     ]
         |> Sub.batch
 
@@ -609,12 +262,3 @@ waitingToShowCountryHelperOutlines model =
 countryOutlineDelayMilliseconds : Float
 countryOutlineDelayMilliseconds =
     300
-
-
-port gotSubscriptionData : (Json.Decode.Value -> msg) -> Sub msg
-
-
-port socketStatusConnected : (() -> msg) -> Sub msg
-
-
-port socketStatusReconnecting : (() -> msg) -> Sub msg

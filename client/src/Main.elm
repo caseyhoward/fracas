@@ -5,6 +5,7 @@ import Browser.Navigation
 import Html
 import Page
 import Page.InternetGame
+import Page.InternetGameConfiguration
 import Page.JoinInternetGame
 import Page.LocalGame
 import Page.NewGame
@@ -23,6 +24,7 @@ type Model
     | LocalGame Page.LocalGame.Model
     | NewMap Page.NewMap.Model
     | InternetGame Page.InternetGame.Model
+    | InternetGameConfiguration Page.InternetGameConfiguration.Model
     | JoinInternetGame Page.JoinInternetGame.Model
     | Redirect Session.Session
 
@@ -81,6 +83,7 @@ type
     | GotNewGameMsg Page.NewGame.Msg
     | GotNewMapMsg Page.NewMap.Msg
     | GotInternetGameMsg Page.InternetGame.Msg
+    | GotInternetGameConfigurationMsg Page.InternetGameConfiguration.Msg
     | GotJoinInternetGameMsg Page.JoinInternetGame.Msg
 
 
@@ -117,6 +120,10 @@ update msg model =
         ( GotInternetGameMsg subMsg, InternetGame internetGame ) ->
             Page.InternetGame.update subMsg internetGame
                 |> updateWith InternetGame GotInternetGameMsg
+
+        ( GotInternetGameConfigurationMsg subMsg, InternetGameConfiguration internetGameConfiguration ) ->
+            Page.InternetGameConfiguration.update subMsg internetGameConfiguration
+                |> updateWith InternetGameConfiguration GotInternetGameConfigurationMsg
 
         ( GotJoinInternetGameMsg subMsg, JoinInternetGame internetGame ) ->
             Page.JoinInternetGame.update subMsg internetGame
@@ -157,6 +164,10 @@ changeRouteTo maybeRoute model =
             Page.InternetGame.init session playerToken
                 |> updateWith InternetGame GotInternetGameMsg
 
+        Just (Route.InternetGameConfiguration playerToken) ->
+            Page.InternetGameConfiguration.init session playerToken
+                |> updateWith InternetGameConfiguration GotInternetGameConfigurationMsg
+
         Just (Route.JoinInternetGame joinToken) ->
             Page.JoinInternetGame.init session joinToken
                 |> updateWith JoinInternetGame GotJoinInternetGameMsg
@@ -176,6 +187,9 @@ toSession model =
 
         InternetGame internetGame ->
             internetGame |> Page.InternetGame.toSession
+
+        InternetGameConfiguration internetGameConfiguration ->
+            internetGameConfiguration |> Page.InternetGameConfiguration.toSession
 
         JoinInternetGame internetGame ->
             internetGame |> Page.JoinInternetGame.toSession
@@ -213,6 +227,9 @@ view model =
         InternetGame internetGame ->
             viewPage Page.InternetGame GotInternetGameMsg (Page.InternetGame.view internetGame)
 
+        InternetGameConfiguration internetGameConfiguration ->
+            viewPage Page.InternetGameConfiguration GotInternetGameConfigurationMsg (Page.InternetGameConfiguration.view internetGameConfiguration)
+
         JoinInternetGame joinInternetGame ->
             viewPage Page.JoinInternetGame GotJoinInternetGameMsg (Page.JoinInternetGame.view joinInternetGame)
 
@@ -238,6 +255,9 @@ subscriptions model =
 
         InternetGame internetGame ->
             Sub.map GotInternetGameMsg (Page.InternetGame.subscriptions internetGame)
+
+        InternetGameConfiguration internetGameConfiguration ->
+            Sub.map GotInternetGameConfigurationMsg (Page.InternetGameConfiguration.subscriptions internetGameConfiguration)
 
         JoinInternetGame _ ->
             Sub.none

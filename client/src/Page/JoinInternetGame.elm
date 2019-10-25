@@ -44,7 +44,7 @@ update message model =
         JoinedGame playerTokenRemoteData ->
             case playerTokenRemoteData of
                 RemoteData.Success playerToken ->
-                    ( { model | joinedGameRemoteData = playerTokenRemoteData }, Route.pushUrl model.session.navKey (Route.InternetGame playerToken) )
+                    ( { model | joinedGameRemoteData = playerTokenRemoteData }, Route.pushUrl model.session.navKey (Route.InternetGameConfiguration playerToken) )
 
                 _ ->
                     ( model, Cmd.none )

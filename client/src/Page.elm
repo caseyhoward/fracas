@@ -11,6 +11,7 @@ type Page
     = LocalGame
     | NewGame
     | InternetGame
+    | InternetGameConfiguration
     | NewMap
     | JoinInternetGame
 

@@ -153,7 +153,7 @@ update msg model =
                 InternetGameCreated playerTokenRemoteData ->
                     case playerTokenRemoteData of
                         RemoteData.Success playerToken ->
-                            ( ChoosingGameType session, Route.pushUrl (Session.navKey session) (Route.InternetGame playerToken) )
+                            ( ChoosingGameType session, Route.pushUrl (Session.navKey session) (Route.InternetGameConfiguration playerToken) )
 
                         _ ->
                             ( model, Cmd.none )

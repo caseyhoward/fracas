@@ -25,6 +25,7 @@ type Route
     | NewMap
     | LocalGame LocalGame.Id Player.Id
     | InternetGame InternetGame.PlayerToken
+    | InternetGameConfiguration InternetGame.PlayerToken
     | JoinInternetGame InternetGame.JoinToken
 
 
@@ -58,6 +59,7 @@ parser =
         [ Parser.map ConfiguringGame Parser.top
         , Parser.map ConfiguringGame (s "games" </> s "local" </> s "new")
         , Parser.map LocalGame (s "games" </> s "local" </> LocalGame.urlParser </> s "players" </> Player.urlParser)
+        , Parser.map InternetGameConfiguration (s "games" </> s "internet" </> InternetGame.playerTokenUrlParser </> s "configure")
         , Parser.map InternetGame (s "games" </> s "internet" </> InternetGame.playerTokenUrlParser)
         , Parser.map JoinInternetGame (s "games" </> s "internet" </> s "join" </> InternetGame.joinTokenUrlParser)
         , Parser.map NewMap (s "maps" </> s "new")
@@ -74,6 +76,9 @@ routeToString page =
 
                 JoinInternetGame joinGameKey ->
                     [ "games", "internet", "join", joinGameKey |> InternetGame.joinTokenToString ]
+
+                InternetGameConfiguration playerKey ->
+                    [ "games", "internet", playerKey |> InternetGame.playerTokenToString, "configure" ]
 
                 InternetGame playerKey ->
                     [ "games", "internet", playerKey |> InternetGame.playerTokenToString ]
