@@ -10,9 +10,8 @@ describe("InternetGameConfigurationRepository.create and .findByToken", () => {
       "some token"
     );
     const foundPlayer = await InternetGamePlayerRepository.findByToken(
-      TestDatabase.query,
-      "some token"
-    );
+      TestDatabase.query
+    )("some token");
     expect(foundPlayer.gameId).toEqual("123");
     expect(foundPlayer.playerToken).toEqual("some token");
   });

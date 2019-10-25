@@ -1,41 +1,72 @@
-import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
+// import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
-import internetGame from "./internetGame";
-import * as TestDatabase from "../../test/TestDatabase";
-import * as Color from "../../models/Color";
-import * as Models from "../../repositories/Models";
-import * as Factories from "../../test/Factories";
+import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
+import * as InternetGame from "./internetGame";
+// import * as TestDatabase from "../../test/TestDatabase";
+// import * as Color from "../../models/Color";
+// import * as Models from "../../repositories/Models";
+// import * as Factories from "../../test/Factories";
 import * as Builders from "../../test/Builders";
+// import { ExecuteQuery } from "../../Database";
+// import * as PubSub from "../../PubSub";
+import { PubSub } from "graphql-yoga";
 
 describe("Subscription.internetGame", () => {
-  it("returns internet game", async () => {
-    //   const configuration = await Factories.createInternetGameConfiguration({});
-    //   const internetGamePlayer = await Factories.createInternetGamePlayer({
-    //     gameId: configuration.id
-    //   });
-    //   const player: Models.Player = {
-    //     __typename: "Player",
-    //     color: Color.lightGreen,
-    //     name: "test name",
-    //     id: internetGamePlayer.id,
-    //     countryTroopCounts: [],
-    //     ports: []
-    //   };
-    //   const updatedConfiguration = await InternetGameConfigurationRepository.findById(
-    //     TestDatabase.query,
-    //     configuration.id
-    //   );
-    //   const game: Models.InternetGame = Builders.internetGame(
-    //     updatedConfiguration.id
-    //   );
-    //   const configurationId = await InternetGameRepository.save(
-    //     TestDatabase.query,
-    //     { ...game, players: [player] }
-    //   );
-    //   const gameOrConfiguration = await internetGame(TestDatabase.query, {
-    //     playerToken: internetGamePlayer.playerToken
-    //   });
-    //   expect(gameOrConfiguration.game.players.length).toEqual(1);
-    //   expect(gameOrConfiguration.game.players[0].name).toEqual("test name");
+  describe(".subscribe", () => {
+    it("returns internet game", () => {
+      const { pubSub } = mocks();
+      const iterator = InternetGame.buildSubscribe(pubSub)(
+        {},
+        { playerToken: "some-token" },
+        {},
+        <any>{}
+      );
+    });
+  });
+
+  describe(".resolve", () => {
+    it("returns internet game", async () => {
+      const playerToken = "asdfasdf";
+      const { findGameById, findPlayerByToken } = mocks();
+      const result = await InternetGame.buildResolve(
+        findPlayerByToken,
+        findGameById
+      )(null, { playerToken: playerToken }, null, <any>{});
+      expect(result).toEqual({
+        __typename: "Game",
+        id: "2",
+        map: {
+          id: "1"
+        },
+        neutralCountryTroops: [],
+        playerTurn: {
+          __typename: "PlayerTurn",
+          playerId: "1",
+          playerTurnStage: "CapitolPlacement"
+        },
+        players: []
+      });
+    });
   });
 });
+
+type Mocks = {
+  findGameById: InternetGameRepository.FindById;
+  findPlayerByToken: InternetGamePlayerRepository.FindByToken;
+  pubSub: PubSub;
+};
+
+function mocks(): Mocks {
+  const findPlayerByToken: InternetGamePlayerRepository.FindByToken = (
+    token: string
+  ) => {
+    const player = Builders.internetGamePlayer("1", "2");
+    return Promise.resolve({ ...player, playerToken: token });
+  };
+  const findGameById: InternetGameRepository.FindById = (id: string) => {
+    const game = Builders.internetGame(id);
+    return Promise.resolve(game);
+  };
+  const pubSub = new PubSub();
+  return { findPlayerByToken, findGameById, pubSub };
+}

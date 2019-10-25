@@ -17,17 +17,20 @@ export async function save(
   );
 }
 
-export async function findById(
-  executeQuery: ExecuteQuery,
-  id: string
-): Promise<Models.InternetGame> {
-  const result = await executeQuery(
-    "SELECT * FROM internet_games WHERE id = $1",
-    [id]
-  );
-  const row: Row | undefined = result.rows[0];
-  return rowToInternetGame(row);
-}
+export type FindById = (id: string) => Promise<Models.InternetGame>;
+
+type FindByIdConstructor = (executeQuery: ExecuteQuery) => FindById;
+
+export const findById: FindByIdConstructor = (executeQuery: ExecuteQuery) => {
+  return async (id: string) => {
+    const result = await executeQuery(
+      "SELECT * FROM internet_games WHERE id = $1",
+      [id]
+    );
+    const row: Row | undefined = result.rows[0];
+    return rowToInternetGame(row);
+  };
+};
 
 export function rowToInternetGame(row: Row | undefined): Models.InternetGame {
   if (row) {

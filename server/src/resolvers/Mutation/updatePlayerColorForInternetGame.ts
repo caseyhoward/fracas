@@ -13,9 +13,8 @@ export default async function updatePlayerNameForInternetGame(
   >
 ): Promise<boolean> {
   const internetGamePlayer = await InternetGamePlayerRepository.findByToken(
-    executeQuery,
-    input.playerToken
-  );
+    executeQuery
+  )(input.playerToken);
   const configuration = await InternetGameConfigurationRepository.findById(
     executeQuery,
     internetGamePlayer.gameId

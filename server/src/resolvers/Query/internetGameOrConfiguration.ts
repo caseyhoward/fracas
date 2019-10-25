@@ -11,8 +11,7 @@ export default async function internetGame(
 
   game: graphql.RequireFields<graphql.QueryInternetGameArgs, "playerToken">
 ): Promise<graphql.InternetGameOrConfiguration> {
-  const player = await InternetGamePlayerRepository.findByToken(
-    executeQuery,
+  const player = await InternetGamePlayerRepository.findByToken(executeQuery)(
     game.playerToken
   );
   try {
@@ -42,8 +41,7 @@ export default async function internetGame(
       )
     };
   } catch (error) {
-    const internetGame = await InternetGameRepository.findById(
-      executeQuery,
+    const internetGame = await InternetGameRepository.findById(executeQuery)(
       player.gameId
     );
 

@@ -11,9 +11,8 @@ describe("InternetGameRepository.save", () => {
       Builders.internetGame(configuration.id)
     );
     const savedConfiguration = await InternetGameRepository.findById(
-      TestDatabase.query,
-      configuration.id
-    );
+      TestDatabase.query
+    )(configuration.id);
     expect(savedConfiguration.__typename).toEqual("InternetGame");
   });
 });

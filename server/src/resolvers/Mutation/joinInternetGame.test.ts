@@ -13,9 +13,8 @@ describe("Mutation.joinInternetGame", () => {
     const hostToken = await createInternetGame(TestDatabase.query); // TODO: Use repositories/factories instead of resolver
 
     const host = await InternetGamePlayerRepository.findByToken(
-      TestDatabase.query,
-      hostToken
-    );
+      TestDatabase.query
+    )(hostToken);
 
     const configuration = await InternetGameConfigurationRepository.findById(
       TestDatabase.query,
@@ -32,9 +31,8 @@ describe("Mutation.joinInternetGame", () => {
     );
 
     const gamePlayer = await InternetGamePlayerRepository.findByToken(
-      TestDatabase.query,
-      playerToken
-    );
+      TestDatabase.query
+    )(playerToken);
 
     expect(gamePlayer.playerToken).toEqual(playerToken);
     expect(configurationWithNewPlayer.players.length).toEqual(2);

@@ -1,5 +1,5 @@
 import PostgresPubSub from "@udia/graphql-postgres-subscriptions";
-import { PubSub as PS } from "graphql-subscriptions";
+import { PubSub as PS } from "graphql-yoga";
 import * as Postgres from "pg";
 
 export type PubSub = PostgresPubSub | PS;

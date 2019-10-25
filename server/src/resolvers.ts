@@ -1,6 +1,7 @@
 import * as Database from "./Database";
 import * as InternetGamePlayerRepository from "./repositories/InternetGamePlayerRepository";
 import * as InternetGameConfigurationRepository from "./repositories/InternetGameConfigurationRepository";
+import * as InternetGameRepository from "./repositories/InternetGameRepository";
 import * as Game from "./Game";
 
 import {
@@ -20,7 +21,7 @@ import joinInternetGame from "./resolvers/Mutation/joinInternetGame";
 import startInternetGame from "./resolvers/Mutation/startInternetGame";
 import updatePlayerNameForInternetGame from "./resolvers/Mutation/updatePlayerNameForInternetGame";
 import updatePlayerColorForInternetGame from "./resolvers/Mutation/updatePlayerColorForInternetGame";
-import subscriptionInternetGame from "./resolvers/Subscription/internetGame";
+import * as SubscriptionInternetGame from "./resolvers/Subscription/internetGame";
 import { IResolvers } from "graphql-tools";
 import * as PubSub from "./PubSub";
 
@@ -62,7 +63,13 @@ export function resolvers(
       }
     },
     Subscription: {
-      internetGame: subscriptionInternetGame(executeQuery, pubsub)
+      internetGame: {
+        resolve: SubscriptionInternetGame.buildResolve(
+          InternetGamePlayerRepository.findByToken(executeQuery),
+          InternetGameRepository.findById(executeQuery)
+        ),
+        subscribe: SubscriptionInternetGame.buildSubscribe(pubsub)
+      }
     }
   };
 
@@ -73,8 +80,7 @@ export function resolvers(
       "playerToken" | "mapId"
     >
   ): Promise<boolean> {
-    const player = await InternetGamePlayerRepository.findByToken(
-      executeQuery,
+    const player = await InternetGamePlayerRepository.findByToken(executeQuery)(
       input.playerToken
     );
     await InternetGameConfigurationRepository.updateMap(

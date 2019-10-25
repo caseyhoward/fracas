@@ -67,3 +67,14 @@ export function internetGame(id: string): Models.InternetGame {
     neutralCountryTroops: []
   };
 }
+
+export function internetGamePlayer(
+  id: string,
+  gameId: string
+): Models.InternetGamePlayer {
+  return {
+    id: id,
+    gameId: gameId,
+    playerToken: Uuid.generate()
+  };
+}

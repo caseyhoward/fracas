@@ -19,8 +19,7 @@ describe("Mutation.startInternetGame", () => {
     await startInternetGame(TestDatabase.query, {
       playerToken: host.playerToken
     });
-    const game = await InternetGameRepository.findById(
-      TestDatabase.query,
+    const game = await InternetGameRepository.findById(TestDatabase.query)(
       configuration.id
     );
     expect(game.__typename).toEqual("InternetGame");

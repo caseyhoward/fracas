@@ -7,22 +7,7 @@ import * as PubSub from "../../PubSub";
 
 export const INTERNET_GAME_CHANGED = "INTERNET_GAME_CHANGED";
 
-export default function internetGame(
-  executeQuery: Database.ExecuteQuery,
-  pubSub: PubSub.PubSub
-): Graphql.SubscriptionResolverObject<
-  Graphql.ResolverTypeWrapper<Graphql.Game>,
-  {},
-  any,
-  Graphql.RequireFields<Graphql.SubscriptionInternetGameArgs, "playerToken">
-> {
-  return {
-    subscribe: buildSubscribe(pubSub),
-    resolve: buildResolve(executeQuery)
-  };
-}
-
-function buildSubscribe(pubSub: PubSub.PubSub) {
+export function buildSubscribe(pubSub: PubSub.PubSub) {
   const subscribe: Graphql.SubscriptionSubscribeFn<
     any,
     {},
@@ -35,23 +20,18 @@ function buildSubscribe(pubSub: PubSub.PubSub) {
   return subscribe;
 }
 
-function buildResolve(executeQuery: Database.ExecuteQuery) {
+export function buildResolve(
+  findPlayerByToken: InternetGamePlayerRepository.FindByToken,
+  findGameById: InternetGameRepository.FindById
+) {
   const resolve: Graphql.SubscriptionResolveFn<
     Graphql.ResolverTypeWrapper<Graphql.Game>,
     any,
     any,
     Graphql.RequireFields<Graphql.SubscriptionInternetGameArgs, "playerToken">
   > = async (_, input): Promise<Graphql.Game> => {
-    const player = await InternetGamePlayerRepository.findByToken(
-      executeQuery,
-      input.playerToken
-    );
-
-    const internetGame = await InternetGameRepository.findById(
-      executeQuery,
-      player.gameId
-    );
-
+    const player = await findPlayerByToken(input.playerToken);
+    const internetGame = await findGameById(player.gameId);
     return Models.internetGameToGraphql(internetGame);
   };
 

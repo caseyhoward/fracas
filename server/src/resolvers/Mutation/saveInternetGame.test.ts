@@ -3,7 +3,7 @@ import * as InternetGameRepository from "../../repositories/InternetGameReposito
 import saveInternetGame from "./saveInternetGame";
 import * as Models from "../../repositories/Models";
 import * as TestDatabase from "../../test/TestDatabase";
-import { PubSub } from "graphql-subscriptions";
+import { PubSub } from "graphql-yoga";
 
 describe("Mutation.saveInternetGame", () => {
   it("starts a game", async () => {
@@ -32,8 +32,7 @@ describe("Mutation.saveInternetGame", () => {
       game: internetGameToSave
     });
 
-    const game = await InternetGameRepository.findById(
-      TestDatabase.query,
+    const game = await InternetGameRepository.findById(TestDatabase.query)(
       configuration.id
     );
 

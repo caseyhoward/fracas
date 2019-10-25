@@ -16,9 +16,8 @@ describe("Mutation.createInternetGame", () => {
     const hostToken = await createInternetGame(TestDatabase.query);
 
     const player = await InternetGamePlayerRepository.findByToken(
-      TestDatabase.query,
-      hostToken
-    );
+      TestDatabase.query
+    )(hostToken);
 
     const configuration = await InternetGameConfigurationRepository.findById(
       TestDatabase.query,

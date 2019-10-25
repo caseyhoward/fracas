@@ -20,21 +20,30 @@ export async function create(
   return rowToInternetGamePlayer(row);
 }
 
-export async function findByToken(
-  executeQuery: Database.ExecuteQuery,
+export type FindByToken = (
   playerToken: string
-): Promise<Models.InternetGamePlayer> {
-  const result = await executeQuery(
-    "SELECT * FROM internet_game_players WHERE token = $1",
-    [playerToken]
-  );
-  const row: Row | undefined = result.rows[0];
-  if (row) {
-    return rowToInternetGamePlayer(row);
-  } else {
-    throw "Count not find game player by token";
-  }
-}
+) => Promise<Models.InternetGamePlayer>;
+
+export type FindByTokenConstructor = (
+  executeQuery: Database.ExecuteQuery
+) => FindByToken;
+
+export const findByToken: FindByTokenConstructor = (
+  executeQuery: Database.ExecuteQuery
+) => {
+  return async (playerToken: string) => {
+    const result = await executeQuery(
+      "SELECT * FROM internet_game_players WHERE token = $1",
+      [playerToken]
+    );
+    const row: Row | undefined = result.rows[0];
+    if (row) {
+      return rowToInternetGamePlayer(row);
+    } else {
+      throw "Count not find game player by token";
+    }
+  };
+};
 
 function rowToInternetGamePlayer(row: Row) {
   return {

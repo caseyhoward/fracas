@@ -13,8 +13,7 @@ export default async function startInternetGame(
     "playerToken"
   >
 ): Promise<boolean> {
-  const player = await InternetGamePlayerRepository.findByToken(
-    executeQuery,
+  const player = await InternetGamePlayerRepository.findByToken(executeQuery)(
     input.playerToken
   );
 
