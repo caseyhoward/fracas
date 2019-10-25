@@ -17,7 +17,7 @@ const client = new SubscriptionClient(graphqlSubscriptionUrl, {
 const cache = new InMemoryCache();
 
 const link = new WebSocketLink({
-  uri: `ws://localhost:4000/`,
+  uri: graphqlSubscriptionUrl,
   options: {
     reconnect: true
   }

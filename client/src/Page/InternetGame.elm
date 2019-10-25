@@ -371,7 +371,7 @@ viewConfiguring configuringModel =
                         [ Element.spacing 40, Element.centerX ]
                         [ Element.el
                             [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
-                            (playerConfiguration p configuringModel.configuration.currentUserPlayerId)
+                            (playerConfiguration (p |> Dict.toList) configuringModel.configuration.currentUserPlayerId)
                         , Element.el
                             [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
                             (NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap)
@@ -407,24 +407,78 @@ viewPlaying playingModel =
     Game.view playingModel.gameModel { width = 800, height = 600 } GameMsg
 
 
-playerConfiguration : Dict.Dict String Player.NewPlayer -> Player.Id -> Element.Element Msg
+playerConfiguration : List ( String, Player.NewPlayer ) -> Player.Id -> Element.Element Msg
 playerConfiguration players currentUserPlayerId =
+    let
+        newPlayersToRender : List ( Player.Id, Player.NewPlayer )
+        newPlayersToRender =
+            players
+                |> List.map (Tuple.mapFirst Player.Id)
+    in
     Element.column
         NewGame.configurationSectionAttributes
-        (Element.el [ Element.Font.bold ] (Element.text "Players")
-            :: (players
-                    |> Dict.toList
-                    |> List.map (Tuple.mapFirst Player.Id)
-                    |> List.map (playerFields currentUserPlayerId)
-               )
-        )
+        [ Element.el
+            [ Element.Font.bold ]
+            (Element.text "Players")
+        , playersFields newPlayersToRender currentUserPlayerId
+        ]
 
 
-playerFields : Player.Id -> ( Player.Id, Player.NewPlayer ) -> Element.Element Msg
-playerFields currentUserPlayerId ( playerId, player ) =
-    Element.row [ Element.spacing 10 ]
-        [ Element.row []
-            (if currentUserPlayerId == playerId then
+playersFields : List ( Player.Id, Player.NewPlayer ) -> Player.Id -> Element.Element Msg
+playersFields newPlayersToRender currentUserPlayerId =
+    newPlayersToRender
+        |> toPlayerFields currentUserPlayerId
+        |> playerFieldsView
+
+
+
+-- |> List.map (playerFields currentUserPlayerId)
+-- |> List.map (playerFields2 currentUserPlayerId)
+-- (if currentUserPlayerId == playerId then
+--  else
+-- )
+
+
+toPlayerFields : Player.Id -> List ( Player.Id, Player.NewPlayer ) -> PlayerFields
+toPlayerFields currentUserPlayerId players =
+    let
+        addPlayerField : ( Player.Id, Player.NewPlayer ) -> PlayerFields -> PlayerFields
+        addPlayerField ( playerId, player ) fields =
+            case fields of
+                PlayerFieldsWithCurrentUserCase playerFields ->
+                    PlayerFieldsWithCurrentUserCase { playerFields | playersAfter = ( playerId, player ) :: playerFields.playersAfter }
+
+                PlayerFieldsWithoutCurrentUserCase playerFields ->
+                    if currentUserPlayerId == playerId then
+                        PlayerFieldsWithCurrentUserCase { playersBefore = playerFields, currentUserPlayer = ( playerId, player ), playersAfter = [] }
+
+                    else
+                        PlayerFieldsWithoutCurrentUserCase (( playerId, player ) :: playerFields)
+    in
+    players
+        |> List.foldl
+            addPlayerField
+            (PlayerFieldsWithoutCurrentUserCase [])
+
+
+type alias PlayerFieldsWithCurrentUser =
+    { playersBefore : List ( Player.Id, Player.NewPlayer )
+    , currentUserPlayer : ( Player.Id, Player.NewPlayer )
+    , playersAfter : List ( Player.Id, Player.NewPlayer )
+    }
+
+
+type PlayerFields
+    = PlayerFieldsWithCurrentUserCase PlayerFieldsWithCurrentUser
+    | PlayerFieldsWithoutCurrentUserCase (List ( Player.Id, Player.NewPlayer ))
+
+
+playerFieldsView : PlayerFields -> Element.Element Msg
+playerFieldsView fields =
+    let
+        currentPlayerField : ( Player.Id, Player.NewPlayer ) -> Element.Element Msg
+        currentPlayerField ( playerId, player ) =
+            Element.row []
                 [ Element.Input.text
                     [ Element.width (Element.px 200)
                     , Html.Attributes.id ("player-name-" ++ (playerId |> Player.idToString)) |> Element.htmlAttribute
@@ -438,7 +492,9 @@ playerFields currentUserPlayerId ( playerId, player ) =
                 , Element.el [ NewGame.removePlayerButtonWidth ] Element.none
                 ]
 
-             else
+        otherPlayerField : ( Player.Id, Player.NewPlayer ) -> Element.Element Msg
+        otherPlayerField ( _, player ) =
+            Element.row []
                 [ Element.el
                     [ Element.width (Element.px 200)
                     , Element.paddingXY 5 0
@@ -455,8 +511,18 @@ playerFields currentUserPlayerId ( playerId, player ) =
                     Element.none
                 , Element.el [ NewGame.removePlayerButtonWidth ] Element.none
                 ]
-            )
-        ]
+    in
+    case fields of
+        PlayerFieldsWithCurrentUserCase playerFields ->
+            [ playerFields.playersBefore |> List.map otherPlayerField
+            , playerFields.currentUserPlayer |> currentPlayerField |> List.singleton
+            , playerFields.playersAfter |> List.map otherPlayerField
+            ]
+                |> List.concat
+                |> Element.column [ Element.spacing 10 ]
+
+        PlayerFieldsWithoutCurrentUserCase _ ->
+            Element.text "Error: Couldn't find fields for current user"
 
 
 playerColorSelect : Dict.Dict String Player.NewPlayer -> Player.Id -> Bool -> Element.Element Msg
