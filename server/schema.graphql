@@ -218,4 +218,7 @@ type Mutation {
 
 type Subscription {
   internetGame(playerToken: String!): Game!
+  internetGameOrConfiguration(
+    playerToken: String!
+  ): InternetGameOrConfiguration!
 }

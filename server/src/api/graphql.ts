@@ -309,10 +309,16 @@ export type SegmentInput = {
 export type Subscription = {
    __typename?: 'Subscription',
   internetGame: Game,
+  internetGameOrConfiguration: InternetGameOrConfiguration,
 };
 
 
 export type SubscriptionInternetGameArgs = {
+  playerToken: Scalars['String']
+};
+
+
+export type SubscriptionInternetGameOrConfigurationArgs = {
   playerToken: Scalars['String']
 };
 
@@ -582,6 +588,7 @@ export type SegmentResolvers<ContextType = any, ParentType extends ResolversPare
 
 export type SubscriptionResolvers<ContextType = any, ParentType extends ResolversParentTypes['Subscription'] = ResolversParentTypes['Subscription']> = {
   internetGame?: SubscriptionResolver<ResolversTypes['Game'], "internetGame", ParentType, ContextType, RequireFields<SubscriptionInternetGameArgs, 'playerToken'>>,
+  internetGameOrConfiguration?: SubscriptionResolver<ResolversTypes['InternetGameOrConfiguration'], "internetGameOrConfiguration", ParentType, ContextType, RequireFields<SubscriptionInternetGameOrConfigurationArgs, 'playerToken'>>,
 };
 
 export type Resolvers<ContextType = any> = {

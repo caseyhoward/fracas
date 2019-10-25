@@ -22,6 +22,7 @@ import startInternetGame from "./resolvers/Mutation/startInternetGame";
 import updatePlayerNameForInternetGame from "./resolvers/Mutation/updatePlayerNameForInternetGame";
 import updatePlayerColorForInternetGame from "./resolvers/Mutation/updatePlayerColorForInternetGame";
 import * as SubscriptionInternetGame from "./resolvers/Subscription/internetGame";
+import * as SubscriptionInternetGameOrConfiguration from "./resolvers/Subscription/internetGameOrConfiguration";
 import { IResolvers } from "graphql-tools";
 import * as PubSub from "./PubSub";
 
@@ -63,6 +64,15 @@ export function resolvers(
       }
     },
     Subscription: {
+      internetGameOrConfiguration: {
+        resolve: SubscriptionInternetGameOrConfiguration.buildResolve(
+          InternetGamePlayerRepository.findByToken(executeQuery),
+          InternetGameRepository.findById(executeQuery)
+        ),
+        subscribe: SubscriptionInternetGameOrConfiguration.buildSubscribe(
+          pubsub
+        )
+      },
       internetGame: {
         resolve: SubscriptionInternetGame.buildResolve(
           InternetGamePlayerRepository.findByToken(executeQuery),
