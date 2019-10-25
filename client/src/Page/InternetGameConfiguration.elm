@@ -30,6 +30,7 @@ import NewGame
 import Player
 import Ports
 import RemoteData
+import Route
 import Session
 import ViewHelpers
 
@@ -39,7 +40,6 @@ type Msg
     | ChangeColorButtonClicked
     | ColorSelected Colors.Color
     | ColorSelectBackgroundClicked
-    | GameMsg Game.Msg
     | GameStarted (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatePlayerName String
     | UpdatedColor (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
@@ -80,14 +80,6 @@ type SubscriptionStatus
     = NotConnected
     | Connected
     | Reconnecting
-
-
-type alias PlayingModel =
-    { playerToken : InternetGame.PlayerToken
-    , gameModel : Game.Model
-    , subscriptionStatus : SubscriptionStatus
-    , session : Session.Session
-    }
 
 
 type alias SelectionSet =
@@ -151,8 +143,8 @@ update msg model =
                                     , Cmd.none
                                     )
 
-                                InternetGame.InternetGame game ->
-                                    Debug.todo "redirect"
+                                InternetGame.InternetGame _ ->
+                                    ( model, Route.pushUrl (Session.navKey loadingModel.session) (Route.InternetGame loadingModel.playerToken) )
 
                         _ ->
                             ( Loading { loadingModel | gameAndMaps = gameRemoteData }, Cmd.none )
@@ -231,7 +223,31 @@ update msg model =
                     in
                     ( Configuring { configuringModel | configuration = updatedConfiguringModel }, InternetGame.updatePlayerName configuringModel.session.apiUrl configuringModel.playerToken name UpdatedPlayerName )
 
-                _ ->
+                GotGameAndMaps _ ->
+                    ( model, Cmd.none )
+
+                GameStarted game ->
+                    ( model, Route.pushUrl (Session.navKey configuringModel.session) (Route.InternetGame configuringModel.playerToken) )
+
+                UpdatedColor _ ->
+                    -- TODO: Check errors, possibly show as offline somehow, retry with exponential backoff
+                    ( model, Cmd.none )
+
+                UpdatedPlayerName _ ->
+                    -- TODO: Check errors, possibly show as offline somehow, retry with exponential backoff
+                    ( model, Cmd.none )
+
+                RemovePlayer _ ->
+                    -- TODO: Check errors, possibly show as offline somehow, retry with exponential backoff
+                    ( model, Cmd.none )
+
+                WindowResized _ _ ->
+                    ( model, Cmd.none )
+
+                SubscriptionDataReceived _ ->
+                    ( model, Cmd.none )
+
+                NewSubscriptionStatus _ _ ->
                     ( model, Cmd.none )
 
 
@@ -324,11 +340,6 @@ joinUrlView origin joinToken =
         [ Element.el [ Element.Font.size 14 ] (Element.text "Give this URL to the people so they can join the game")
         , Element.text (origin ++ "/games/internet/join/" ++ (joinToken |> InternetGame.joinTokenToString))
         ]
-
-
-viewPlaying : PlayingModel -> { title : String, content : Html.Html Msg }
-viewPlaying playingModel =
-    Game.view playingModel.gameModel { width = 800, height = 600 } GameMsg
 
 
 playerConfiguration : List ( String, Player.NewPlayer ) -> Player.Id -> Element.Element Msg
