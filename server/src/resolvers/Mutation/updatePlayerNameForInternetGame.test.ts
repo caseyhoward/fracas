@@ -13,14 +13,16 @@ describe("Mutation.updatePlayerNameForInternetGame", () => {
       gameId: internetGameConfiguration.id
     });
     const configuration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      internetGameConfiguration.id
-    );
+      TestDatabase.query
+    )(internetGameConfiguration.id);
     const updatedConfiguration = {
       ...configuration,
       players: [
         Builders.playerConfiguration({ id: "1", name: "some name 1" }),
-        Builders.playerConfiguration({ id: internetGamePlayer.id, name: "some name 2" }),
+        Builders.playerConfiguration({
+          id: internetGamePlayer.id,
+          name: "some name 2"
+        }),
         Builders.playerConfiguration({ id: "3", name: "some name 3" })
       ]
     };
@@ -33,9 +35,8 @@ describe("Mutation.updatePlayerNameForInternetGame", () => {
       name: "new name"
     });
     const retrievedConfiguration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      internetGameConfiguration.id
-    );
+      TestDatabase.query
+    )(internetGameConfiguration.id);
     expect(retrievedConfiguration.players[1].name).toEqual("new name");
   });
 });

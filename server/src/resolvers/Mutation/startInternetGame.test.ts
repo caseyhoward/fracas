@@ -47,9 +47,8 @@ describe("Mutation.startInternetGame", () => {
       playerToken: notHost.playerToken
     });
     const game = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      configuration.id
-    );
+      TestDatabase.query
+    )(configuration.id);
     expect(game.__typename).toEqual("InternetGameConfiguration");
   });
 });

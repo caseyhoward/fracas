@@ -1,7 +1,9 @@
 import * as Database from "../../Database";
 import * as Graphql from "../../api/graphql";
 import * as Models from "../../repositories/Models";
+import * as Player from "../../models/Player";
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
+import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import * as PubSub from "../../PubSub";
 
@@ -22,17 +24,52 @@ export function buildSubscribe(pubSub: PubSub.PubSub) {
 
 export function buildResolve(
   findPlayerByToken: InternetGamePlayerRepository.FindByToken,
+  findConfigurationById: InternetGameConfigurationRepository.FindById,
   findGameById: InternetGameRepository.FindById
 ) {
   const resolve: Graphql.SubscriptionResolveFn<
-    Graphql.ResolverTypeWrapper<Graphql.Game>,
+    Graphql.ResolverTypeWrapper<Graphql.InternetGameOrConfiguration>,
     any,
     any,
     Graphql.RequireFields<Graphql.SubscriptionInternetGameArgs, "playerToken">
-  > = async (_, input): Promise<Graphql.Game> => {
+  > = async (_, input): Promise<Graphql.InternetGameOrConfiguration> => {
     const player = await findPlayerByToken(input.playerToken);
-    const internetGame = await findGameById(player.gameId);
-    return Models.internetGameToGraphql(internetGame);
+    try {
+      const configuration = await findConfigurationById(player.gameId);
+      const players: Graphql.InternetGamePlayerConfiguration[] = configuration.players.map(
+        player => {
+          return {
+            ...player,
+            __typename: "InternetGamePlayerConfiguration",
+            playerId: player.playerId
+          };
+        }
+      );
+      return {
+        __typename: "InternetGameConfiguration",
+        id: configuration.id,
+        players: players,
+        mapId: configuration.mapId.toString(),
+        joinToken: configuration.joinToken,
+        currentUserPlayerId: player.id,
+        isCurrentUserHost: Player.isCurrentUserHost(
+          player.id,
+          configuration.players
+        )
+      };
+    } catch (error) {
+      const internetGame = await findGameById(player.gameId);
+
+      const graphqlGame: Graphql.Game = Models.internetGameToGraphql(
+        internetGame
+      );
+
+      return {
+        __typename: "InternetGame",
+        game: graphqlGame,
+        currentUserPlayerId: player.id
+      };
+    }
   };
 
   return resolve;

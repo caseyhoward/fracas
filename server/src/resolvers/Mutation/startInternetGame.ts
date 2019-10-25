@@ -18,9 +18,8 @@ export default async function startInternetGame(
   );
 
   const configuration = await InternetGameConfigurationRepository.findById(
-    executeQuery,
-    player.gameId
-  );
+    executeQuery
+  )(player.gameId);
   if (Player.isCurrentUserHost(player.id, configuration.players)) {
     const game: Models.InternetGame = {
       __typename: "InternetGame",

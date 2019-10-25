@@ -20,9 +20,8 @@ describe("Mutation.createInternetGame", () => {
     )(hostToken);
 
     const configuration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      player.gameId
-    );
+      TestDatabase.query
+    )(player.gameId);
 
     expect(configuration.players.length).toEqual(1);
     expect(configuration.players[0]).toEqual(Player.createHost(player.id));

@@ -25,9 +25,8 @@ describe("Query.internetGame", () => {
     };
 
     const updatedConfiguration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      configuration.id
-    );
+      TestDatabase.query
+    )(configuration.id);
 
     const game: Models.InternetGame = Builders.internetGame(
       updatedConfiguration.id

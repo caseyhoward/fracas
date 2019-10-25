@@ -17,18 +17,16 @@ describe("Mutation.joinInternetGame", () => {
     )(hostToken);
 
     const configuration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      host.gameId
-    );
+      TestDatabase.query
+    )(host.gameId);
 
     const playerToken = await joinInternetGame(TestDatabase.query, {
       joinGameToken: configuration.joinToken
     });
 
     const configurationWithNewPlayer = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      host.gameId
-    );
+      TestDatabase.query
+    )(host.gameId);
 
     const gamePlayer = await InternetGamePlayerRepository.findByToken(
       TestDatabase.query

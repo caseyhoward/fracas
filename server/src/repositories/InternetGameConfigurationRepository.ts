@@ -2,6 +2,12 @@ import { ExecuteQuery } from "../Database";
 import * as Models from "./Models";
 import * as Player from "../models/Player";
 
+export type FindById = (
+  id: string
+) => Promise<Models.InternetGameConfiguration>;
+
+type FindByIdConstructor = (executeQuery: ExecuteQuery) => FindById;
+
 export async function create(
   executeQuery: ExecuteQuery,
   newInternetGame: Models.NewInternetGameConfiguration
@@ -57,7 +63,7 @@ export async function addPlayer(
   id: string,
   player: Player.PlayerConfiguration
 ): Promise<void> {
-  const configuration = await findById(executeQuery, id);
+  const configuration = await findById(executeQuery)(id);
   const updatedConfiguration = {
     ...configuration,
     players: [...configuration.players, player]
@@ -78,17 +84,16 @@ export async function findByJoinToken(
   return rowToInternetGameConfiguration(row);
 }
 
-export async function findById(
-  executeQuery: ExecuteQuery,
-  id: string
-): Promise<Models.InternetGameConfiguration> {
-  const result = await executeQuery(
-    "SELECT * FROM internet_games WHERE id = $1",
-    [id]
-  );
-  const row: Row | undefined = result.rows[0];
-  return rowToInternetGameConfiguration(row);
-}
+export const findById: FindByIdConstructor = (executeQuery: ExecuteQuery) => {
+  return async (id: string) => {
+    const result = await executeQuery(
+      "SELECT * FROM internet_games WHERE id = $1",
+      [id]
+    );
+    const row: Row | undefined = result.rows[0];
+    return rowToInternetGameConfiguration(row);
+  };
+};
 
 export function rowToInternetGameConfiguration(
   row: Row | undefined

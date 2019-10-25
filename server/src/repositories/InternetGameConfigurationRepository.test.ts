@@ -28,9 +28,8 @@ describe("InternetGameConfigurationRepository.addPlayer", () => {
       player
     );
     const savedConfiguration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      configurationId
-    );
+      TestDatabase.query
+    )(configurationId);
     expect(
       savedConfiguration.players.find(p => p.playerId === "123")!.name
     ).toEqual("test name");
@@ -51,9 +50,8 @@ describe("InternetGameConfigurationRepository.create", () => {
       newConfiguration
     );
     const savedConfiguration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      configurationId
-    );
+      TestDatabase.query
+    )(configurationId);
     expect(savedConfiguration.mapId).toEqual("1");
   });
 });
@@ -72,9 +70,8 @@ describe("InternetGameConfigurationRepository.findByJoinToken", () => {
       newConfiguration
     );
     const savedConfiguration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      configurationId
-    );
+      TestDatabase.query
+    )(configurationId);
     const savedConfigurationByJoinToken = await InternetGameConfigurationRepository.findByJoinToken(
       TestDatabase.query,
       savedConfiguration.joinToken

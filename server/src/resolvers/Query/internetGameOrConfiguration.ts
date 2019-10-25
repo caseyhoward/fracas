@@ -16,9 +16,8 @@ export default async function internetGame(
   );
   try {
     const configuration = await InternetGameConfigurationRepository.findById(
-      executeQuery,
-      player.gameId
-    );
+      executeQuery
+    )(player.gameId);
     const players: graphql.InternetGamePlayerConfiguration[] = configuration.players.map(
       player => {
         return {

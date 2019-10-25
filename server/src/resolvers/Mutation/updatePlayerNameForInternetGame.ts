@@ -14,9 +14,8 @@ export default async function updatePlayerNameForInternetGame(
     executeQuery
   )(input.playerToken);
   const configuration = await InternetGameConfigurationRepository.findById(
-    executeQuery,
-    internetGamePlayer.gameId
-  );
+    executeQuery
+  )(internetGamePlayer.gameId);
   const updatedConfiguration = {
     ...configuration,
     players: configuration.players.map(player => {

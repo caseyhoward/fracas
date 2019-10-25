@@ -29,8 +29,7 @@ export async function createInternetGameConfiguration(
     TestDatabase.query,
     newInternetGameConfiguration
   );
-  return await InternetGameConfigurationRepository.findById(
-    TestDatabase.query,
+  return await InternetGameConfigurationRepository.findById(TestDatabase.query)(
     id
   );
 }

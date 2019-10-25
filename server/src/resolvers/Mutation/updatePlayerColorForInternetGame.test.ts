@@ -14,9 +14,8 @@ describe("Mutation.updatePlayerColorForInternetGame", () => {
       gameId: internetGameConfiguration.id
     });
     const configuration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      internetGameConfiguration.id
-    );
+      TestDatabase.query
+    )(internetGameConfiguration.id);
     const updatedConfiguration = {
       ...configuration,
       players: [
@@ -43,9 +42,8 @@ describe("Mutation.updatePlayerColorForInternetGame", () => {
       color: Color.black
     });
     const retrievedConfiguration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query,
-      internetGameConfiguration.id
-    );
+      TestDatabase.query
+    )(internetGameConfiguration.id);
     expect(retrievedConfiguration.players[1].color).toEqual(Color.black);
   });
 });

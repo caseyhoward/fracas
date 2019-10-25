@@ -67,6 +67,7 @@ export function resolvers(
       internetGameOrConfiguration: {
         resolve: SubscriptionInternetGameOrConfiguration.buildResolve(
           InternetGamePlayerRepository.findByToken(executeQuery),
+          InternetGameConfigurationRepository.findById(executeQuery),
           InternetGameRepository.findById(executeQuery)
         ),
         subscribe: SubscriptionInternetGameOrConfiguration.buildSubscribe(
