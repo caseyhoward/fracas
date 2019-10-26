@@ -11,7 +11,7 @@ export function buildSubscribe(pubSub: PubSub.PubSub) {
     {},
     any,
     Graphql.RequireFields<Graphql.SubscriptionInternetGameArgs, "playerToken">
-  > = (_, input) => {
+  > = () => {
     return PubSub.internetGameConfigurationChangedIterator(pubSub);
   };
 

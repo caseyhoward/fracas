@@ -175,7 +175,7 @@ export function internetGameToGraphql(
 }
 
 export function internetGameConfigurationToGraphQl(
-  player: InternetGamePlayer,
+  currentUserPlayer: InternetGamePlayer,
   configuration: InternetGameConfiguration
 ): Graphql.InternetGameConfiguration {
   const players: Graphql.InternetGamePlayerConfiguration[] = configuration.players.map(
@@ -193,9 +193,9 @@ export function internetGameConfigurationToGraphQl(
     players: players,
     mapId: configuration.mapId.toString(),
     joinToken: configuration.joinToken,
-    currentUserPlayerId: player.id,
+    currentUserPlayerId: currentUserPlayer.id,
     isCurrentUserHost: Player.isCurrentUserHost(
-      player.id,
+      currentUserPlayer.id,
       configuration.players
     )
   };

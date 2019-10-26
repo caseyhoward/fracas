@@ -9,7 +9,7 @@ import * as InternetGame from "./internetGame";
 import * as Builders from "../../test/Builders";
 // import { ExecuteQuery } from "../../Database";
 // import * as PubSub from "../../PubSub";
-import { PubSub } from "graphql-yoga";
+import * as GraphqlYoga from "graphql-yoga";
 
 describe("Subscription.internetGame", () => {
   describe(".subscribe", () => {
@@ -44,7 +44,8 @@ describe("Subscription.internetGame", () => {
           playerId: "1",
           playerTurnStage: "CapitolPlacement"
         },
-        players: []
+        players: [],
+        currentUserPlayerId: "1"
       });
     });
   });
@@ -53,7 +54,7 @@ describe("Subscription.internetGame", () => {
 type Mocks = {
   findGameById: InternetGameRepository.FindById;
   findPlayerByToken: InternetGamePlayerRepository.FindByToken;
-  pubSub: PubSub;
+  pubSub: GraphqlYoga.PubSub;
 };
 
 function mocks(): Mocks {
@@ -67,6 +68,6 @@ function mocks(): Mocks {
     const game = Builders.internetGame(id);
     return Promise.resolve(game);
   };
-  const pubSub = new PubSub();
+  const pubSub = new GraphqlYoga.PubSub();
   return { findPlayerByToken, findGameById, pubSub };
 }

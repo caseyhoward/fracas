@@ -30,14 +30,15 @@ export async function create(
 
 type UpdateMapConstructor = (executeQuery: ExecuteQuery) => UpdateMap;
 
-export type UpdateMap = (id: string, mapId: string) => Promise<void>;
+export type UpdateMap = (id: string, mapId: string) => Promise<boolean>;
 
 export const updateMap: UpdateMapConstructor = (executeQuery: ExecuteQuery) => {
-  return async (id: string, mapId: string): Promise<void> => {
-    return await executeQuery(
-      "UPDATE internet_games SET map_id = $1 WHERE id = $2",
-      [mapId, id]
-    ).then(() => undefined);
+  return async (id: string, mapId: string): Promise<boolean> => {
+    await executeQuery("UPDATE internet_games SET map_id = $1 WHERE id = $2", [
+      mapId,
+      id
+    ]);
+    return true;
   };
 };
 

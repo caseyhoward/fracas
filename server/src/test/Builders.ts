@@ -36,12 +36,6 @@ export function map(options: MapOptions): Models.NewMap {
   };
 }
 
-// interface PlayerOptions {
-//   id?: string;
-//   name?: string;
-//   color?: Color.Color;
-// }
-
 export const playerConfiguration: Player.PlayerConfiguration = {
   __typename: "PlayerConfiguration",
   name: "Player " + Uuid.generate(),
@@ -74,3 +68,12 @@ export function internetGamePlayer(
     playerToken: Uuid.generate()
   };
 }
+
+export const player: Models.Player = {
+  __typename: "Player",
+  id: Uuid.generate(),
+  name: "Player " + Uuid.generate(),
+  countryTroopCounts: [],
+  color: Color.black,
+  ports: []
+};

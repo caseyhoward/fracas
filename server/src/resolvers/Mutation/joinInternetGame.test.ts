@@ -6,7 +6,7 @@ import * as Color from "../../models/Color";
 import { createInternetGame } from "./createInternetGame";
 import joinInternetGame from "./joinInternetGame";
 import * as TestDatabase from "../../test/TestDatabase";
-
+import * as GraphqlYoga from "graphql-yoga";
 describe("Mutation.joinInternetGame", () => {
   it("works", async () => {
     await Factories.createMap();
@@ -20,9 +20,13 @@ describe("Mutation.joinInternetGame", () => {
       TestDatabase.query
     )(host.gameId);
 
-    const playerToken = await joinInternetGame(TestDatabase.query, {
-      joinGameToken: configuration.joinToken
-    });
+    const playerToken = await joinInternetGame(
+      TestDatabase.query,
+      new GraphqlYoga.PubSub(),
+      {
+        joinGameToken: configuration.joinToken
+      }
+    );
 
     const configurationWithNewPlayer = await InternetGameConfigurationRepository.findById(
       TestDatabase.query

@@ -1,7 +1,7 @@
 import * as Database from "../../Database";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
-
+import * as PubSub from "../../PubSub";
 import * as Uuid from "../../Uuid";
 import * as Models from "../../repositories/Models";
 import * as graphql from "../../api/graphql";
@@ -9,12 +9,14 @@ import * as Player from "../../models/Player";
 
 export default async function joinInternetGame(
   executeQuery: Database.ExecuteQuery,
+  pubSub: PubSub.PubSub,
   input: graphql.RequireFields<
     graphql.MutationJoinInternetGameArgs,
     "joinGameToken"
   >
 ): Promise<string> {
   const playerToken = Uuid.generate();
+
   const internetGame = await InternetGameConfigurationRepository.findByJoinToken(
     executeQuery,
     input.joinGameToken
@@ -38,6 +40,6 @@ export default async function joinInternetGame(
     players: updatedPlayers
   };
   await InternetGameConfigurationRepository.save(executeQuery, updatedGame);
-
+  PubSub.internetGameConfigurationChanged(pubSub, updatedGame);
   return playerToken;
 }

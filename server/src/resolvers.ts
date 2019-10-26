@@ -3,12 +3,6 @@ import * as InternetGamePlayerRepository from "./repositories/InternetGamePlayer
 import * as InternetGameConfigurationRepository from "./repositories/InternetGameConfigurationRepository";
 import * as InternetGameRepository from "./repositories/InternetGameRepository";
 import * as Game from "./Game";
-
-import {
-  MutationUpdateMapForInternetGameArgs,
-  RequireFields
-} from "./api/graphql";
-
 import { createInternetGame } from "./resolvers/Mutation/createInternetGame";
 import internetGameOrConfiguration from "./resolvers/Query/internetGameOrConfiguration";
 import internetGame from "./resolvers/Query/internetGame";
@@ -26,7 +20,6 @@ import * as SubscriptionInternetGame from "./resolvers/Subscription/internetGame
 import * as SubscriptionInternetGameOrConfiguration from "./resolvers/Subscription/internetGameOrConfiguration";
 import { IResolvers } from "graphql-tools";
 import * as PubSub from "./PubSub";
-import { internetGameConfiguration } from "./test/Builders";
 
 export function resolvers(
   executeQuery: Database.ExecuteQuery,
@@ -51,7 +44,8 @@ export function resolvers(
         return Game.create(executeQuery, createGame.newGame);
       },
       createMap: async (_, input) => createMap(executeQuery, input),
-      joinInternetGame: (_, input) => joinInternetGame(executeQuery, input),
+      joinInternetGame: (_, input) =>
+        joinInternetGame(executeQuery, pubsub, input),
       createInternetGame: () => createInternetGame(executeQuery),
       startInternetGame: (_, input) => startInternetGame(executeQuery, input),
       updatePlayerNameForInternetGame: (_, input) =>
@@ -62,9 +56,10 @@ export function resolvers(
         updateMapForInternetGame(
           InternetGamePlayerRepository.findByToken(executeQuery),
           InternetGameConfigurationRepository.updateMap(executeQuery),
+          InternetGameConfigurationRepository.findById(executeQuery),
           pubsub,
           input
-        ),
+        )(),
       saveInternetGame: async (_, input) =>
         saveInternetGame(executeQuery, pubsub, input),
       saveGame: async (_, saveGame) => {
