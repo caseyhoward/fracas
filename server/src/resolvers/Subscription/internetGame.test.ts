@@ -1,14 +1,7 @@
-// import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import * as InternetGame from "./internetGame";
-// import * as TestDatabase from "../../test/TestDatabase";
-// import * as Color from "../../models/Color";
-// import * as Models from "../../repositories/Models";
-// import * as Factories from "../../test/Factories";
 import * as Builders from "../../test/Builders";
-// import { ExecuteQuery } from "../../Database";
-// import * as PubSub from "../../PubSub";
 import * as GraphqlYoga from "graphql-yoga";
 
 describe("Subscription.internetGame", () => {

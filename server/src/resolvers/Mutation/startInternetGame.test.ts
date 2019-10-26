@@ -4,7 +4,7 @@ import * as InternetGameConfigurationRepository from "../../repositories/Interne
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import startInternetGame from "./startInternetGame";
 import * as TestDatabase from "../../test/TestDatabase";
-import * as GraphqlYoga from "graphql-yoga";
+import * as GraphqlYoga from "graphql-subscriptions";
 
 describe("Mutation.startInternetGame", () => {
   it("starts a game when host", async () => {

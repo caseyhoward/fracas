@@ -3,7 +3,7 @@ import * as InternetGameRepository from "../../repositories/InternetGameReposito
 import saveInternetGame from "./saveInternetGame";
 import * as Models from "../../repositories/Models";
 import * as TestDatabase from "../../test/TestDatabase";
-import { PubSub } from "graphql-yoga";
+import { PubSub } from "graphql-subscriptions";
 
 describe("Mutation.saveInternetGame", () => {
   it("starts a game", async () => {
