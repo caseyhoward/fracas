@@ -42,3 +42,8 @@ neutralCountryTroops object_ =
 playerTurn : SelectionSet decodesTo Api.Object.PlayerTurn -> SelectionSet decodesTo Api.Object.Game
 playerTurn object_ =
     Object.selectionForCompositeField "playerTurn" [] object_ identity
+
+
+currentUserPlayerId : SelectionSet String Api.Object.Game
+currentUserPlayerId =
+    Object.selectionForField "String" "currentUserPlayerId" [] Decode.string

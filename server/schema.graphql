@@ -129,6 +129,7 @@ type Game {
   players: [Player!]!
   neutralCountryTroops: [CountryTroopCounts!]!
   playerTurn: PlayerTurn!
+  currentUserPlayerId: String!
 }
 
 type CountryTroopCounts {
@@ -167,12 +168,7 @@ enum PlayerTurnStage {
   GameOver
 }
 
-union InternetGameOrConfiguration = InternetGameConfiguration | InternetGame
-
-type InternetGame {
-  game: Game!
-  currentUserPlayerId: String!
-}
+union InternetGameOrConfiguration = InternetGameConfiguration | Game
 
 type InternetGamePlayerConfiguration {
   color: Color!
@@ -195,7 +191,7 @@ type Query {
   internetGameOrConfiguration(
     playerToken: String!
   ): InternetGameOrConfiguration!
-  internetGame(playerToken: String!): InternetGame!
+  internetGame(playerToken: String!): Game!
   maps: [Map!]!
 }
 

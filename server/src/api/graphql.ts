@@ -84,6 +84,7 @@ export type Game = {
   players: Array<Player>,
   neutralCountryTroops: Array<CountryTroopCounts>,
   playerTurn: PlayerTurn,
+  currentUserPlayerId: Scalars['String'],
 };
 
 export type GameInput = {
@@ -92,12 +93,6 @@ export type GameInput = {
   players: Array<PlayerInput>,
   neutralCountryTroops: Array<CountryTroopCountsInput>,
   playerTurn: PlayerTurnInput,
-};
-
-export type InternetGame = {
-   __typename?: 'InternetGame',
-  game: Game,
-  currentUserPlayerId: Scalars['String'],
 };
 
 export type InternetGameConfiguration = {
@@ -110,7 +105,7 @@ export type InternetGameConfiguration = {
   isCurrentUserHost: Scalars['Boolean'],
 };
 
-export type InternetGameOrConfiguration = InternetGameConfiguration | InternetGame;
+export type InternetGameOrConfiguration = InternetGameConfiguration | Game;
 
 export type InternetGamePlayerConfiguration = {
    __typename?: 'InternetGamePlayerConfiguration',
@@ -271,7 +266,7 @@ export type Query = {
   map: Map,
   game: Game,
   internetGameOrConfiguration: InternetGameOrConfiguration,
-  internetGame: InternetGame,
+  internetGame: Game,
   maps: Array<Map>,
 };
 
@@ -408,11 +403,10 @@ export type ResolversTypes = {
   Color: ResolverTypeWrapper<Color>,
   PlayerTurn: ResolverTypeWrapper<PlayerTurn>,
   PlayerTurnStage: PlayerTurnStage,
-  InternetGameOrConfiguration: ResolversTypes['InternetGameConfiguration'] | ResolversTypes['InternetGame'],
+  InternetGameOrConfiguration: ResolversTypes['InternetGameConfiguration'] | ResolversTypes['Game'],
   InternetGameConfiguration: ResolverTypeWrapper<InternetGameConfiguration>,
   InternetGamePlayerConfiguration: ResolverTypeWrapper<InternetGamePlayerConfiguration>,
   Boolean: ResolverTypeWrapper<Scalars['Boolean']>,
-  InternetGame: ResolverTypeWrapper<InternetGame>,
   Mutation: ResolverTypeWrapper<{}>,
   NewGameInput: NewGameInput,
   PlayerInput: PlayerInput,
@@ -446,11 +440,10 @@ export type ResolversParentTypes = {
   Color: Color,
   PlayerTurn: PlayerTurn,
   PlayerTurnStage: PlayerTurnStage,
-  InternetGameOrConfiguration: ResolversParentTypes['InternetGameConfiguration'] | ResolversParentTypes['InternetGame'],
+  InternetGameOrConfiguration: ResolversParentTypes['InternetGameConfiguration'] | ResolversParentTypes['Game'],
   InternetGameConfiguration: InternetGameConfiguration,
   InternetGamePlayerConfiguration: InternetGamePlayerConfiguration,
   Boolean: Scalars['Boolean'],
-  InternetGame: InternetGame,
   Mutation: {},
   NewGameInput: NewGameInput,
   PlayerInput: PlayerInput,
@@ -504,10 +497,6 @@ export type GameResolvers<ContextType = any, ParentType extends ResolversParentT
   players?: Resolver<Array<ResolversTypes['Player']>, ParentType, ContextType>,
   neutralCountryTroops?: Resolver<Array<ResolversTypes['CountryTroopCounts']>, ParentType, ContextType>,
   playerTurn?: Resolver<ResolversTypes['PlayerTurn'], ParentType, ContextType>,
-};
-
-export type InternetGameResolvers<ContextType = any, ParentType extends ResolversParentTypes['InternetGame'] = ResolversParentTypes['InternetGame']> = {
-  game?: Resolver<ResolversTypes['Game'], ParentType, ContextType>,
   currentUserPlayerId?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
 };
 
@@ -521,7 +510,7 @@ export type InternetGameConfigurationResolvers<ContextType = any, ParentType ext
 };
 
 export type InternetGameOrConfigurationResolvers<ContextType = any, ParentType extends ResolversParentTypes['InternetGameOrConfiguration'] = ResolversParentTypes['InternetGameOrConfiguration']> = {
-  __resolveType: TypeResolveFn<'InternetGameConfiguration' | 'InternetGame', ParentType, ContextType>
+  __resolveType: TypeResolveFn<'InternetGameConfiguration' | 'Game', ParentType, ContextType>
 };
 
 export type InternetGamePlayerConfigurationResolvers<ContextType = any, ParentType extends ResolversParentTypes['InternetGamePlayerConfiguration'] = ResolversParentTypes['InternetGamePlayerConfiguration']> = {
@@ -577,7 +566,7 @@ export type QueryResolvers<ContextType = any, ParentType extends ResolversParent
   map?: Resolver<ResolversTypes['Map'], ParentType, ContextType, RequireFields<QueryMapArgs, 'id'>>,
   game?: Resolver<ResolversTypes['Game'], ParentType, ContextType, RequireFields<QueryGameArgs, 'id'>>,
   internetGameOrConfiguration?: Resolver<ResolversTypes['InternetGameOrConfiguration'], ParentType, ContextType, RequireFields<QueryInternetGameOrConfigurationArgs, 'playerToken'>>,
-  internetGame?: Resolver<ResolversTypes['InternetGame'], ParentType, ContextType, RequireFields<QueryInternetGameArgs, 'playerToken'>>,
+  internetGame?: Resolver<ResolversTypes['Game'], ParentType, ContextType, RequireFields<QueryInternetGameArgs, 'playerToken'>>,
   maps?: Resolver<Array<ResolversTypes['Map']>, ParentType, ContextType>,
 };
 
@@ -598,7 +587,6 @@ export type Resolvers<ContextType = any> = {
   CountryTroopCounts?: CountryTroopCountsResolvers<ContextType>,
   Dimensions?: DimensionsResolvers<ContextType>,
   Game?: GameResolvers<ContextType>,
-  InternetGame?: InternetGameResolvers<ContextType>,
   InternetGameConfiguration?: InternetGameConfigurationResolvers<ContextType>,
   InternetGameOrConfiguration?: InternetGameOrConfigurationResolvers,
   InternetGamePlayerConfiguration?: InternetGamePlayerConfigurationResolvers<ContextType>,

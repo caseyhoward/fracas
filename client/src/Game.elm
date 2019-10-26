@@ -3,7 +3,7 @@ module Game exposing
     , CountryBorderHelperOutlineStatus(..)
     , CountryStatus(..)
     , Game
-    , GameWithCurrentUser
+    -- , GameWithCurrentUser
     , Id(..)
     , Model
     , Msg(..)
@@ -57,7 +57,6 @@ type alias Model =
     { activeGame : Game
     , showAvailableMoves : Bool
     , error : Maybe String
-    , playerId : Player.Id
     , countryBorderHelperOutlineStatus : CountryBorderHelperOutlineStatus
     }
 
@@ -67,19 +66,13 @@ type alias Game =
     , currentPlayerTurn : PlayerTurn.PlayerTurn
     , map : Map.Map
     , players : Player.Players
+    , currentUserPlayerId : Player.Id
     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
     }
 
 
 type Id
     = Id String
-
-
-type alias GameWithCurrentUser =
-    { game : Game
-    , currentUserPlayerId : Player.Id
-    }
-
 
 type CountryBorderHelperOutlineStatus
     = CountryBorderHelperOutlineWaitingForDelay Country.Id

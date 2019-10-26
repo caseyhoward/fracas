@@ -76,9 +76,9 @@ describe("Query.internetGameOrConfiguration", () => {
       }
     );
 
-    if (gameOrConfiguration.__typename === "InternetGame") {
-      expect(gameOrConfiguration.game.players.length).toEqual(1);
-      expect(gameOrConfiguration.game.players[0].name).toEqual("test name");
+    if (gameOrConfiguration.__typename === "Game") {
+      expect(gameOrConfiguration.players.length).toEqual(1);
+      expect(gameOrConfiguration.players[0].name).toEqual("test name");
     } else {
       fail("Must be InternetGame");
     }

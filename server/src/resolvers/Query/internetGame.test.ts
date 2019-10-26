@@ -41,7 +41,7 @@ describe("Query.internetGame", () => {
       playerToken: internetGamePlayer.playerToken
     });
 
-    expect(gameOrConfiguration.game.players.length).toEqual(1);
-    expect(gameOrConfiguration.game.players[0].name).toEqual("test name");
+    expect(gameOrConfiguration.players.length).toEqual(1);
+    expect(gameOrConfiguration.players[0].name).toEqual("test name");
   });
 });

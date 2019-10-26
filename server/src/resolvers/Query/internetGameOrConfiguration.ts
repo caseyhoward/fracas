@@ -24,14 +24,6 @@ export default async function internetGame(
       player.gameId
     );
 
-    const graphqlGame: graphql.Game = Models.internetGameToGraphql(
-      internetGame
-    );
-
-    return {
-      __typename: "InternetGame",
-      game: graphqlGame,
-      currentUserPlayerId: player.id
-    };
+    return Models.internetGameToGraphql(internetGame, player.id);
   }
 }

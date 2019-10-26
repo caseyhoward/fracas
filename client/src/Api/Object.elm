@@ -29,10 +29,6 @@ type Game
     = Game
 
 
-type InternetGame
-    = InternetGame
-
-
 type InternetGameConfiguration
     = InternetGameConfiguration
 

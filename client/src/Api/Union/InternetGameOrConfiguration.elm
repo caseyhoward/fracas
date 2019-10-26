@@ -21,7 +21,7 @@ import Json.Decode as Decode
 
 type alias Fragments decodesTo =
     { onInternetGameConfiguration : SelectionSet decodesTo Api.Object.InternetGameConfiguration
-    , onInternetGame : SelectionSet decodesTo Api.Object.InternetGame
+    , onGame : SelectionSet decodesTo Api.Object.Game
     }
 
 
@@ -33,7 +33,7 @@ fragments :
 fragments selections =
     Object.exhuastiveFragmentSelection
         [ Object.buildFragment "InternetGameConfiguration" selections.onInternetGameConfiguration
-        , Object.buildFragment "InternetGame" selections.onInternetGame
+        , Object.buildFragment "Game" selections.onGame
         ]
 
 
@@ -43,5 +43,5 @@ update syntax to add `SelectionSet`s for the types you want to handle.
 maybeFragments : Fragments (Maybe decodesTo)
 maybeFragments =
     { onInternetGameConfiguration = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
-    , onInternetGame = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
+    , onGame = Graphql.SelectionSet.empty |> Graphql.SelectionSet.map (\_ -> Nothing)
     }

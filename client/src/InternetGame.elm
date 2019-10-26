@@ -6,7 +6,6 @@ module InternetGame exposing
     , PlayerToken
     , create
     , gameOrConfigurationSelectionSet
-    , gameSelectionSet
     , get
     , internetGameOrConfigurationSubscriptionDocument
     , joinGame
@@ -27,7 +26,6 @@ import Api.InputObject
 import Api.Mutation
 import Api.Object
 import Api.Object.Game
-import Api.Object.InternetGame
 import Api.Object.InternetGameConfiguration
 import Api.Object.InternetGamePlayerConfiguration
 import Api.Query
@@ -79,7 +77,7 @@ type alias InternetGameTokens =
 
 
 type GameOrConfiguration
-    = InternetGame Game.GameWithCurrentUser
+    = InternetGame Game.Game
     | InternetGameConfiguration Configuration
 
 
@@ -92,7 +90,7 @@ create apiUrl toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-get : String -> PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error Game.GameWithCurrentUser) Game.GameWithCurrentUser -> msg) -> Cmd msg
+get : String -> PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game -> msg) -> Cmd msg
 get apiUrl playerToken toMsg =
     Api.Query.internetGame
         { playerToken = playerToken |> playerTokenToString }
@@ -165,7 +163,7 @@ updateMap apiUrl playerToken mapId toMsg =
 
 subscriptionDocument : PlayerToken -> Graphql.SelectionSet.SelectionSet Game.Game Graphql.Operation.RootSubscription
 subscriptionDocument (PlayerToken playerToken) =
-    Api.Subscription.internetGame { playerToken = playerToken } gameSelectionSet
+    Api.Subscription.internetGame { playerToken = playerToken } selectionSet
 
 
 internetGameOrConfigurationSubscriptionDocument : PlayerToken -> Graphql.SelectionSet.SelectionSet GameOrConfiguration Graphql.Operation.RootSubscription
@@ -173,26 +171,17 @@ internetGameOrConfigurationSubscriptionDocument (PlayerToken playerToken) =
     Api.Subscription.internetGameOrConfiguration { playerToken = playerToken } gameOrConfigurationSelectionSet
 
 
-selectionSet : Graphql.SelectionSet.SelectionSet Game.GameWithCurrentUser Api.Object.InternetGame
-selectionSet =
-    Graphql.SelectionSet.map2 (\game currentUserPlayerId -> { game = game, currentUserPlayerId = Player.Id currentUserPlayerId })
-        (Api.Object.InternetGame.game gameSelectionSet)
-        Api.Object.InternetGame.currentUserPlayerId
-
-
 gameOrConfigurationSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Union.InternetGameOrConfiguration
 gameOrConfigurationSelectionSet =
     Api.Union.InternetGameOrConfiguration.fragments
         { onInternetGameConfiguration = configurationSelectionSet
-        , onInternetGame = internetGameSelectionSet
+        , onGame = internetGameSelectionSet
         }
 
 
-internetGameSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGame
+internetGameSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.Game
 internetGameSelectionSet =
-    Graphql.SelectionSet.map2 (\game currentUserPlayerId -> InternetGame { game = game, currentUserPlayerId = Player.Id currentUserPlayerId })
-        (Api.Object.InternetGame.game gameSelectionSet)
-        Api.Object.InternetGame.currentUserPlayerId
+    Graphql.SelectionSet.map InternetGame selectionSet
 
 
 configurationSelectionSet1 : Graphql.SelectionSet.SelectionSet Configuration Api.Object.InternetGameConfiguration
@@ -218,10 +207,10 @@ configurationSelectionSet =
     Graphql.SelectionSet.map InternetGameConfiguration configurationSelectionSet1
 
 
-gameSelectionSet : Graphql.SelectionSet.SelectionSet Game.Game Api.Object.Game
-gameSelectionSet =
-    Graphql.SelectionSet.map5
-        (\id2 map currentPlayerTurn players neutralCountryTroops ->
+selectionSet : Graphql.SelectionSet.SelectionSet Game.Game Api.Object.Game
+selectionSet =
+    Graphql.SelectionSet.map6
+        (\id2 map currentPlayerTurn players neutralCountryTroops currentUserPlayerId ->
             let
                 activeGame : Game.Game
                 activeGame =
@@ -230,6 +219,7 @@ gameSelectionSet =
                     , map = map
                     , players = players |> Player.playerSelectionSetsToPlayers
                     , neutralCountryTroops = neutralCountryTroops |> Dict.fromList
+                    , currentUserPlayerId = currentUserPlayerId |> Player.Id
                     }
             in
             activeGame
@@ -239,6 +229,7 @@ gameSelectionSet =
         (Api.Object.Game.playerTurn PlayerTurn.selectionSet)
         (Api.Object.Game.players Player.playerSelection)
         (Api.Object.Game.neutralCountryTroops TroopCount.troopCountsSelection)
+        Api.Object.Game.currentUserPlayerId
 
 
 playerTokenToString : PlayerToken -> String

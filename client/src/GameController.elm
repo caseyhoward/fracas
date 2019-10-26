@@ -17,7 +17,7 @@ update : Game.Msg -> Game.Model -> ( Game.Model, Cmd msg )
 update msg model =
     case msg of
         Game.CountryMouseUp clickedCountryId ->
-            ( handleCountryMouseUpFromPlayer clickedCountryId model.playerId model, Cmd.none )
+            ( handleCountryMouseUpFromPlayer clickedCountryId model.activeGame.currentUserPlayerId model, Cmd.none )
 
         Game.CountryMouseDown clickedCountryId ->
             ( handleCountryMouseDown clickedCountryId model, Cmd.none )

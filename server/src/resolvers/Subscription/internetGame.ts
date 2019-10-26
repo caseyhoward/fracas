@@ -32,7 +32,7 @@ export function buildResolve(
   > = async (_, input): Promise<Graphql.Game> => {
     const player = await findPlayerByToken(input.playerToken);
     const internetGame = await findGameById(player.gameId);
-    return Models.internetGameToGraphql(internetGame);
+    return Models.internetGameToGraphql(internetGame, player.id);
   };
 
   return resolve;

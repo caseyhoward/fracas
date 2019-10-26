@@ -151,11 +151,13 @@ export interface InternetGamePlayer {
 }
 
 export function internetGameToGraphql(
-  internetGame: InternetGame
+  internetGame: InternetGame,
+  currentUserPlayerId: string
 ): Graphql.Game {
   return {
     __typename: "Game",
     id: internetGame.id.toString(),
+    currentUserPlayerId: currentUserPlayerId,
     map: <any>{ id: internetGame.mapId.toString() },
     neutralCountryTroops: internetGame.neutralCountryTroops,
     playerTurn: {

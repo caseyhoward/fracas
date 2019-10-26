@@ -40,15 +40,7 @@ export function buildResolve(
     } catch (error) {
       const internetGame = await findGameById(player.gameId);
 
-      const graphqlGame: Graphql.Game = Models.internetGameToGraphql(
-        internetGame
-      );
-
-      return {
-        __typename: "InternetGame",
-        game: graphqlGame,
-        currentUserPlayerId: player.id
-      };
+      return Models.internetGameToGraphql(internetGame, player.id);
     }
   };
 

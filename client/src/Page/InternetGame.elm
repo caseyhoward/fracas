@@ -27,7 +27,7 @@ import Time
 
 
 type Msg
-    = GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.GameWithCurrentUser) Game.GameWithCurrentUser)
+    = GotGame (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game)
     | GameMsg Game.Msg
     | GameSaved (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | ShowCountryBorderHelper
@@ -44,7 +44,7 @@ type Model
 
 type alias LoadingModel =
     { session : Session.Session
-    , gameAndMaps : RemoteData.RemoteData (Graphql.Http.Error Game.GameWithCurrentUser) Game.GameWithCurrentUser
+    , gameAndMaps : RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game
     , playerToken : InternetGame.PlayerToken
     }
 
@@ -63,7 +63,7 @@ type alias PlayingModel =
     }
 
 
-getGame : String -> InternetGame.PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error Game.GameWithCurrentUser) Game.GameWithCurrentUser -> msg) -> Cmd msg
+getGame : String -> InternetGame.PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error Game.Game) Game.Game -> msg) -> Cmd msg
 getGame apiUrl playerToken toMsg =
     InternetGame.get apiUrl playerToken toMsg
 
@@ -95,14 +95,13 @@ update msg model =
             case msg of
                 GotGame gameRemoteData ->
                     case gameRemoteData of
-                        RemoteData.Success internetGameWithUser ->
+                        RemoteData.Success game ->
                             let
                                 gameModel : Game.Model
                                 gameModel =
-                                    { activeGame = internetGameWithUser.game
+                                    { activeGame = game
                                     , showAvailableMoves = False
                                     , error = Nothing
-                                    , playerId = internetGameWithUser.currentUserPlayerId
                                     , countryBorderHelperOutlineStatus = Game.CountryBorderHelperOutlineInactive
                                     }
 

@@ -8,7 +8,7 @@ export default async function internetGame(
   executeQuery: Database.ExecuteQuery,
 
   game: graphql.RequireFields<graphql.QueryInternetGameArgs, "playerToken">
-): Promise<graphql.InternetGame> {
+): Promise<graphql.Game> {
   const player = await InternetGamePlayerRepository.findByToken(executeQuery)(
     game.playerToken
   );
@@ -17,11 +17,10 @@ export default async function internetGame(
     player.gameId
   );
 
-  const graphqlGame: graphql.Game = Models.internetGameToGraphql(internetGame);
+  const graphqlGame: graphql.Game = Models.internetGameToGraphql(
+    internetGame,
+    player.id
+  );
 
-  return {
-    __typename: "InternetGame",
-    game: graphqlGame,
-    currentUserPlayerId: player.id
-  };
+  return graphqlGame;
 }
