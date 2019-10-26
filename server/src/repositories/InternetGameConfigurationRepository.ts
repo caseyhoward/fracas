@@ -28,16 +28,18 @@ export async function create(
   return row.id.toString();
 }
 
-export async function updateMap(
-  executeQuery: ExecuteQuery,
-  id: string,
-  mapId: number
-): Promise<void> {
-  await executeQuery("UPDATE internet_games SET map_id = $1 WHERE id = $2", [
-    mapId,
-    id
-  ]);
-}
+type UpdateMapConstructor = (executeQuery: ExecuteQuery) => UpdateMap;
+
+export type UpdateMap = (id: string, mapId: string) => Promise<void>;
+
+export const updateMap: UpdateMapConstructor = (executeQuery: ExecuteQuery) => {
+  return async (id: string, mapId: string): Promise<void> => {
+    return await executeQuery(
+      "UPDATE internet_games SET map_id = $1 WHERE id = $2",
+      [mapId, id]
+    ).then(() => undefined);
+  };
+};
 
 export async function save(
   executeQuery: ExecuteQuery,

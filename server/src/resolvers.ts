@@ -21,6 +21,7 @@ import joinInternetGame from "./resolvers/Mutation/joinInternetGame";
 import startInternetGame from "./resolvers/Mutation/startInternetGame";
 import updatePlayerNameForInternetGame from "./resolvers/Mutation/updatePlayerNameForInternetGame";
 import updatePlayerColorForInternetGame from "./resolvers/Mutation/updatePlayerColorForInternetGame";
+import { updateMapForInternetGame } from "./resolvers/Mutation/updateMapForInternetGame";
 import * as SubscriptionInternetGame from "./resolvers/Subscription/internetGame";
 import * as SubscriptionInternetGameOrConfiguration from "./resolvers/Subscription/internetGameOrConfiguration";
 import { IResolvers } from "graphql-tools";
@@ -56,7 +57,8 @@ export function resolvers(
         updatePlayerNameForInternetGame(executeQuery, pubsub, input),
       updatePlayerColorForInternetGame: (_, input) =>
         updatePlayerColorForInternetGame(executeQuery, pubsub, input),
-      updateMapForInternetGame,
+      updateMapForInternetGame: (_, input) =>
+        updateMapForInternetGame(executeQuery, pubsub, input),
       saveInternetGame: async (_, input) =>
         saveInternetGame(executeQuery, pubsub, input),
       saveGame: async (_, saveGame) => {
@@ -83,5 +85,4 @@ export function resolvers(
       }
     }
   };
-
 }

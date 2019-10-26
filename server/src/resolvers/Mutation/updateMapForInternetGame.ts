@@ -1,11 +1,8 @@
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
-
-import {
-  MutationUpdateMapForInternetGameArgs,
-  RequireFields
-} from "../../api/graphql";
+import * as Graphql from "../../api/graphql";
 import * as Database from "../../Database";
+import { PubSub } from "../../PubSub";
 
 export type UpdateMapForInternetGame = (
   playerToken: string,
@@ -13,7 +10,12 @@ export type UpdateMapForInternetGame = (
 ) => Promise<boolean>;
 
 export type UpdateMapForInternetGameConstructor = (
-  executeQuery: Database.ExecuteQuery
+  executeQuery: Database.ExecuteQuery,
+  pubsub: PubSub,
+  input: Graphql.RequireFields<
+    Graphql.MutationUpdateMapForInternetGameArgs,
+    "mapId" | "playerToken"
+  >
 ) => UpdateMapForInternetGame;
 
 type UpdateMapForInternetGameExecutor = (
@@ -23,7 +25,8 @@ type UpdateMapForInternetGameExecutor = (
 ) => Promise<boolean>;
 
 export const updateMapForInternetGame: UpdateMapForInternetGameConstructor = (
-  executeQuery: Database.ExecuteQuery
+  executeQuery: Database.ExecuteQuery,
+  pubsub: PubSub
 ) => {
   return (playerToken, mapId) => {
     return executUpdateMapForInternetGame(executeQuery, playerToken, mapId);
@@ -38,10 +41,9 @@ const executUpdateMapForInternetGame: UpdateMapForInternetGameExecutor = async (
   const player = await InternetGamePlayerRepository.findByToken(executeQuery)(
     playerToken
   );
-  await InternetGameConfigurationRepository.updateMap(
-    executeQuery,
+  await InternetGameConfigurationRepository.updateMap(executeQuery)(
     player.gameId.toString(),
-    parseInt(mapId, 10)
+    mapId
   );
   return true;
 };
