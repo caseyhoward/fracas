@@ -35,7 +35,6 @@ export function buildResolve(
       return Models.internetGameConfigurationToGraphQl(player, configuration);
     } catch (error) {
       const internetGame = await findGameById(player.gameId);
-
       return Models.internetGameToGraphql(internetGame, player.id);
     }
   };

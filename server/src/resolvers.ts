@@ -47,7 +47,8 @@ export function resolvers(
       joinInternetGame: (_, input) =>
         joinInternetGame(executeQuery, pubsub, input),
       createInternetGame: () => createInternetGame(executeQuery),
-      startInternetGame: (_, input) => startInternetGame(executeQuery, input),
+      startInternetGame: (_, input) =>
+        startInternetGame(executeQuery, pubsub, input),
       updatePlayerNameForInternetGame: (_, input) =>
         updatePlayerNameForInternetGame(executeQuery, pubsub, input),
       updatePlayerColorForInternetGame: (_, input) =>
@@ -56,7 +57,6 @@ export function resolvers(
         updateMapForInternetGame(
           InternetGamePlayerRepository.findByToken(executeQuery),
           InternetGameConfigurationRepository.updateMap(executeQuery),
-          InternetGameConfigurationRepository.findById(executeQuery),
           pubsub,
           input
         )(),

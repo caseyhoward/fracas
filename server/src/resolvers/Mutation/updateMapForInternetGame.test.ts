@@ -31,20 +31,9 @@ describe("Mutation.updateMapForInternetGame", () => {
       return Promise.resolve(true);
     };
 
-    const findInternetGameById: InternetGameConfigurationRepository.FindById = async actualConfigurationId => {
-      expect(actualConfigurationId).toEqual(gameId);
-      return Promise.resolve({
-        ...Builders.internetGameConfiguration({ mapId }),
-        players: [{ ...Builders.playerConfiguration }],
-        id: gameId,
-        __typename: "InternetGameConfiguration"
-      });
-    };
-
     const result = await updateMapForInternetGame(
       findInternetGamePlayerByToken,
       updateMap,
-      findInternetGameById,
       pubSub,
       { mapId, playerToken }
     )();
@@ -64,7 +53,6 @@ describe("Mutation.updateMapForInternetGame", () => {
 
     await new Promise(async (resolve, _) => {
       pubSub.subscribe("INTERNET_GAME_CONFIGURATION_CHANGED", message => {
-        expect(message.internetGameOrConfiguration.id).toEqual(gameId);
         resolve();
       });
 
@@ -89,7 +77,6 @@ describe("Mutation.updateMapForInternetGame", () => {
       const result = await updateMapForInternetGame(
         findInternetGamePlayerByToken,
         updateMap,
-        findInternetGameById,
         pubSub,
         { mapId, playerToken }
       )();

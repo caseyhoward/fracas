@@ -40,6 +40,6 @@ export default async function joinInternetGame(
     players: updatedPlayers
   };
   await InternetGameConfigurationRepository.save(executeQuery, updatedGame);
-  PubSub.internetGameConfigurationChanged(pubSub, updatedGame);
+  PubSub.internetGameConfigurationChanged(pubSub);
   return playerToken;
 }

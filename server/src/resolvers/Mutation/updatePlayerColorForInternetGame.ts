@@ -35,6 +35,6 @@ export default async function updatePlayerNameForInternetGame(
     updatedConfiguration
   );
 
-  PubSub.internetGameConfigurationChanged(pubSub, configuration);
+  PubSub.internetGameConfigurationChanged(pubSub);
   return true;
 }
