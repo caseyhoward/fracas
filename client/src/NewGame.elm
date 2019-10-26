@@ -3,6 +3,7 @@ module NewGame exposing
     , colorButton
     , configurationSectionAttributes
     , mapConfiguration
+    , mapConfigurationFields
     , mapView
     , removePlayerButton
     , removePlayerButtonWidth
@@ -59,9 +60,58 @@ configurationSectionAttributes =
     ]
 
 
-mapConfiguration : List Map.Map -> Maybe String -> (String -> msg) -> Element.Element msg
-mapConfiguration maps selectedMapId toMessage =
+mapConfigurationFields : List Map.Map -> Maybe String -> (String -> msg) -> Element.Element msg
+mapConfigurationFields maps selectedMapId toMessage =
     Element.Lazy.lazy3 mapSelect maps selectedMapId toMessage
+
+
+mapConfiguration : List Map.Map -> Maybe String -> Element.Element msg
+mapConfiguration maps selectedMapId =
+    Element.Lazy.lazy2 mapConfigurationInner maps selectedMapId
+
+
+mapConfigurationInner : List Map.Map -> Maybe String -> Element.Element msg
+mapConfigurationInner maps selectedMapId =
+    Element.el
+        configurationSectionAttributes
+        (Element.column
+            [ Element.padding 8
+            , Element.spacing 20
+            ]
+            (Element.el [ Element.Font.bold ] (Element.text "Map")
+                :: (maps
+                        |> List.map
+                            (\map ->
+                                let
+                                    border =
+                                        if Just (map.id |> Map.idToString) == selectedMapId then
+                                            [ Element.Border.color (Colors.blue |> Colors.toElementColor)
+                                            , Element.Border.solid
+                                            , Element.Border.width 2
+                                            , Element.Background.color (Colors.lightBlue |> Colors.toElementColor)
+                                            , Element.Font.color (Colors.white |> Colors.toElementColor)
+                                            ]
+
+                                        else
+                                            [ Element.Border.color (Colors.charcoal |> Colors.toElementColor)
+                                            , Element.Background.color (Colors.white |> Colors.toElementColor)
+                                            , Element.Border.solid
+                                            , Element.Border.width 2
+                                            ]
+
+                                    -- Element.Input.Selected ->
+                                in
+                                Element.row
+                                    (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
+                                    [ Element.el
+                                        [ Element.width (Element.px 50) ]
+                                        (Element.Lazy.lazy2 mapView map.countries map.dimensions)
+                                    , Element.text map.name
+                                    ]
+                            )
+                   )
+            )
+        )
 
 
 mapSelect : List Map.Map -> Maybe String -> (String -> msg) -> Element.Element msg

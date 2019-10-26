@@ -322,7 +322,12 @@ viewConfiguring configuringModel =
                             (playerConfiguration (p |> Dict.toList) configuringModel.configuration.currentUserPlayerId)
                         , Element.el
                             [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
-                            (NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap)
+                            (if configuringModel.isCurrentUserHost then
+                                NewGame.mapConfigurationFields configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap
+
+                             else
+                                NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId))
+                            )
                         ]
                     )
                  ]
