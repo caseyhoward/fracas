@@ -8,6 +8,7 @@ module InternetGame exposing
     , gameOrConfigurationSelectionSet
     , gameSelectionSet
     , get
+    , internetGameOrConfigurationSubscriptionDocument
     , joinGame
     , joinTokenToString
     , joinTokenUrlParser
@@ -165,6 +166,11 @@ updateMap apiUrl playerToken mapId toMsg =
 subscriptionDocument : PlayerToken -> Graphql.SelectionSet.SelectionSet Game.Game Graphql.Operation.RootSubscription
 subscriptionDocument (PlayerToken playerToken) =
     Api.Subscription.internetGame { playerToken = playerToken } gameSelectionSet
+
+
+internetGameOrConfigurationSubscriptionDocument : PlayerToken -> Graphql.SelectionSet.SelectionSet GameOrConfiguration Graphql.Operation.RootSubscription
+internetGameOrConfigurationSubscriptionDocument (PlayerToken playerToken) =
+    Api.Subscription.internetGameOrConfiguration { playerToken = playerToken } gameOrConfigurationSelectionSet
 
 
 selectionSet : Graphql.SelectionSet.SelectionSet Game.GameWithCurrentUser Api.Object.InternetGame

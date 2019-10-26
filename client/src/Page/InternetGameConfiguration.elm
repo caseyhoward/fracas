@@ -1,4 +1,4 @@
-port module Page.InternetGameConfiguration exposing
+module Page.InternetGameConfiguration exposing
     ( Model
     , Msg
     , init
@@ -16,7 +16,6 @@ import Element
 import Element.Background
 import Element.Font
 import Element.Input
-import Game
 import Graphql.Document
 import Graphql.Http
 import Graphql.Operation
@@ -44,7 +43,7 @@ type Msg
     | UpdatePlayerName String
     | UpdatedColor (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
     | UpdatedPlayerName (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool)
-    | RemovePlayer String
+      -- | RemovePlayer String
     | StartGameClicked
     | SelectMap String
     | WindowResized Int Int
@@ -70,6 +69,7 @@ type alias ConfiguringModel =
     { session : Session.Session
     , configuration : InternetGame.Configuration
     , maps : List Map.Map
+    , subscriptionStatus : SubscriptionStatus
     , configureColor : Bool
     , playerToken : InternetGame.PlayerToken
     , isCurrentUserHost : Bool
@@ -106,8 +106,7 @@ init : Session.Session -> InternetGame.PlayerToken -> ( Model, Cmd Msg )
 init session playerToken =
     ( Loading { session = session, gameAndMaps = RemoteData.Loading, playerToken = playerToken }
     , Cmd.batch
-        [ Ports.createSubscriptions (InternetGame.subscriptionDocument playerToken |> Graphql.Document.serializeSubscription)
-        , getGameAndMaps session.apiUrl playerToken GotGameAndMaps
+        [ getGameAndMaps session.apiUrl playerToken GotGameAndMaps
         ]
     )
 
@@ -136,18 +135,37 @@ update msg model =
                                         { session = loadingModel.session
                                         , configuration = configuration
                                         , maps = gameAndMaps.maps
+                                        , subscriptionStatus = NotConnected
                                         , playerToken = loadingModel.playerToken
                                         , configureColor = False
                                         , isCurrentUserHost = configuration.isCurrentUserHost
                                         }
-                                    , Cmd.none
+                                    , Ports.createSubscriptions (InternetGame.internetGameOrConfigurationSubscriptionDocument loadingModel.playerToken |> Graphql.Document.serializeSubscription)
                                     )
 
                                 InternetGame.InternetGame _ ->
                                     ( model, Route.pushUrl (Session.navKey loadingModel.session) (Route.InternetGame loadingModel.playerToken) )
 
                         _ ->
-                            ( Loading { loadingModel | gameAndMaps = gameRemoteData }, Cmd.none )
+                            ( Loading { loadingModel | gameAndMaps = gameRemoteData }
+                            , Cmd.none
+                            )
+
+                SubscriptionDataReceived newData ->
+                    case Json.Decode.decodeValue (InternetGame.internetGameOrConfigurationSubscriptionDocument loadingModel.playerToken |> Graphql.Document.decoder) newData of
+                        Ok updatedGameOrConfiguration ->
+                            case updatedGameOrConfiguration of
+                                InternetGame.InternetGame _ ->
+                                    ( model, Route.pushUrl (Session.navKey loadingModel.session) (Route.InternetGame loadingModel.playerToken) )
+
+                                InternetGame.InternetGameConfiguration configuration ->
+                                    ( model, Cmd.none )
+
+                        Err _ ->
+                            ( model, Cmd.none )
+
+                NewSubscriptionStatus newStatus () ->
+                    ( model, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -226,7 +244,7 @@ update msg model =
                 GotGameAndMaps _ ->
                     ( model, Cmd.none )
 
-                GameStarted game ->
+                GameStarted _ ->
                     ( model, Route.pushUrl (Session.navKey configuringModel.session) (Route.InternetGame configuringModel.playerToken) )
 
                 UpdatedColor _ ->
@@ -237,37 +255,27 @@ update msg model =
                     -- TODO: Check errors, possibly show as offline somehow, retry with exponential backoff
                     ( model, Cmd.none )
 
-                RemovePlayer _ ->
-                    -- TODO: Check errors, possibly show as offline somehow, retry with exponential backoff
-                    ( model, Cmd.none )
-
+                -- RemovePlayer _ ->
+                --     -- TODO: Check errors, possibly show as offline somehow, retry with exponential backoff
+                --     ( model, Cmd.none )
                 WindowResized _ _ ->
                     ( model, Cmd.none )
 
-                SubscriptionDataReceived _ ->
-                    ( model, Cmd.none )
+                SubscriptionDataReceived newData ->
+                    case Json.Decode.decodeValue (InternetGame.internetGameOrConfigurationSubscriptionDocument configuringModel.playerToken |> Graphql.Document.decoder) newData of
+                        Ok updatedGameOrConfiguration ->
+                            case updatedGameOrConfiguration of
+                                InternetGame.InternetGame _ ->
+                                    ( model, Route.pushUrl (Session.navKey configuringModel.session) (Route.InternetGame configuringModel.playerToken) )
 
-                NewSubscriptionStatus _ _ ->
-                    ( model, Cmd.none )
+                                InternetGame.InternetGameConfiguration updatedConfiguration ->
+                                    ( Configuring { configuringModel | configuration = updatedConfiguration }, Cmd.none )
 
+                        Err _ ->
+                            ( model, Cmd.none )
 
-
--- SubscriptionDataReceived newData ->
---     Debug.todo ""
--- -- case Json.Decode.decodeValue (InternetGame.subscriptionDocument playingModel.playerToken |> Graphql.Document.decoder) newData of
--- --     Ok game ->
--- --         let
--- --             gameModel =
--- --                 playingModel.gameModel
--- --         in
--- --         ( Playing { playingModel | gameModel = { gameModel | activeGame = game } }, Cmd.none )
--- --     Err error ->
--- --         ( model, Cmd.none )
--- NewSubscriptionStatus newStatus () ->
---     Debug.todo ""
--- -- ( Playing { playingModel | subscriptionStatus = newStatus }, Cmd.none )
--- _ ->
---     ( model, Cmd.none )
+                NewSubscriptionStatus newStatus () ->
+                    ( Configuring { configuringModel | subscriptionStatus = newStatus }, Cmd.none )
 
 
 view : Model -> { title : String, content : Html.Html Msg }
@@ -504,8 +512,8 @@ layout overlay body =
 
 
 subscriptions : Model -> Sub Msg
-subscriptions model =
-    [ Browser.Events.onResize (\x y -> WindowResized x y)
+subscriptions _ =
+    [ Browser.Events.onResize WindowResized
     , Ports.gotSubscriptionData SubscriptionDataReceived
     , Ports.socketStatusConnected (NewSubscriptionStatus Connected)
     , Ports.socketStatusReconnecting (NewSubscriptionStatus Reconnecting)

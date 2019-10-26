@@ -4,6 +4,7 @@ import * as InternetGameConfigurationRepository from "../../repositories/Interne
 import updatePlayerColorForInternetGame from "./updatePlayerColorForInternetGame";
 import * as TestDatabase from "../../test/TestDatabase";
 import * as Color from "../../models/Color";
+import { PubSub } from "graphql-yoga";
 
 describe("Mutation.updatePlayerColorForInternetGame", () => {
   it("works", async () => {
@@ -37,7 +38,7 @@ describe("Mutation.updatePlayerColorForInternetGame", () => {
       TestDatabase.query,
       updatedConfiguration
     );
-    await updatePlayerColorForInternetGame(TestDatabase.query, {
+    await updatePlayerColorForInternetGame(TestDatabase.query, new PubSub(), {
       playerToken: internetGamePlayer.playerToken,
       color: Color.black
     });

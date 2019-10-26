@@ -53,9 +53,9 @@ export function resolvers(
       createInternetGame: () => createInternetGame(executeQuery),
       startInternetGame: (_, input) => startInternetGame(executeQuery, input),
       updatePlayerNameForInternetGame: (_, input) =>
-        updatePlayerNameForInternetGame(executeQuery, input),
+        updatePlayerNameForInternetGame(executeQuery, pubsub, input),
       updatePlayerColorForInternetGame: (_, input) =>
-        updatePlayerColorForInternetGame(executeQuery, input),
+        updatePlayerColorForInternetGame(executeQuery, pubsub, input),
       updateMapForInternetGame,
       saveInternetGame: async (_, input) =>
         saveInternetGame(executeQuery, pubsub, input),

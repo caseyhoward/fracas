@@ -18,27 +18,7 @@ export default async function internetGame(
     const configuration = await InternetGameConfigurationRepository.findById(
       executeQuery
     )(player.gameId);
-    const players: graphql.InternetGamePlayerConfiguration[] = configuration.players.map(
-      player => {
-        return {
-          ...player,
-          __typename: "InternetGamePlayerConfiguration",
-          playerId: player.playerId
-        };
-      }
-    );
-    return {
-      __typename: "InternetGameConfiguration",
-      id: configuration.id,
-      players: players,
-      mapId: configuration.mapId.toString(),
-      joinToken: configuration.joinToken,
-      currentUserPlayerId: player.id,
-      isCurrentUserHost: Player.isCurrentUserHost(
-        player.id,
-        configuration.players
-      )
-    };
+    return Models.internetGameConfigurationToGraphQl(player, configuration);
   } catch (error) {
     const internetGame = await InternetGameRepository.findById(executeQuery)(
       player.gameId

@@ -171,3 +171,30 @@ export function internetGameToGraphql(
     })
   };
 }
+
+export function internetGameConfigurationToGraphQl(
+  player: InternetGamePlayer,
+  configuration: InternetGameConfiguration
+): Graphql.InternetGameConfiguration {
+  const players: Graphql.InternetGamePlayerConfiguration[] = configuration.players.map(
+    player => {
+      return {
+        ...player,
+        __typename: "InternetGamePlayerConfiguration",
+        playerId: player.playerId
+      };
+    }
+  );
+  return {
+    __typename: "InternetGameConfiguration",
+    id: configuration.id,
+    players: players,
+    mapId: configuration.mapId.toString(),
+    joinToken: configuration.joinToken,
+    currentUserPlayerId: player.id,
+    isCurrentUserHost: Player.isCurrentUserHost(
+      player.id,
+      configuration.players
+    )
+  };
+}

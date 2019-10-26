@@ -3,6 +3,7 @@ import * as Builders from "../../test/Builders";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import updatePlayerNameForInternetGame from "./updatePlayerNameForInternetGame";
 import * as TestDatabase from "../../test/TestDatabase";
+import { PubSub } from "graphql-yoga";
 
 describe("Mutation.updatePlayerNameForInternetGame", () => {
   it("works", async () => {
@@ -30,7 +31,7 @@ describe("Mutation.updatePlayerNameForInternetGame", () => {
       TestDatabase.query,
       updatedConfiguration
     );
-    await updatePlayerNameForInternetGame(TestDatabase.query, {
+    await updatePlayerNameForInternetGame(TestDatabase.query, new PubSub(), {
       playerToken: internetGamePlayer.playerToken,
       name: "new name"
     });

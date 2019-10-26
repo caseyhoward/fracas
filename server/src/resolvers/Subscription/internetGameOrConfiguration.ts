@@ -16,7 +16,7 @@ export function buildSubscribe(pubSub: PubSub.PubSub) {
     any,
     Graphql.RequireFields<Graphql.SubscriptionInternetGameArgs, "playerToken">
   > = (_, input) => {
-    return (<any>pubSub).asyncIterator(INTERNET_GAME_CHANGED);
+    return (<any>pubSub).asyncIterator("INTERNET_GAME_CONFIGURATION_CHANGED");
   };
 
   return subscribe;
@@ -36,27 +36,7 @@ export function buildResolve(
     const player = await findPlayerByToken(input.playerToken);
     try {
       const configuration = await findConfigurationById(player.gameId);
-      const players: Graphql.InternetGamePlayerConfiguration[] = configuration.players.map(
-        player => {
-          return {
-            ...player,
-            __typename: "InternetGamePlayerConfiguration",
-            playerId: player.playerId
-          };
-        }
-      );
-      return {
-        __typename: "InternetGameConfiguration",
-        id: configuration.id,
-        players: players,
-        mapId: configuration.mapId.toString(),
-        joinToken: configuration.joinToken,
-        currentUserPlayerId: player.id,
-        isCurrentUserHost: Player.isCurrentUserHost(
-          player.id,
-          configuration.players
-        )
-      };
+      return Models.internetGameConfigurationToGraphQl(player, configuration);
     } catch (error) {
       const internetGame = await findGameById(player.gameId);
 

@@ -1,10 +1,13 @@
 import * as Database from "../../Database";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
+import * as PubSub from "../../PubSub";
+import * as Models from "../../repositories/Models";
 import * as Graphql from "../../api/graphql";
 
 export default async function updatePlayerNameForInternetGame(
   executeQuery: Database.ExecuteQuery,
+  pubSub: PubSub.PubSub,
   input: Graphql.RequireFields<
     Graphql.MutationUpdatePlayerNameForInternetGameArgs,
     "name" | "playerToken"
@@ -30,5 +33,12 @@ export default async function updatePlayerNameForInternetGame(
     executeQuery,
     updatedConfiguration
   );
+  const message = {
+    internetGameOrConfiguration: Models.internetGameConfigurationToGraphQl(
+      internetGamePlayer,
+      configuration
+    )
+  };
+  pubSub.publish("INTERNET_GAME_CONFIGURATION_CHANGED", message);
   return true;
 }
