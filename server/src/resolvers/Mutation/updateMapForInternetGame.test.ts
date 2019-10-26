@@ -59,21 +59,14 @@ describe("Mutation.updateMapForInternetGame", () => {
       const findInternetGamePlayerByToken: InternetGamePlayerRepository.FindByToken = async actualPlayerToken => {
         return Promise.resolve(internetGamePlayer);
       };
+
       const updateMap: InternetGameConfigurationRepository.UpdateMap = async (
         _,
         __
       ) => {
         return Promise.resolve(true);
       };
-      const findInternetGameById: InternetGameConfigurationRepository.FindById = async actualConfigurationId => {
-        expect(actualConfigurationId).toEqual(gameId);
-        return Promise.resolve({
-          ...Builders.internetGameConfiguration({ mapId }),
-          players: [{ ...Builders.playerConfiguration }],
-          id: gameId,
-          __typename: "InternetGameConfiguration"
-        });
-      };
+
       const result = await updateMapForInternetGame(
         findInternetGamePlayerByToken,
         updateMap,

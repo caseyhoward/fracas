@@ -37,7 +37,6 @@ async function startServer() {
         },
         onDisconnect: (_: any, __: any) => {
           console.log("Disconnected");
-          // ...
         }
       }
     };

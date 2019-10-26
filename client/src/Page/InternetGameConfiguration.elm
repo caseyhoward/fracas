@@ -158,7 +158,7 @@ update msg model =
                                 InternetGame.InternetGame _ ->
                                     ( model, Route.pushUrl (Session.navKey loadingModel.session) (Route.InternetGame loadingModel.playerToken) )
 
-                                InternetGame.InternetGameConfiguration configuration ->
+                                InternetGame.InternetGameConfiguration _ ->
                                     ( model, Cmd.none )
 
                         Err _ ->
@@ -386,17 +386,17 @@ toPlayerFields currentUserPlayerId players =
         addPlayerField ( playerId, player ) fields =
             case fields of
                 PlayerFieldsWithCurrentUserCase playerFields ->
-                    PlayerFieldsWithCurrentUserCase { playerFields | playersAfter = ( playerId, player ) :: playerFields.playersAfter }
+                    PlayerFieldsWithCurrentUserCase { playerFields | playersBefore = ( playerId, player ) :: playerFields.playersBefore }
 
                 PlayerFieldsWithoutCurrentUserCase playerFields ->
                     if currentUserPlayerId == playerId then
-                        PlayerFieldsWithCurrentUserCase { playersBefore = playerFields, currentUserPlayer = ( playerId, player ), playersAfter = [] }
+                        PlayerFieldsWithCurrentUserCase { playersBefore = [], currentUserPlayer = ( playerId, player ), playersAfter = playerFields }
 
                     else
                         PlayerFieldsWithoutCurrentUserCase (( playerId, player ) :: playerFields)
     in
     players
-        |> List.foldl
+        |> List.foldr
             addPlayerField
             (PlayerFieldsWithoutCurrentUserCase [])
 
