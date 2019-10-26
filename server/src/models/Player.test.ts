@@ -5,9 +5,17 @@ import * as Builders from "../test/Builders";
 describe("Player.getNextAvailablePlayerColor", () => {
   it("gets the next color that a player isn't already using", async () => {
     const playerConfigurations: Player.PlayerConfiguration[] = [
-      Builders.playerConfiguration({ id: "1", color: Color.darkGreen }),
-      Builders.playerConfiguration({ id: "2", color: Color.lightYellow }),
-      Builders.playerConfiguration({ id: "3", color: Color.orange })
+      {
+        ...Builders.playerConfiguration,
+        playerId: "1",
+        color: Color.darkGreen
+      },
+      {
+        ...Builders.playerConfiguration,
+        playerId: "2",
+        color: Color.lightYellow
+      },
+      { ...Builders.playerConfiguration, playerId: "3", color: Color.orange }
     ];
     const color = await Player.getNextAvailablePlayerColor(
       playerConfigurations

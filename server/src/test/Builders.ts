@@ -36,22 +36,18 @@ export function map(options: MapOptions): Models.NewMap {
   };
 }
 
-interface PlayerOptions {
-  id: string;
-  name?: string;
-  color?: Color.Color;
-}
+// interface PlayerOptions {
+//   id?: string;
+//   name?: string;
+//   color?: Color.Color;
+// }
 
-export function playerConfiguration(
-  options: PlayerOptions
-): Player.PlayerConfiguration {
-  return {
-    __typename: "PlayerConfiguration",
-    name: options.name || "Player " + Uuid.generate(),
-    color: options.color || Color.black,
-    playerId: options.id
-  };
-}
+export const playerConfiguration: Player.PlayerConfiguration = {
+  __typename: "PlayerConfiguration",
+  name: "Player " + Uuid.generate(),
+  color: Color.black,
+  playerId: Uuid.generate()
+};
 
 export function internetGame(id: string): Models.InternetGame {
   return {

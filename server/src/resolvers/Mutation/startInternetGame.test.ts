@@ -14,7 +14,7 @@ describe("Mutation.startInternetGame", () => {
     await InternetGameConfigurationRepository.addPlayer(
       TestDatabase.query,
       configuration.id,
-      Builders.playerConfiguration({ id: host.id })
+      { ...Builders.playerConfiguration, playerId: host.id }
     );
     await startInternetGame(TestDatabase.query, {
       playerToken: host.playerToken
@@ -36,12 +36,12 @@ describe("Mutation.startInternetGame", () => {
     await InternetGameConfigurationRepository.addPlayer(
       TestDatabase.query,
       configuration.id,
-      Builders.playerConfiguration({ id: host.id })
+      { ...Builders.playerConfiguration, playerId: host.id }
     );
     await InternetGameConfigurationRepository.addPlayer(
       TestDatabase.query,
       configuration.id,
-      Builders.playerConfiguration({ id: notHost.id })
+      { ...Builders.playerConfiguration, playerId: notHost.id }
     );
     await startInternetGame(TestDatabase.query, {
       playerToken: notHost.playerToken

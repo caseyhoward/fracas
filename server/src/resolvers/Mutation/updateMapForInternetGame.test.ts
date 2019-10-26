@@ -1,12 +1,12 @@
 import * as Factories from "../../test/Factories";
 import * as Builders from "../../test/Builders";
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
-import updatePlayerColorForInternetGame from "./updatePlayerColorForInternetGame";
+import { updateMapForInternetGame } from "./updateMapForInternetGame";
 import * as TestDatabase from "../../test/TestDatabase";
 import * as Color from "../../models/Color";
 import { PubSub } from "graphql-yoga";
 
-describe("Mutation.updatePlayerColorForInternetGame", () => {
+describe("Mutation.updateMapForInternetGame", () => {
   it("works", async () => {
     const internetGameConfiguration = await Factories.createInternetGameConfiguration(
       {}
@@ -20,26 +20,26 @@ describe("Mutation.updatePlayerColorForInternetGame", () => {
     const updatedConfiguration = {
       ...configuration,
       players: [
-        { ...Builders.playerConfiguration, playerIdd: "1", color: Color.red },
+        { ...Builders.playerConfiguration, color: Color.red },
         {
           ...Builders.playerConfiguration,
-          playerIdd: internetGamePlayer.id,
-          color: Color.green
+          id: internetGamePlayer.id,
+          color: Color.red
         },
-        { ...Builders.playerConfiguration, playerIdd: "3", color: Color.blue }
+        { ...Builders.playerConfiguration, color: Color.red }
       ]
     };
     await InternetGameConfigurationRepository.save(
       TestDatabase.query,
       updatedConfiguration
     );
-    await updatePlayerColorForInternetGame(TestDatabase.query, new PubSub(), {
-      playerToken: internetGamePlayer.playerToken,
-      color: Color.black
-    });
-    const retrievedConfiguration = await InternetGameConfigurationRepository.findById(
-      TestDatabase.query
-    )(internetGameConfiguration.id);
-    expect(retrievedConfiguration.players[1].color).toEqual(Color.black);
+    // await updateMapForInternetGame(TestDatabase.query, new PubSub(), {
+    //   playerToken: internetGamePlayer.playerToken,
+    //   color: Color.black
+    // });
+    // const retrievedConfiguration = await InternetGameConfigurationRepository.findById(
+    //   TestDatabase.query
+    // )(internetGameConfiguration.id);
+    // expect(retrievedConfiguration.players[1].color).toEqual(Color.black);
   });
 });

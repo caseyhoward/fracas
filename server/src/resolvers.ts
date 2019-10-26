@@ -84,21 +84,4 @@ export function resolvers(
     }
   };
 
-  async function updateMapForInternetGame(
-    _: any,
-    input: RequireFields<
-      MutationUpdateMapForInternetGameArgs,
-      "playerToken" | "mapId"
-    >
-  ): Promise<boolean> {
-    const player = await InternetGamePlayerRepository.findByToken(executeQuery)(
-      input.playerToken
-    );
-    await InternetGameConfigurationRepository.updateMap(
-      executeQuery,
-      player.gameId.toString(),
-      parseInt(input.mapId, 10)
-    );
-    return true;
-  }
 }

@@ -18,10 +18,11 @@ describe("InternetGameConfigurationRepository.addPlayer", () => {
       TestDatabase.query,
       newConfiguration
     );
-    const player: Player.PlayerConfiguration = Builders.playerConfiguration({
-      id: "123",
+    const player: Player.PlayerConfiguration = {
+      ...Builders.playerConfiguration,
+      playerId: "123",
       name: "test name"
-    });
+    };
     await InternetGameConfigurationRepository.addPlayer(
       TestDatabase.query,
       configurationId,
