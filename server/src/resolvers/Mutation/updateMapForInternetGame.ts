@@ -2,16 +2,14 @@ import * as InternetGamePlayerRepository from "../../repositories/InternetGamePl
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as Graphql from "../../api/graphql";
 import * as Database from "../../Database";
-import { PubSub } from "../../PubSub";
+import * as PubSub from "../../PubSub";
 
-export type UpdateMapForInternetGame = (
-  playerToken: string,
-  mapId: string
-) => Promise<boolean>;
+export type UpdateMapForInternetGame = () => Promise<boolean>;
 
 export type UpdateMapForInternetGameConstructor = (
-  executeQuery: Database.ExecuteQuery,
-  pubsub: PubSub,
+  findInternetGamePlayerByToken: InternetGamePlayerRepository.FindByToken,
+  updateMapForInternetGame: InternetGameConfigurationRepository.UpdateMap,
+  pubsub: PubSub.PubSub,
   input: Graphql.RequireFields<
     Graphql.MutationUpdateMapForInternetGameArgs,
     "mapId" | "playerToken"
@@ -19,31 +17,41 @@ export type UpdateMapForInternetGameConstructor = (
 ) => UpdateMapForInternetGame;
 
 type UpdateMapForInternetGameExecutor = (
-  executeQuery: Database.ExecuteQuery,
+  findInternetGamePlayerByToken: InternetGamePlayerRepository.FindByToken,
+  updateMapForInternetGame: InternetGameConfigurationRepository.UpdateMap,
+  pubSub: PubSub.PubSub,
   playerToken: string,
   mapId: string
 ) => Promise<boolean>;
 
 export const updateMapForInternetGame: UpdateMapForInternetGameConstructor = (
-  executeQuery: Database.ExecuteQuery,
-  pubsub: PubSub
+  findInternetGamePlayerByToken: InternetGamePlayerRepository.FindByToken,
+  updateMapForInternetGame: InternetGameConfigurationRepository.UpdateMap,
+  pubSub: PubSub.PubSub,
+  input: Graphql.RequireFields<
+    Graphql.MutationUpdateMapForInternetGameArgs,
+    "mapId" | "playerToken"
+  >
 ) => {
-  return (playerToken, mapId) => {
-    return executUpdateMapForInternetGame(executeQuery, playerToken, mapId);
+  return () => {
+    return executUpdateMapForInternetGame(
+      findInternetGamePlayerByToken,
+      updateMapForInternetGame,
+      pubSub,
+      input.playerToken,
+      input.mapId
+    );
   };
 };
 
 const executUpdateMapForInternetGame: UpdateMapForInternetGameExecutor = async (
-  executeQuery,
+  findInternetGamePlayerByToken,
+  updateMapForInternetGame,
+  pubSub,
   playerToken,
   mapId
 ) => {
-  const player = await InternetGamePlayerRepository.findByToken(executeQuery)(
-    playerToken
-  );
-  await InternetGameConfigurationRepository.updateMap(executeQuery)(
-    player.gameId.toString(),
-    mapId
-  );
+  const player = await findInternetGamePlayerByToken(playerToken);
+  await updateMapForInternetGame(player.gameId.toString(), mapId);
   return true;
 };

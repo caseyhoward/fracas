@@ -40,6 +40,6 @@ export default async function updatePlayerNameForInternetGame(
       configuration
     )
   };
-  pubSub.publish("INTERNET_GAME_CONFIGURATION_CHANGED", message);
+  pubSub.publish(PubSub.INTERNET_GAME_CONFIGURATION_CHANGED, message);
   return true;
 }

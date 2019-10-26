@@ -1,11 +1,8 @@
-import * as Database from "../../Database";
 import * as Graphql from "../../api/graphql";
 import * as Models from "../../repositories/Models";
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import * as PubSub from "../../PubSub";
-
-export const INTERNET_GAME_CHANGED = "INTERNET_GAME_CHANGED";
 
 export function buildSubscribe(pubSub: PubSub.PubSub) {
   const subscribe: Graphql.SubscriptionSubscribeFn<
@@ -14,7 +11,7 @@ export function buildSubscribe(pubSub: PubSub.PubSub) {
     any,
     Graphql.RequireFields<Graphql.SubscriptionInternetGameArgs, "playerToken">
   > = (_, input) => {
-    return (<any>pubSub).asyncIterator(INTERNET_GAME_CHANGED);
+    return (<any>pubSub).asyncIterator(PubSub.INTERNET_GAME_CHANGED);
   };
 
   return subscribe;

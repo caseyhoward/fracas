@@ -26,6 +26,7 @@ import * as SubscriptionInternetGame from "./resolvers/Subscription/internetGame
 import * as SubscriptionInternetGameOrConfiguration from "./resolvers/Subscription/internetGameOrConfiguration";
 import { IResolvers } from "graphql-tools";
 import * as PubSub from "./PubSub";
+import { internetGameConfiguration } from "./test/Builders";
 
 export function resolvers(
   executeQuery: Database.ExecuteQuery,
@@ -58,7 +59,12 @@ export function resolvers(
       updatePlayerColorForInternetGame: (_, input) =>
         updatePlayerColorForInternetGame(executeQuery, pubsub, input),
       updateMapForInternetGame: (_, input) =>
-        updateMapForInternetGame(executeQuery, pubsub, input),
+        updateMapForInternetGame(
+          InternetGamePlayerRepository.findByToken(executeQuery),
+          InternetGameConfigurationRepository.updateMap(executeQuery),
+          pubsub,
+          input
+        ),
       saveInternetGame: async (_, input) =>
         saveInternetGame(executeQuery, pubsub, input),
       saveGame: async (_, saveGame) => {

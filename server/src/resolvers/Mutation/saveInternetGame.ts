@@ -6,8 +6,6 @@ import * as Color from "../../models/Color";
 import * as Graphql from "../../api/graphql";
 import * as PubSub from "../../PubSub";
 
-export const INTERNET_GAME_CHANGED = "INTERNET_GAME_CHANGED";
-
 export default async function saveInternetGame(
   executeQuery: Database.ExecuteQuery,
   pubSub: PubSub.PubSub,
@@ -58,7 +56,7 @@ export default async function saveInternetGame(
   const message = {
     internetGame: Models.internetGameToGraphql(internetGame, player.id)
   };
-  pubSub.publish(INTERNET_GAME_CHANGED, message);
+  pubSub.publish(PubSub.INTERNET_GAME_CHANGED, message);
 
   return true;
 }
