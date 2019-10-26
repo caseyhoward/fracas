@@ -224,7 +224,7 @@ viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatu
         , Element.Border.color black
         , Element.Border.solid
         ]
-        [ viewPassButtonIfNecessary activeGame.currentPlayerTurn
+        [ viewPassButtonIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
         , viewPlayerCountryAndTroopCountsMobile activeGame.currentPlayerTurn activeGame.players
         , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn
         , viewCountryInfo activeGame countryBorderHelperOutlineStatus
@@ -244,7 +244,7 @@ viewInfoPanelDesktop activeGame showAvailableMoves countryBorderHelperOutlineSta
         , Element.Border.color black
         , Element.Border.solid
         ]
-        [ viewPassButtonIfNecessary activeGame.currentPlayerTurn
+        [ viewPassButtonIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
         , viewPlayerCountryAndTroopCounts activeGame.currentPlayerTurn activeGame.players
         , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn
         , viewCountryInfo activeGame countryBorderHelperOutlineStatus
@@ -268,13 +268,13 @@ viewShowAvailableMoves showAvailableMoves =
         ]
 
 
-viewPassButtonIfNecessary : PlayerTurn.PlayerTurn -> Element.Element Msg
-viewPassButtonIfNecessary currentPlayerTurn =
+viewPassButtonIfNecessary : PlayerTurn.PlayerTurn -> Bool -> Element.Element Msg
+viewPassButtonIfNecessary currentPlayerTurn isCurrentUserPlayerTurn =
     Element.el
         [ Element.width Element.fill
         , Element.height (Element.px 50)
         ]
-        (if PlayerTurn.canCurrentPlayerPass currentPlayerTurn then
+        (if isCurrentUserPlayerTurn && PlayerTurn.canCurrentPlayerPass currentPlayerTurn then
             Element.Input.button
                 (ViewHelpers.defaultButtonAttributes
                     ++ [ Element.width (Element.px 120)
