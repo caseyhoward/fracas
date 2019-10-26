@@ -12,9 +12,7 @@ export function buildSubscribe(pubSub: PubSub.PubSub) {
     any,
     Graphql.RequireFields<Graphql.SubscriptionInternetGameArgs, "playerToken">
   > = (_, input) => {
-    return (<any>pubSub).asyncIterator(
-      PubSub.INTERNET_GAME_CONFIGURATION_CHANGED
-    );
+    return PubSub.internetGameConfigurationChangedIterator(pubSub);
   };
 
   return subscribe;

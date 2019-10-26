@@ -53,10 +53,7 @@ export default async function saveInternetGame(
 
   await InternetGameRepository.save(executeQuery, internetGame);
 
-  const message = {
-    internetGame: Models.internetGameToGraphql(internetGame, player.id)
-  };
-  pubSub.publish(PubSub.INTERNET_GAME_CHANGED, message);
+  PubSub.internetGameChanged(pubSub, internetGame, player.id);
 
   return true;
 }

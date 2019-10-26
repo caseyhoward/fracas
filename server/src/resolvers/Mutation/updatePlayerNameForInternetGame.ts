@@ -33,12 +33,11 @@ export default async function updatePlayerNameForInternetGame(
     executeQuery,
     updatedConfiguration
   );
-  const message = {
-    internetGameOrConfiguration: Models.internetGameConfigurationToGraphQl(
-      internetGamePlayer,
-      configuration
-    )
-  };
-  pubSub.publish(PubSub.INTERNET_GAME_CONFIGURATION_CHANGED, message);
+
+  PubSub.internetGameConfigurationChanged(
+    pubSub,
+    configuration,
+    internetGamePlayer
+  );
   return true;
 }
