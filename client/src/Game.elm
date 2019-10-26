@@ -3,7 +3,6 @@ module Game exposing
     , CountryBorderHelperOutlineStatus(..)
     , CountryStatus(..)
     , Game
-    -- , GameWithCurrentUser
     , Id(..)
     , Model
     , Msg(..)
@@ -47,7 +46,6 @@ import TroopCount
 import ViewHelpers
 
 
-
 idToString : Id -> String
 idToString (Id id) =
     id
@@ -73,6 +71,7 @@ type alias Game =
 
 type Id
     = Id String
+
 
 type CountryBorderHelperOutlineStatus
     = CountryBorderHelperOutlineWaitingForDelay Country.Id
@@ -132,7 +131,6 @@ view model windowSize toMsg =
             viewGame model windowSize
     in
     { title = title, content = content |> Html.map toMsg }
-
 
 
 countryBorderColor : Colors.Color
@@ -226,7 +224,7 @@ viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatu
         ]
         [ viewPassButtonIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
         , viewPlayerCountryAndTroopCountsMobile activeGame.currentPlayerTurn activeGame.players
-        , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn
+        , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
         , viewCountryInfo activeGame countryBorderHelperOutlineStatus
         , viewShowAvailableMoves showAvailableMoves
         ]
@@ -246,7 +244,7 @@ viewInfoPanelDesktop activeGame showAvailableMoves countryBorderHelperOutlineSta
         ]
         [ viewPassButtonIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
         , viewPlayerCountryAndTroopCounts activeGame.currentPlayerTurn activeGame.players
-        , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn
+        , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
         , viewCountryInfo activeGame countryBorderHelperOutlineStatus
         , viewShowAvailableMoves showAvailableMoves
         ]
@@ -528,38 +526,42 @@ defaultLabelAttributes =
     ]
 
 
-viewConfigureTroopCountIfNecessary : PlayerTurn.PlayerTurn -> Element.Element Msg
-viewConfigureTroopCountIfNecessary currentPlayerTurn =
+viewConfigureTroopCountIfNecessary : PlayerTurn.PlayerTurn -> Bool -> Element.Element Msg
+viewConfigureTroopCountIfNecessary currentPlayerTurn isCurrentUsersTurn =
     Element.el
         [ Element.width Element.fill
         ]
-        (case currentPlayerTurn |> PlayerTurn.troopsToMove of
-            Just numberOfTroopsToMove ->
-                Element.column
-                    [ Element.width Element.fill
-                    , Element.padding 10
-                    ]
-                    [ Element.Input.text
-                        (ViewHelpers.defaultTextInputAttributes ++ [ Element.alignLeft ])
-                        { onChange = UpdateNumberOfTroopsToMove
-                        , placeholder = Nothing
-                        , label = Element.Input.labelAbove (defaultLabelAttributes ++ [ Element.alignLeft ]) (Element.text "Number of troops to move")
-                        , text = numberOfTroopsToMove
-                        }
-                    , Element.Input.button
-                        (ViewHelpers.defaultButtonAttributes
-                            ++ [ Element.width Element.fill
-                               , Element.centerX
-                               , Element.Font.color (Element.rgb255 255 255 255)
-                               , Element.Background.color (Element.rgb255 255 63 63)
-                               , Element.moveDown 10
-                               ]
-                        )
-                        { onPress = Just CancelMovingTroops, label = ViewHelpers.centerText "Cancel" }
-                    ]
+        (if isCurrentUsersTurn then
+            case currentPlayerTurn |> PlayerTurn.troopsToMove of
+                Just numberOfTroopsToMove ->
+                    Element.column
+                        [ Element.width Element.fill
+                        , Element.padding 10
+                        ]
+                        [ Element.Input.text
+                            (ViewHelpers.defaultTextInputAttributes ++ [ Element.alignLeft ])
+                            { onChange = UpdateNumberOfTroopsToMove
+                            , placeholder = Nothing
+                            , label = Element.Input.labelAbove (defaultLabelAttributes ++ [ Element.alignLeft ]) (Element.text "Number of troops to move")
+                            , text = numberOfTroopsToMove
+                            }
+                        , Element.Input.button
+                            (ViewHelpers.defaultButtonAttributes
+                                ++ [ Element.width Element.fill
+                                   , Element.centerX
+                                   , Element.Font.color (Element.rgb255 255 255 255)
+                                   , Element.Background.color (Element.rgb255 255 63 63)
+                                   , Element.moveDown 10
+                                   ]
+                            )
+                            { onPress = Just CancelMovingTroops, label = ViewHelpers.centerText "Cancel" }
+                        ]
 
-            Nothing ->
-                Element.none
+                Nothing ->
+                    Element.none
+
+         else
+            Element.none
         )
 
 
@@ -1669,5 +1671,3 @@ type alias CountryAttackersForPlayer =
     { neighboringCountryAttackers : Dict.Dict String TroopCount.TroopCount
     , neighboringThroughWaterAttackers : Dict.Dict String TroopCount.TroopCount
     }
-
-
