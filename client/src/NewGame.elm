@@ -79,8 +79,9 @@ mapConfigurationInner maps selectedMapId =
         (Element.column
             [ Element.padding 8
             , Element.spacing 20
+            , Element.width Element.fill
             ]
-            (Element.el [ Element.Font.bold ] (Element.text "Map")
+            (Element.el [ Element.Font.bold, Element.width Element.fill ] (Element.text "Map")
                 :: (maps
                         |> List.map
                             (\map ->
@@ -100,11 +101,9 @@ mapConfigurationInner maps selectedMapId =
                                             , Element.Border.solid
                                             , Element.Border.width 2
                                             ]
-
-                                    -- Element.Input.Selected ->
                                 in
                                 Element.row
-                                    (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
+                                    (Element.width Element.fill :: Element.spacing 10 :: Element.padding 10 :: border)
                                     [ Element.el
                                         [ Element.width (Element.px 50) ]
                                         (Element.Lazy.lazy2 mapView map.countries map.dimensions)

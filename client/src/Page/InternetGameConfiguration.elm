@@ -72,6 +72,7 @@ type alias ConfiguringModel =
     , subscriptionStatus : SubscriptionStatus
     , configureColor : Bool
     , playerToken : InternetGame.PlayerToken
+    , playerName : String
     , isCurrentUserHost : Bool
     }
 
@@ -139,6 +140,17 @@ update msg model =
                                         , playerToken = loadingModel.playerToken
                                         , configureColor = False
                                         , isCurrentUserHost = configuration.isCurrentUserHost
+                                        , playerName =
+                                            case
+                                                configuration.players
+                                                    |> List.filter (\player -> player.id == configuration.currentUserPlayerId)
+                                                    |> List.head
+                                            of
+                                                Just player ->
+                                                    player.name
+
+                                                Nothing ->
+                                                    ""
                                         }
                                     , Ports.createSubscriptions (InternetGame.internetGameOrConfigurationSubscriptionDocument loadingModel.playerToken |> Graphql.Document.serializeSubscription)
                                     )
@@ -239,7 +251,7 @@ update msg model =
                         updatedConfiguringModel =
                             { configuration | players = updatedPlayers }
                     in
-                    ( Configuring { configuringModel | configuration = updatedConfiguringModel }, InternetGame.updatePlayerName configuringModel.session.apiUrl configuringModel.playerToken name UpdatedPlayerName )
+                    ( Configuring { configuringModel | configuration = updatedConfiguringModel, playerName = name }, InternetGame.updatePlayerName configuringModel.session.apiUrl configuringModel.playerToken name UpdatedPlayerName )
 
                 GotGameAndMaps _ ->
                     ( model, Cmd.none )
@@ -330,7 +342,7 @@ viewConfiguring configuringModel =
                                 , Element.height Element.fill
                                 , Element.width (Element.fillPortion 1)
                                 ]
-                                (playerConfiguration (p |> Dict.toList) configuringModel.configuration.currentUserPlayerId)
+                                (playerConfiguration (p |> Dict.toList) configuringModel.configuration.currentUserPlayerId configuringModel.playerName)
                             , Element.el
                                 [ Element.alignTop
                                 , Element.height Element.fill
@@ -371,8 +383,8 @@ joinUrlView origin joinToken =
         ]
 
 
-playerConfiguration : List ( String, Player.NewPlayer ) -> Player.Id -> Element.Element Msg
-playerConfiguration players currentUserPlayerId =
+playerConfiguration : List ( String, Player.NewPlayer ) -> Player.Id -> String -> Element.Element Msg
+playerConfiguration players currentUserPlayerId playerName =
     let
         newPlayersToRender : List ( Player.Id, Player.NewPlayer )
         newPlayersToRender =
@@ -388,15 +400,15 @@ playerConfiguration players currentUserPlayerId =
             [ Element.Font.bold
             ]
             (Element.text "Players")
-        , playersFields newPlayersToRender currentUserPlayerId
+        , playersFields newPlayersToRender currentUserPlayerId playerName
         ]
 
 
-playersFields : List ( Player.Id, Player.NewPlayer ) -> Player.Id -> Element.Element Msg
-playersFields newPlayersToRender currentUserPlayerId =
+playersFields : List ( Player.Id, Player.NewPlayer ) -> Player.Id -> String -> Element.Element Msg
+playersFields newPlayersToRender currentUserPlayerId playerName =
     newPlayersToRender
         |> toPlayerFields currentUserPlayerId
-        |> playerFieldsView
+        |> playerFieldsView playerName
 
 
 toPlayerFields : Player.Id -> List ( Player.Id, Player.NewPlayer ) -> PlayerFields
@@ -433,8 +445,8 @@ type PlayerFields
     | PlayerFieldsWithoutCurrentUserCase (List ( Player.Id, Player.NewPlayer ))
 
 
-playerFieldsView : PlayerFields -> Element.Element Msg
-playerFieldsView fields =
+playerFieldsView : String -> PlayerFields -> Element.Element Msg
+playerFieldsView playerName fields =
     let
         currentPlayerField : ( Player.Id, Player.NewPlayer ) -> Element.Element Msg
         currentPlayerField ( playerId, player ) =
@@ -444,7 +456,7 @@ playerFieldsView fields =
                     , Html.Attributes.id ("player-name-" ++ (playerId |> Player.idToString)) |> Element.htmlAttribute
                     ]
                     { onChange = UpdatePlayerName
-                    , text = player.name
+                    , text = playerName
                     , placeholder = Nothing
                     , label = Element.Input.labelHidden "Name"
                     }
