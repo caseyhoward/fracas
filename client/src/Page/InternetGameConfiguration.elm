@@ -308,39 +308,54 @@ viewConfiguring configuringModel =
     , content =
         layout
             (playerColorSelect p configuringModel.configuration.currentUserPlayerId configuringModel.configureColor)
-            (Element.column
-                [ Element.width Element.fill
-                , Element.spacingXY 0 20
-                , Element.Background.color (Colors.blue |> Colors.toElementColor)
-                ]
-                ([ joinUrlView configuringModel.session.origin configuringModel.configuration.joinToken
-                 , Element.el [ Element.centerX ]
-                    (Element.wrappedRow
-                        [ Element.spacing 40, Element.centerX ]
-                        [ Element.el
-                            [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
-                            (playerConfiguration (p |> Dict.toList) configuringModel.configuration.currentUserPlayerId)
-                        , Element.el
-                            [ Element.alignTop, Element.height Element.fill, Element.width Element.fill ]
-                            (if configuringModel.isCurrentUserHost then
-                                NewGame.mapConfigurationFields configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap
-
-                             else
-                                NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId))
-                            )
+            (Element.el [ Element.width Element.fill ]
+                (Element.column
+                    [ Element.spacingXY 20 20
+                    , Element.Background.color (Colors.blue |> Colors.toElementColor)
+                    , Element.centerX
+                    , Element.width (Element.fill |> Element.maximum 1200)
+                    ]
+                    ([ joinUrlView configuringModel.session.origin configuringModel.configuration.joinToken
+                     , Element.el
+                        [ Element.centerX
+                        , Element.width Element.fill
                         ]
-                    )
-                 ]
-                    ++ (if configuringModel.isCurrentUserHost then
-                            if List.length configuringModel.configuration.players >= 2 then
-                                [ Element.el [ Element.width Element.fill ] (NewGame.startGameButton StartGameClicked) ]
+                        (Element.wrappedRow
+                            [ Element.centerX
+                            , Element.spacing 20
+                            , Element.width Element.fill
+                            ]
+                            [ Element.el
+                                [ Element.alignTop
+                                , Element.height Element.fill
+                                , Element.width (Element.fillPortion 1)
+                                ]
+                                (playerConfiguration (p |> Dict.toList) configuringModel.configuration.currentUserPlayerId)
+                            , Element.el
+                                [ Element.alignTop
+                                , Element.height Element.fill
+                                , Element.width (Element.fillPortion 1)
+                                ]
+                                (if configuringModel.isCurrentUserHost then
+                                    NewGame.mapConfigurationFields configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap
+
+                                 else
+                                    NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId))
+                                )
+                            ]
+                        )
+                     ]
+                        ++ (if configuringModel.isCurrentUserHost then
+                                if List.length configuringModel.configuration.players >= 2 then
+                                    [ Element.el [ Element.width Element.fill ] (NewGame.startGameButton StartGameClicked) ]
+
+                                else
+                                    [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for at least one other player to join ...") ]
 
                             else
-                                [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for at least one other player to join ...") ]
-
-                        else
-                            [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for host to start the game ...") ]
-                       )
+                                [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for host to start the game ...") ]
+                           )
+                    )
                 )
             )
     }
@@ -351,7 +366,8 @@ joinUrlView origin joinToken =
     Element.column
         NewGame.configurationSectionAttributes
         [ Element.el [ Element.Font.size 14 ] (Element.text "Give this URL to the people so they can join the game")
-        , Element.text (origin ++ "/games/internet/join/" ++ (joinToken |> InternetGame.joinTokenToString))
+        , Element.paragraph [ Element.htmlAttribute (Html.Attributes.style "word-break" "break-all") ]
+            [ origin ++ "/games/internet/join/" ++ (joinToken |> InternetGame.joinTokenToString) |> Element.text ]
         ]
 
 
@@ -364,9 +380,13 @@ playerConfiguration players currentUserPlayerId =
                 |> List.map (Tuple.mapFirst Player.Id)
     in
     Element.column
-        NewGame.configurationSectionAttributes
+        (NewGame.configurationSectionAttributes
+            ++ [ Element.width Element.fill
+               ]
+        )
         [ Element.el
-            [ Element.Font.bold ]
+            [ Element.Font.bold
+            ]
             (Element.text "Players")
         , playersFields newPlayersToRender currentUserPlayerId
         ]
@@ -418,9 +438,9 @@ playerFieldsView fields =
     let
         currentPlayerField : ( Player.Id, Player.NewPlayer ) -> Element.Element Msg
         currentPlayerField ( playerId, player ) =
-            Element.row []
+            Element.row [ Element.width Element.fill ]
                 [ Element.Input.text
-                    [ Element.width (Element.px 200)
+                    [ Element.width Element.fill
                     , Html.Attributes.id ("player-name-" ++ (playerId |> Player.idToString)) |> Element.htmlAttribute
                     ]
                     { onChange = UpdatePlayerName
@@ -434,9 +454,9 @@ playerFieldsView fields =
 
         otherPlayerField : ( Player.Id, Player.NewPlayer ) -> Element.Element Msg
         otherPlayerField ( _, player ) =
-            Element.row []
+            Element.row [ Element.width Element.fill ]
                 [ Element.el
-                    [ Element.width (Element.px 200)
+                    [ Element.width Element.fill
                     , Element.paddingXY 5 0
                     , Element.height (Element.px 50)
                     , Element.Background.color (Colors.lightGray |> Colors.toElementColor)
@@ -459,7 +479,7 @@ playerFieldsView fields =
             , playerFields.playersAfter |> List.map otherPlayerField
             ]
                 |> List.concat
-                |> Element.column [ Element.spacing 10 ]
+                |> Element.column [ Element.spacing 10, Element.width Element.fill ]
 
         PlayerFieldsWithoutCurrentUserCase _ ->
             Element.text "Error: Couldn't find fields for current user"

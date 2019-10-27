@@ -55,7 +55,9 @@ configurationSectionAttributes =
     [ Element.Background.color (Colors.gray |> Colors.toElementColor)
     , Element.Border.rounded 10
     , Element.padding 20
+    , Element.height Element.fill
     , Element.spacing 20
+    , Element.width Element.fill
     , Element.centerX
     ]
 
@@ -121,6 +123,7 @@ mapSelect maps selectedMapId toMsg =
         (Element.Input.radio
             [ Element.padding 8
             , Element.spacing 20
+            , Element.width Element.fill
             ]
             { onChange = toMsg
             , selected = selectedMapId
@@ -139,6 +142,7 @@ mapSelect maps selectedMapId toMsg =
                                                     [ Element.Border.color (Colors.charcoal |> Colors.toElementColor)
                                                     , Element.Background.color (Colors.white |> Colors.toElementColor)
                                                     , Element.Border.solid
+                                                    , Element.width Element.fill
                                                     , Element.Border.width 2
                                                     ]
 
@@ -146,18 +150,20 @@ mapSelect maps selectedMapId toMsg =
                                                     [ Element.Border.color (Colors.white |> Colors.toElementColor)
                                                     , Element.Border.solid
                                                     , Element.Border.width 2
+                                                    , Element.width Element.fill
                                                     ]
 
                                                 Element.Input.Selected ->
                                                     [ Element.Border.color (Colors.blue |> Colors.toElementColor)
                                                     , Element.Border.solid
                                                     , Element.Border.width 2
+                                                    , Element.width Element.fill
                                                     , Element.Background.color (Colors.lightBlue |> Colors.toElementColor)
                                                     , Element.Font.color (Colors.white |> Colors.toElementColor)
                                                     ]
                                     in
                                     Element.row
-                                        (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
+                                        (Element.spacing 10 :: Element.padding 10 :: Element.width Element.fill :: border)
                                         [ Element.el
                                             [ Element.width (Element.px 50) ]
                                             (Element.Lazy.lazy2 mapView map.countries map.dimensions)
