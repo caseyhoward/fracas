@@ -112,13 +112,13 @@ viewInfoPanelPhone model =
                 [ Element.height (Element.px 50)
                 ]
                 Element.none
-        , viewPlayerCountryAndTroopCounts model.troopCounts
         , case model.troopMovement of
             MovingTroops troopCountString ->
                 viewConfigureTroopCount troopCountString
 
             NotMovingTroops ->
                 Element.none
+        , viewPlayerCountryAndTroopCounts model.troopCounts
         , case model.countryInfo of
             Just countryInfo ->
                 viewCountryInfo countryInfo
@@ -133,21 +133,19 @@ viewInfoPanelDesktop : Model -> Element.Element Msg
 viewInfoPanelDesktop model =
     Element.column
         (Element.width (Element.px 300) :: infoPanelAttributes)
-        [ if model.canPass then
-            passButton
+        [ Element.el [ Element.height (Element.px 120), Element.width Element.fill ]
+            (case model.troopMovement of
+                MovingTroops troopCountString ->
+                    viewConfigureTroopCount troopCountString
 
-          else
-            Element.el
-                [ Element.height (Element.px 50)
-                ]
-                Element.none
+                NotMovingTroops ->
+                    if model.canPass then
+                        passButton
+
+                    else
+                        Element.none
+            )
         , viewPlayerCountryAndTroopCounts model.troopCounts
-        , case model.troopMovement of
-            MovingTroops troopCountString ->
-                viewConfigureTroopCount troopCountString
-
-            NotMovingTroops ->
-                Element.none
         , case model.countryInfo of
             Just countryInfo ->
                 viewCountryInfo countryInfo
@@ -471,5 +469,5 @@ viewTurnIndicator troopPlacementColor attackColor troopMovementColor =
         ]
         [ Element.el [ Element.Font.color (troopPlacementColor |> Colors.toElementColor) ] (ViewHelpers.fontawesomeIcon "fas" "parachute-box" "xs")
         , Element.el [ Element.Font.color (attackColor |> Colors.toElementColor) ] (ViewHelpers.fontawesomeIcon "fas" "fighter-jet" "xs")
-        , Element.el [ Element.Font.color (troopMovementColor |> Colors.toElementColor) ] (ViewHelpers.fontawesomeIcon "fas" "plane" "xs")
+        , Element.el [ Element.Font.color (troopMovementColor |> Colors.toElementColor) ] (ViewHelpers.fontawesomeIcon "fas" "shuttle-van" "xs")
         ]

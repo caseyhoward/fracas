@@ -345,7 +345,11 @@ infoPanelModel model =
         troopMovement =
             case model.activeGame.currentPlayerTurn |> PlayerTurn.troopsToMove of
                 Just numberOfTroopsToMove ->
-                    Game.InfoPanel.MovingTroops numberOfTroopsToMove
+                    if PlayerTurn.isPlayerTurn model.activeGame.currentPlayerTurn model.activeGame.currentUserPlayerId then
+                        Game.InfoPanel.MovingTroops numberOfTroopsToMove
+
+                    else
+                        Game.InfoPanel.NotMovingTroops
 
                 Nothing ->
                     Game.InfoPanel.NotMovingTroops
@@ -385,7 +389,6 @@ infoPanelModel model =
                 _ ->
                     []
 
-  
         countryInfo : Maybe Game.InfoPanel.CountryInfo
         countryInfo =
             case model.countryBorderHelperOutlineStatus of
@@ -409,7 +412,7 @@ infoPanelModel model =
                 _ ->
                     Nothing
     in
-    { canPass = PlayerTurn.canCurrentPlayerPass model.activeGame.currentPlayerTurn
+    { canPass = PlayerTurn.canCurrentPlayerPass model.activeGame.currentPlayerTurn && PlayerTurn.isPlayerTurn model.activeGame.currentPlayerTurn model.activeGame.currentUserPlayerId
     , troopMovement = troopMovement
     , showAvailableMoves = model.showAvailableMoves
     , troopCounts = troopCounts
