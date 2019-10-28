@@ -232,34 +232,40 @@ viewPlayingGameDesktop model device =
         )
 
 
-playerToPlayerAndTroopCounts : Player.Player -> PlayerTurn.PlayerTurnStage -> Game.InfoPanel.PlayerCountryAndTroopCount
-playerToPlayerAndTroopCounts player currentPlayerTurnStage =
+playerToPlayerAndTroopCounts : Player.Player -> PlayerTurn.PlayerTurn -> Bool -> Game.InfoPanel.PlayerCountryAndTroopCount
+playerToPlayerAndTroopCounts player currentPlayerTurn isCurrentUser =
     case player.capitolStatus of
         Player.Capitol _ ->
-            Game.InfoPanel.AlivePlayerTroopCount
+            Game.InfoPanel.AlivePlayerTroopCountCase
                 { playerColor = player.color
                 , playerName = player.name
                 , troopCount = getTotalTroopCountForPlayer player
                 , countryCount = Dict.size player.countryTroopCounts
+                , isCurrentUser = isCurrentUser
                 }
 
         Player.NoCapitol ->
-            if currentPlayerTurnStage == PlayerTurn.CapitolPlacement then
-                Game.InfoPanel.AlivePlayerTroopCount
+            if PlayerTurn.getPlayerTurnStageFromPlayerTurn currentPlayerTurn == PlayerTurn.CapitolPlacement then
+                Game.InfoPanel.AlivePlayerTroopCountCase
                     { playerColor = player.color
                     , playerName = player.name
                     , troopCount = getTotalTroopCountForPlayer player
                     , countryCount = Dict.size player.countryTroopCounts
+                    , isCurrentUser = isCurrentUser
                     }
 
             else
-                Game.InfoPanel.DeadPlayerTroopCount player.name player.color
+                Game.InfoPanel.DeadPlayerTroopCountCase
+                    { playerName = player.name
+                    , playerColor = player.color
+                    , isCurrentUser = isCurrentUser
+                    }
 
 
 getPlayerCountryAndTroopCounts :
-    { players : Player.Players, currentPlayerTurn : PlayerTurn.PlayerTurn }
+    { players : Player.Players, currentPlayerTurn : PlayerTurn.PlayerTurn, currentUserPlayerId : Player.Id }
     -> Game.InfoPanel.PlayerCountryAndTroopCounts
-getPlayerCountryAndTroopCounts { players, currentPlayerTurn } =
+getPlayerCountryAndTroopCounts { players, currentPlayerTurn, currentUserPlayerId } =
     let
         playerCountryAndTroopCounts :
             { playerTroopCountsBefore : List Game.InfoPanel.PlayerCountryAndTroopCount
@@ -272,7 +278,14 @@ getPlayerCountryAndTroopCounts { players, currentPlayerTurn } =
                     (\playerId player result ->
                         case result.maybeCurrentPlayerTurnTroopCounts of
                             Just _ ->
-                                { result | playerTroopCountsBefore = playerToPlayerAndTroopCounts player (PlayerTurn.getPlayerTurnStageFromPlayerTurn currentPlayerTurn) :: result.playerTroopCountsBefore }
+                                { result
+                                    | playerTroopCountsBefore =
+                                        playerToPlayerAndTroopCounts
+                                            player
+                                            currentPlayerTurn
+                                            (currentUserPlayerId == Player.Id playerId)
+                                            :: result.playerTroopCountsBefore
+                                }
 
                             Nothing ->
                                 if PlayerTurn.isPlayerTurn currentPlayerTurn (Player.Id playerId) then
@@ -284,6 +297,7 @@ getPlayerCountryAndTroopCounts { players, currentPlayerTurn } =
                                                     , playerName = player.name
                                                     , troopCount = getTotalTroopCountForPlayer player
                                                     , countryCount = Dict.size player.countryTroopCounts
+                                                    , isCurrentUser = PlayerTurn.isPlayerTurn currentPlayerTurn currentUserPlayerId
                                                     }
                                                 , turnStage =
                                                     case PlayerTurn.getPlayerTurnStageFromPlayerTurn currentPlayerTurn of
@@ -308,7 +322,14 @@ getPlayerCountryAndTroopCounts { players, currentPlayerTurn } =
                                     }
 
                                 else
-                                    { result | playerTroopCountsAfter = playerToPlayerAndTroopCounts player (PlayerTurn.getPlayerTurnStageFromPlayerTurn currentPlayerTurn) :: result.playerTroopCountsAfter }
+                                    { result
+                                        | playerTroopCountsAfter =
+                                            playerToPlayerAndTroopCounts
+                                                player
+                                                currentPlayerTurn
+                                                (currentUserPlayerId == Player.Id playerId)
+                                                :: result.playerTroopCountsAfter
+                                    }
                     )
                     { playerTroopCountsBefore = []
                     , maybeCurrentPlayerTurnTroopCounts = Nothing
@@ -324,6 +345,7 @@ getPlayerCountryAndTroopCounts { players, currentPlayerTurn } =
                     , playerName = ""
                     , troopCount = TroopCount.noTroops
                     , countryCount = 0
+                    , isCurrentUser = False
                     }
                 , turnStage = Game.InfoPanel.TroopMovement
                 }
@@ -356,7 +378,7 @@ infoPanelModel model =
 
         troopCounts : Game.InfoPanel.PlayerCountryAndTroopCounts
         troopCounts =
-            getPlayerCountryAndTroopCounts { players = model.activeGame.players, currentPlayerTurn = model.activeGame.currentPlayerTurn }
+            getPlayerCountryAndTroopCounts { players = model.activeGame.players, currentPlayerTurn = model.activeGame.currentPlayerTurn, currentUserPlayerId = model.activeGame.currentUserPlayerId }
 
         attackers : List Game.InfoPanel.Attacker
         attackers =

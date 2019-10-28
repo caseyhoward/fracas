@@ -1,12 +1,13 @@
 module Game.InfoPanel exposing
-    ( Attacker
+    ( AlivePlayerTroopCount
+    , Attacker
     , CountryInfo
     , CurrentPlayerTurnCountryAndTroopCount
+    , DeadPlayerTroopCount
     , Model
     , Msg(..)
     , PlayerCountryAndTroopCount(..)
     , PlayerCountryAndTroopCounts
-    , TroopCounts
     , TroopMovement(..)
     , TurnStage(..)
     , viewInfoPanelDesktop
@@ -47,14 +48,14 @@ type alias CountryInfo =
 
 
 type alias CurrentPlayerTurnCountryAndTroopCount =
-    { playerTroopCounts : TroopCounts
+    { playerTroopCounts : AlivePlayerTroopCount
     , turnStage : TurnStage
     }
 
 
 type PlayerCountryAndTroopCount
-    = DeadPlayerTroopCount String Colors.Color
-    | AlivePlayerTroopCount TroopCounts
+    = DeadPlayerTroopCountCase DeadPlayerTroopCount
+    | AlivePlayerTroopCountCase AlivePlayerTroopCount
 
 
 type alias PlayerCountryAndTroopCounts =
@@ -64,11 +65,19 @@ type alias PlayerCountryAndTroopCounts =
     }
 
 
-type alias TroopCounts =
+type alias AlivePlayerTroopCount =
     { playerColor : Colors.Color
     , playerName : String
     , troopCount : TroopCount.TroopCount
+    , isCurrentUser : Bool
     , countryCount : Int
+    }
+
+
+type alias DeadPlayerTroopCount =
+    { playerColor : Colors.Color
+    , playerName : String
+    , isCurrentUser : Bool
     }
 
 
@@ -162,7 +171,14 @@ viewInfoPanelDesktop model =
 
 currentPlayerTurnTroopCountView : CurrentPlayerTurnCountryAndTroopCount -> Element.Element Msg
 currentPlayerTurnTroopCountView { playerTroopCounts, turnStage } =
-    viewPlayerTroopCount playerTroopCounts.playerName Colors.black playerTroopCounts.playerColor playerTroopCounts.countryCount playerTroopCounts.troopCount turnStage
+    viewPlayerTroopCount
+        playerTroopCounts.playerName
+        Colors.black
+        playerTroopCounts.playerColor
+        playerTroopCounts.countryCount
+        playerTroopCounts.troopCount
+        turnStage
+        playerTroopCounts.isCurrentUser
 
 
 passButton : Element.Element Msg
@@ -217,7 +233,7 @@ infoPanelAttributes =
 playerTroopCountView : PlayerCountryAndTroopCount -> Element.Element Msg
 playerTroopCountView viewModel =
     case viewModel of
-        AlivePlayerTroopCount playerTroopCounts ->
+        AlivePlayerTroopCountCase playerTroopCounts ->
             viewPlayerTroopCount
                 playerTroopCounts.playerName
                 Colors.black
@@ -225,15 +241,17 @@ playerTroopCountView viewModel =
                 playerTroopCounts.countryCount
                 playerTroopCounts.troopCount
                 WaitingForTurn
+                playerTroopCounts.isCurrentUser
 
-        DeadPlayerTroopCount playerName playerColor ->
+        DeadPlayerTroopCountCase deadPlayerTroopCount ->
             viewPlayerTroopCount
-                playerName
+                deadPlayerTroopCount.playerName
                 Colors.gray
-                playerColor
+                deadPlayerTroopCount.playerColor
                 0
                 TroopCount.noTroops
                 WaitingForTurn
+                deadPlayerTroopCount.isCurrentUser
 
 
 turnIndicatorWidth : Element.Attribute msg
@@ -385,8 +403,9 @@ viewPlayerTroopCount :
     -> Int
     -> TroopCount.TroopCount
     -> TurnStage
+    -> Bool
     -> Element.Element Msg
-viewPlayerTroopCount playerName fontColor playerColor countryCount troopCount turnStage =
+viewPlayerTroopCount playerName fontColor playerColor countryCount troopCount turnStage isCurrentUserTurn =
     Element.row
         [ Element.width Element.fill, Element.spacing 3 ]
         [ Element.column
@@ -405,7 +424,15 @@ viewPlayerTroopCount playerName fontColor playerColor countryCount troopCount tu
                 , Element.Font.bold
                 , Element.centerX
                 ]
-                (Element.el [ Element.centerX, Element.padding 2 ] (Element.text <| playerName))
+                (Element.row [ Element.centerX, Element.padding 2, Element.spacing 10 ]
+                    [ Element.el [] (Element.text <| playerName)
+                    , if isCurrentUserTurn then
+                        Element.el [] (ViewHelpers.fontawesomeIcon "fas" "user" "xs")
+
+                      else
+                        Element.none
+                    ]
+                )
             , Element.column
                 [ Element.Background.color (Colors.lightGray |> ViewHelpers.colorToElementColor)
                 , Element.width Element.fill
