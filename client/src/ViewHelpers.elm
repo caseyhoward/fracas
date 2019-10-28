@@ -6,8 +6,10 @@ module ViewHelpers exposing
     , defaultTextInputAttributes
     , dialog
     , errorToString
+    , fontawesomeIcon
     , layoutAttributes
-    ,  loadingLayout
+    , loadingLayout
+    ,  minimumSupportedViewportWidth
        -- , selectButton
 
     , pixelsPerMapSquare
@@ -24,6 +26,7 @@ import Element.Font
 import Graphql.Http
 import Graphql.Http.GraphqlError
 import Html
+import Html.Attributes
 import Map
 import Maps.FracasTitle
 
@@ -31,12 +34,15 @@ import Maps.FracasTitle
 layoutAttributes : List (Element.Attribute msg)
 layoutAttributes =
     [ Element.centerX
-    , Element.padding 30
     , Element.Background.color (Colors.blue |> Colors.toElementColor)
     , Element.width Element.fill
 
     -- , Element.height Element.fill
     ]
+
+
+minimumSupportedViewportWidth =
+    360
 
 
 loadingLayout : Html.Html msg
@@ -230,3 +236,8 @@ title =
         , Element.centerX
         ]
         (Map.view 100 titleMap.countries titleMap.dimensions |> Element.html)
+
+
+fontawesomeIcon name =
+    Html.i [ Html.Attributes.classList [ ( "fab", True ), ( "fa-" ++ name, True ) ] ] []
+        |> Element.html

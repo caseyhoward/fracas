@@ -3,6 +3,7 @@ module GameController exposing (update)
 import Country
 import Dict
 import Game
+import Game.InfoPanel
 import Map
 import Player
 import PlayerTurn
@@ -25,19 +26,19 @@ update msg model =
         Game.CountryMouseOut mouseOutCountryId ->
             ( handleCountryMouseOut mouseOutCountryId model, Cmd.none )
 
-        Game.ShowAvailableMovesCheckboxToggled isChecked ->
+        Game.InfoPanelMsg (Game.InfoPanel.ShowAvailableMovesCheckboxToggled isChecked) ->
             ( { model | showAvailableMoves = isChecked }, Cmd.none )
 
         Game.MouseUp ->
             ( stopShowingCountryHelperOutlines model, Cmd.none )
 
-        Game.Pass ->
+        Game.InfoPanelMsg Game.InfoPanel.Pass ->
             ( updateModelWithGameResult (pass model.activeGame) model, Cmd.none )
 
-        Game.UpdateNumberOfTroopsToMove numberOfTroopsToMoveString ->
+        Game.InfoPanelMsg (Game.InfoPanel.TroopCountChanged numberOfTroopsToMoveString) ->
             ( { model | activeGame = updateNumberOfTroopsToMove numberOfTroopsToMoveString model.activeGame }, Cmd.none )
 
-        Game.CancelMovingTroops ->
+        Game.InfoPanelMsg Game.InfoPanel.CancelTroopMovement ->
             ( { model | activeGame = cancelMovingTroops model.activeGame }, Cmd.none )
 
         Game.ShowCountryBorderHelper ->

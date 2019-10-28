@@ -18,11 +18,7 @@ import Element.Border
 import Element.Font
 import Element.Input
 import Element.Lazy
-import Graphql.Http
 import Map
-import Maps.FracasTitle
-import Player
-import RemoteData
 import ViewHelpers
 
 
@@ -56,7 +52,7 @@ configurationSectionAttributes =
     , Element.padding 20
     , Element.height Element.fill
     , Element.spacing 20
-    , Element.width Element.fill
+    , Element.width (Element.fill |> Element.minimum (ViewHelpers.minimumSupportedViewportWidth - 20))
     , Element.centerX
     ]
 

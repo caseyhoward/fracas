@@ -179,6 +179,11 @@ update msg model =
                 NewSubscriptionStatus newStatus () ->
                     ( model, Cmd.none )
 
+                WindowResized width height ->
+                    ( Loading { loadingModel | session = loadingModel.session |> Session.updateWindowSize { width = width, height = height } }
+                    , Cmd.none
+                    )
+
                 _ ->
                     ( model, Cmd.none )
 
@@ -270,8 +275,10 @@ update msg model =
                 -- RemovePlayer _ ->
                 --     -- TODO: Check errors, possibly show as offline somehow, retry with exponential backoff
                 --     ( model, Cmd.none )
-                WindowResized _ _ ->
-                    ( model, Cmd.none )
+                WindowResized width height ->
+                    ( Configuring { configuringModel | session = configuringModel.session |> Session.updateWindowSize { width = width, height = height } }
+                    , Cmd.none
+                    )
 
                 SubscriptionDataReceived newData ->
                     case Json.Decode.decodeValue (InternetGame.internetGameOrConfigurationSubscriptionDocument configuringModel.playerToken |> Graphql.Document.decoder) newData of
@@ -320,54 +327,37 @@ viewConfiguring configuringModel =
     , content =
         layout
             (playerColorSelect p configuringModel.configuration.currentUserPlayerId configuringModel.configureColor)
-            (Element.el [ Element.width Element.fill ]
+            (Element.el [ Element.width (Element.fill |> Element.minimum 360) ]
                 (Element.column
-                    [ Element.spacingXY 20 20
-
-                    -- , Element.Background.color (Colors.blue |> Colors.toElementColor)
+                    [ Element.spacing 10
+                    , Element.padding 10
                     , Element.centerX
                     , Element.width (Element.fill |> Element.maximum 1200)
                     , Element.height Element.shrink
                     ]
                     ([ joinUrlView configuringModel.session.origin configuringModel.configuration.joinToken
-                     , Element.el
+                     , Element.wrappedRow
                         [ Element.centerX
+                        , Element.spacing 10
                         , Element.width Element.fill
                         ]
-                        (Element.wrappedRow
-                            [ Element.centerX
-                            , Element.spacing 20
-                            , Element.width Element.fill
-                            ]
-                            [ Element.el
-                                [ Element.alignTop
-                                , Element.height Element.fill
-                                , Element.width (Element.fillPortion 1)
-                                ]
-                                (playerConfiguration (p |> Dict.toList) configuringModel.configuration.currentUserPlayerId configuringModel.playerName)
-                            , Element.el
-                                [ Element.alignTop
-                                , Element.height Element.fill
-                                , Element.width (Element.fillPortion 1)
-                                ]
-                                (if configuringModel.isCurrentUserHost then
-                                    NewGame.mapConfigurationFields configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap
+                        [ playerConfiguration (p |> Dict.toList) configuringModel.configuration.currentUserPlayerId configuringModel.playerName
+                        , if configuringModel.isCurrentUserHost then
+                            NewGame.mapConfigurationFields configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap
 
-                                 else
-                                    NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId))
-                                )
-                            ]
-                        )
+                          else
+                            NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId))
+                        ]
                      ]
                         ++ (if configuringModel.isCurrentUserHost then
                                 if List.length configuringModel.configuration.players >= 2 then
                                     [ Element.el [ Element.width Element.fill ] (NewGame.startGameButton StartGameClicked) ]
 
                                 else
-                                    [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for at least one other player to join ...") ]
+                                    [ Element.paragraph (NewGame.configurationSectionAttributes ++ [ Element.spacing 0 ]) [ Element.text "Waiting for at least one other player to join..." ] ]
 
                             else
-                                [ Element.el NewGame.configurationSectionAttributes (Element.text "Waiting for host to start the game ...") ]
+                                [ Element.paragraph (NewGame.configurationSectionAttributes ++ [ Element.spacing 0, Element.Font.center ]) [ Element.text "Waiting for host to start the game..." ] ]
                            )
                     )
                 )
@@ -379,7 +369,7 @@ joinUrlView : String -> InternetGame.JoinToken -> Element.Element Msg
 joinUrlView origin joinToken =
     Element.column
         NewGame.configurationSectionAttributes
-        [ Element.el [ Element.Font.size 14 ] (Element.text "Give this URL to the people so they can join the game")
+        [ Element.paragraph [ Element.Font.size 14 ] [ Element.text "Give this URL to the people so they can join the game" ]
         , Element.paragraph [ Element.htmlAttribute (Html.Attributes.style "word-break" "break-all") ]
             [ origin ++ "/games/internet/join/" ++ (joinToken |> InternetGame.joinTokenToString) |> Element.text ]
         ]
@@ -394,10 +384,7 @@ playerConfiguration players currentUserPlayerId playerName =
                 |> List.map (Tuple.mapFirst Player.Id)
     in
     Element.column
-        (NewGame.configurationSectionAttributes
-            ++ [ Element.width Element.fill
-               ]
-        )
+        NewGame.configurationSectionAttributes
         [ Element.el
             [ Element.Font.bold
             ]
@@ -447,6 +434,10 @@ type PlayerFields
     | PlayerFieldsWithoutCurrentUserCase (List ( Player.Id, Player.NewPlayer ))
 
 
+playerNameFieldWidth =
+    Element.px 300
+
+
 playerFieldsView : String -> PlayerFields -> Element.Element Msg
 playerFieldsView playerName fields =
     let
@@ -454,7 +445,7 @@ playerFieldsView playerName fields =
         currentPlayerField ( playerId, player ) =
             Element.row [ Element.width Element.fill ]
                 [ Element.Input.text
-                    [ Element.width (Element.px 200)
+                    [ Element.width playerNameFieldWidth
                     , Html.Attributes.id ("player-name-" ++ (playerId |> Player.idToString)) |> Element.htmlAttribute
                     ]
                     { onChange = UpdatePlayerName
@@ -463,14 +454,13 @@ playerFieldsView playerName fields =
                     , label = Element.Input.labelHidden "Name"
                     }
                 , NewGame.colorButton player.color ChangeColorButtonClicked
-                , Element.el [ NewGame.removePlayerButtonWidth ] Element.none
                 ]
 
         otherPlayerField : ( Player.Id, Player.NewPlayer ) -> Element.Element Msg
         otherPlayerField ( _, player ) =
             Element.row [ Element.width Element.fill ]
                 [ Element.el
-                    [ Element.width Element.fill
+                    [ Element.width playerNameFieldWidth
                     , Element.paddingXY 5 0
                     , Element.height (Element.px 50)
                     , Element.Background.color (Colors.lightGray |> Colors.toElementColor)
@@ -483,7 +473,6 @@ playerFieldsView playerName fields =
                     , Element.height (Element.px 50)
                     ]
                     Element.none
-                , Element.el [ NewGame.removePlayerButtonWidth ] Element.none
                 ]
     in
     case fields of
@@ -493,7 +482,7 @@ playerFieldsView playerName fields =
             , playerFields.playersAfter |> List.map otherPlayerField
             ]
                 |> List.concat
-                |> Element.column [ Element.spacing 10, Element.width Element.fill ]
+                |> Element.column [ Element.spacing 10 ]
 
         PlayerFieldsWithoutCurrentUserCase _ ->
             Element.text "Error: Couldn't find fields for current user"
@@ -536,11 +525,10 @@ layout overlay body =
         (Element.column
             [ Element.width Element.fill
             , Element.spacingXY 0 20
-
-            -- , Element.Background.color (Colors.blue |> Colors.toElementColor)
+            , Element.centerX
             ]
             [ Element.el
-                [ Element.width Element.fill
+                [ Element.width (Element.fill |> Element.minimum ViewHelpers.minimumSupportedViewportWidth)
                 , Element.centerX
                 ]
                 ViewHelpers.title

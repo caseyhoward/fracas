@@ -36,6 +36,7 @@ import Element.Border
 import Element.Events
 import Element.Font
 import Element.Input
+import Game.InfoPanel
 import Html
 import Html.Attributes
 import Map
@@ -84,11 +85,8 @@ type Msg
     | CountryMouseDown Country.Id
     | CountryMouseOut Country.Id
     | MouseUp
-    | Pass
-    | UpdateNumberOfTroopsToMove String
-    | CancelMovingTroops
     | ShowCountryBorderHelper
-    | ShowAvailableMovesCheckboxToggled Bool
+    | InfoPanelMsg Game.InfoPanel.Msg
 
 
 
@@ -108,7 +106,7 @@ viewGameWrapMessage model windowSize toMsg =
 
 
 viewGame : Model -> { width : Int, height : Int } -> { title : String, content : Html.Html Msg }
-viewGame gameLoaded windowSize =
+viewGame model windowSize =
     { content =
         let
             device =
@@ -116,10 +114,10 @@ viewGame gameLoaded windowSize =
         in
         case Element.classifyDevice windowSize |> .class of
             Element.Phone ->
-                viewPlayingGameMobile gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error device
+                viewPlayingGameMobile model device
 
             _ ->
-                viewPlayingGameDesktop gameLoaded.activeGame gameLoaded.showAvailableMoves gameLoaded.countryBorderHelperOutlineStatus gameLoaded.error device
+                viewPlayingGameDesktop model device
     , title = "Fracas"
     }
 
@@ -138,8 +136,8 @@ countryBorderColor =
     Colors.rgb255 100 100 100
 
 
-viewPlayingGameMobile : Game -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
-viewPlayingGameMobile activeGame showAvailableMoves countryBorderHelperOutlineStatus maybeError device =
+viewPlayingGameMobile : Model -> Element.Device -> Html.Html Msg
+viewPlayingGameMobile model device =
     Element.layout
         [ Element.width Element.fill
         , Element.height Element.fill
@@ -164,28 +162,28 @@ viewPlayingGameMobile activeGame showAvailableMoves countryBorderHelperOutlineSt
                     , Element.Border.color black
                     , Element.Border.solid
                     ]
-                    ((case maybeError of
+                    ((case model.error of
                         Just error ->
                             [ Element.paragraph [] [ Element.text error ] ]
 
                         Nothing ->
                             []
                      )
-                        ++ [ viewPlayerTurnStatus 38 10 activeGame.currentPlayerTurn activeGame.players ]
+                        ++ [ viewPlayerTurnStatus 38 10 model.activeGame.currentPlayerTurn model.activeGame.players ]
                     )
                 , Element.el
                     [ Element.width Element.fill
                     , Element.height Element.fill
                     ]
-                    (getGameBoardHtml 100 activeGame showAvailableMoves countryBorderHelperOutlineStatus device |> Element.html)
-                , viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatus
+                    (getGameBoardHtml 100 model.activeGame model.showAvailableMoves model.countryBorderHelperOutlineStatus device |> Element.html)
+                , Game.InfoPanel.viewInfoPanelPhone (infoPanelModel model) |> Element.map InfoPanelMsg
                 ]
             ]
         )
 
 
-viewPlayingGameDesktop : Game -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
-viewPlayingGameDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus maybeError device =
+viewPlayingGameDesktop : Model -> Element.Device -> Html.Html Msg
+viewPlayingGameDesktop model device =
     Element.layout
         [ Element.width Element.fill
         , Element.height Element.fill
@@ -201,7 +199,7 @@ viewPlayingGameDesktop activeGame showAvailableMoves countryBorderHelperOutlineS
                 , Element.width Element.fill
                 , Element.Background.color (Colors.darkCharcoal |> Colors.toElementColor)
                 ]
-                [ viewInfoPanelDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus
+                [ Game.InfoPanel.viewInfoPanelDesktop (infoPanelModel model) |> Element.map InfoPanelMsg
                 , Element.column
                     [ Element.centerX
                     , Element.width Element.fill
@@ -212,21 +210,21 @@ viewPlayingGameDesktop activeGame showAvailableMoves countryBorderHelperOutlineS
                         [ Element.width Element.fill
                         , Element.height Element.fill
                         ]
-                        (getGameBoardHtml 100 activeGame showAvailableMoves countryBorderHelperOutlineStatus device |> Element.html)
+                        (getGameBoardHtml 100 model.activeGame model.showAvailableMoves model.countryBorderHelperOutlineStatus device |> Element.html)
                     , Element.column
                         [ Element.width Element.fill
                         , Element.Border.width 1
                         , Element.Border.color black
                         , Element.Border.solid
                         ]
-                        ((case maybeError of
+                        ((case model.error of
                             Just error ->
                                 [ Element.paragraph [] [ Element.text error ] ]
 
                             Nothing ->
                                 []
                          )
-                            ++ [ viewPlayerTurnStatus 55 20 activeGame.currentPlayerTurn activeGame.players ]
+                            ++ [ viewPlayerTurnStatus 55 20 model.activeGame.currentPlayerTurn model.activeGame.players ]
                         )
                     ]
                 ]
@@ -234,106 +232,103 @@ viewPlayingGameDesktop activeGame showAvailableMoves countryBorderHelperOutlineS
         )
 
 
-infoPanelAttributes : List (Element.Attribute Msg)
-infoPanelAttributes =
-    [ Element.height Element.fill
-    , Element.padding 20
-    , Element.spacing 20
-    , Element.alignTop
-    , Element.Background.color (Colors.darkCharcoal |> Colors.toElementColor)
-    ]
+playerToPlayerAndTroopCounts : Player.Player -> PlayerTurn.PlayerTurnStage -> Game.InfoPanel.PlayerCountryAndTroopCount
+playerToPlayerAndTroopCounts player currentPlayerTurnStage =
+    case player.capitolStatus of
+        Player.Capitol _ ->
+            Game.InfoPanel.AlivePlayerTroopCount
+                { playerColor = player.color
+                , playerName = player.name
+                , troopCount = getTotalTroopCountForPlayer player
+                , countryCount = Dict.size player.countryTroopCounts
+                }
 
+        Player.NoCapitol ->
+            if currentPlayerTurnStage == PlayerTurn.CapitolPlacement then
+                Game.InfoPanel.AlivePlayerTroopCount
+                    { playerColor = player.color
+                    , playerName = player.name
+                    , troopCount = getTotalTroopCountForPlayer player
+                    , countryCount = Dict.size player.countryTroopCounts
+                    }
 
-viewInfoPanelPhone : Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Element Msg
-viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatus =
-    Element.column
-        (Element.width Element.fill :: infoPanelAttributes)
-        [ viewPassButtonIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
-        , viewPlayerCountryAndTroopCountsMobile activeGame.currentPlayerTurn activeGame.players
-        , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
-        , viewCountryInfo activeGame countryBorderHelperOutlineStatus
-        , viewShowAvailableMoves showAvailableMoves
-        ]
-
-
-viewInfoPanelDesktop : Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Element Msg
-viewInfoPanelDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus =
-    Element.column
-        (Element.width (Element.px 200) :: infoPanelAttributes)
-        [ viewPassButtonIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
-        , viewPlayerCountryAndTroopCounts activeGame.currentPlayerTurn activeGame.players
-        , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
-        , viewCountryInfo activeGame countryBorderHelperOutlineStatus
-        , viewShowAvailableMoves showAvailableMoves
-        ]
-
-
-viewShowAvailableMoves : Bool -> Element.Element Msg
-viewShowAvailableMoves showAvailableMoves =
-    Element.row
-        [ Element.alignBottom ]
-        [ Element.Input.checkbox
-            []
-            { label =
-                Element.Input.labelRight [ Element.Font.size 12, Element.Font.color (Colors.white |> Colors.toElementColor) ]
-                    (Element.text "Show available moves")
-            , icon = Element.Input.defaultCheckbox
-            , checked = showAvailableMoves
-            , onChange = ShowAvailableMovesCheckboxToggled
-            }
-        ]
-
-
-viewPassButtonIfNecessary : PlayerTurn.PlayerTurn -> Bool -> Element.Element Msg
-viewPassButtonIfNecessary currentPlayerTurn isCurrentUserPlayerTurn =
-    Element.el
-        [ Element.width Element.fill
-        , Element.height (Element.px 50)
-        ]
-        (if isCurrentUserPlayerTurn && PlayerTurn.canCurrentPlayerPass currentPlayerTurn then
-            Element.Input.button
-                (ViewHelpers.defaultButtonAttributes
-                    ++ [ Element.width (Element.px 120)
-                       , Element.centerX
-                       , 40 |> Element.px |> Element.height
-                       , Element.Background.color (Element.rgb255 100 200 100)
-                       ]
-                )
-                { onPress = Just Pass, label = ViewHelpers.centerText "Pass" }
-
-         else
-            Element.none
-        )
-
-
-playerAndTroopCountBorderColor : Element.Color
-playerAndTroopCountBorderColor =
-    Colors.white |> ViewHelpers.colorToElementColor
+            else
+                Game.InfoPanel.DeadPlayerTroopCount player.name player.color
 
 
 getPlayerCountryAndTroopCounts :
     { players : Player.Players, currentPlayerTurn : PlayerTurn.PlayerTurn }
-    -> List { playerId : Player.Id, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
+    -> Game.InfoPanel.PlayerCountryAndTroopCounts
 getPlayerCountryAndTroopCounts { players, currentPlayerTurn } =
-    players
-        |> Dict.map
-            (\playerId player ->
-                case player.capitolStatus of
-                    Player.Capitol _ ->
-                        { playerId = Player.Id playerId
-                        , countryCount = Dict.size player.countryTroopCounts
-                        , troopCount = getTotalTroopCountForPlayer player
-                        , isAlive = True
-                        }
+    let
+        playerCountryAndTroopCounts :
+            { playerTroopCountsBefore : List Game.InfoPanel.PlayerCountryAndTroopCount
+            , maybeCurrentPlayerTurnTroopCounts : Maybe Game.InfoPanel.CurrentPlayerTurnCountryAndTroopCount
+            , playerTroopCountsAfter : List Game.InfoPanel.PlayerCountryAndTroopCount
+            }
+        playerCountryAndTroopCounts =
+            players
+                |> Dict.foldr
+                    (\playerId player result ->
+                        case result.maybeCurrentPlayerTurnTroopCounts of
+                            Just _ ->
+                                { result | playerTroopCountsBefore = playerToPlayerAndTroopCounts player (PlayerTurn.getPlayerTurnStageFromPlayerTurn currentPlayerTurn) :: result.playerTroopCountsBefore }
 
-                    Player.NoCapitol ->
-                        { playerId = Player.Id playerId
-                        , countryCount = Dict.size player.countryTroopCounts
-                        , troopCount = getTotalTroopCountForPlayer player
-                        , isAlive = False || PlayerTurn.isCapitolPlacementTurn currentPlayerTurn
-                        }
-            )
-        |> Dict.values
+                            Nothing ->
+                                if PlayerTurn.isPlayerTurn currentPlayerTurn (Player.Id playerId) then
+                                    { result
+                                        | maybeCurrentPlayerTurnTroopCounts =
+                                            Just
+                                                { playerTroopCounts =
+                                                    { playerColor = player.color
+                                                    , playerName = player.name
+                                                    , troopCount = getTotalTroopCountForPlayer player
+                                                    , countryCount = Dict.size player.countryTroopCounts
+                                                    }
+                                                , turnStage =
+                                                    case PlayerTurn.getPlayerTurnStageFromPlayerTurn currentPlayerTurn of
+                                                        PlayerTurn.TroopMovement ->
+                                                            Game.InfoPanel.TroopMovement
+
+                                                        PlayerTurn.CapitolPlacement ->
+                                                            Game.InfoPanel.CapitolPlacement
+
+                                                        PlayerTurn.TroopPlacement ->
+                                                            Game.InfoPanel.TroopPlacement
+
+                                                        PlayerTurn.AttackAnnexOrPort ->
+                                                            Game.InfoPanel.AttackPassOrBuildPort
+
+                                                        PlayerTurn.TroopMovementFromSelected _ _ ->
+                                                            Game.InfoPanel.TroopMovement
+
+                                                        PlayerTurn.GameOver ->
+                                                            Game.InfoPanel.WaitingForTurn
+                                                }
+                                    }
+
+                                else
+                                    { result | playerTroopCountsAfter = playerToPlayerAndTroopCounts player (PlayerTurn.getPlayerTurnStageFromPlayerTurn currentPlayerTurn) :: result.playerTroopCountsAfter }
+                    )
+                    { playerTroopCountsBefore = []
+                    , maybeCurrentPlayerTurnTroopCounts = Nothing
+                    , playerTroopCountsAfter = []
+                    }
+    in
+    { playerTroopCountsBefore = playerCountryAndTroopCounts.playerTroopCountsBefore
+    , currentPlayerTurnTroopCounts =
+        playerCountryAndTroopCounts.maybeCurrentPlayerTurnTroopCounts
+            |> Maybe.withDefault
+                { playerTroopCounts =
+                    { playerColor = Colors.black
+                    , playerName = ""
+                    , troopCount = TroopCount.noTroops
+                    , countryCount = 0
+                    }
+                , turnStage = Game.InfoPanel.TroopMovement
+                }
+    , playerTroopCountsAfter = playerCountryAndTroopCounts.playerTroopCountsAfter
+    }
 
 
 getTotalTroopCountForPlayer : Player.Player -> TroopCount.TroopCount
@@ -343,204 +338,26 @@ getTotalTroopCountForPlayer player =
         |> List.foldl (\troopCount result -> TroopCount.addTroopCounts troopCount result) TroopCount.noTroops
 
 
-viewPlayerCountryAndTroopCounts : PlayerTurn.PlayerTurn -> Dict.Dict String Player.Player -> Element.Element Msg
-viewPlayerCountryAndTroopCounts currentPlayerTurn players =
-    Element.column
-        [ Element.spacing 10
-        , Element.width Element.fill
-        ]
-        (getPlayerCountryAndTroopCounts { currentPlayerTurn = currentPlayerTurn, players = players }
-            |> List.map (viewPlayerTroopCount (PlayerTurn.getCurrentPlayer currentPlayerTurn) players)
-        )
-
-
-viewPlayerCountryAndTroopCountsMobile : PlayerTurn.PlayerTurn -> Dict.Dict String Player.Player -> Element.Element Msg
-viewPlayerCountryAndTroopCountsMobile currentPlayerTurn players =
-    Element.wrappedRow
-        [ Element.spacing 10
-        , Element.width Element.fill
-        ]
-        (getPlayerCountryAndTroopCounts { currentPlayerTurn = currentPlayerTurn, players = players }
-            |> List.map (viewPlayerTroopCount (PlayerTurn.getCurrentPlayer currentPlayerTurn) players)
-        )
-
-
-attackerInfo : Player.Id -> Game -> Dict.Dict String TroopCount.TroopCount -> Element.Element Msg
-attackerInfo countyOwnerPlayerId activeGame attackerStrengthPerPlayer =
-    Element.column
-        [ Element.width Element.fill, Element.spacing 3 ]
-        (attackerStrengthPerPlayer
-            |> Dict.toList
-            |> List.filter
-                (\( playerId, troopCount ) ->
-                    Player.Id playerId /= countyOwnerPlayerId && troopCount /= TroopCount.noTroops
-                )
-            |> List.map
-                (\( playerId, troopCount ) ->
-                    case Player.getPlayer (Player.Id playerId) activeGame.players of
-                        Just player ->
-                            Element.row
-                                [ Element.width Element.fill
-                                , Element.Font.size 14
-                                , Element.padding 3
-                                , Element.Background.color (player.color |> ViewHelpers.colorToElementColor)
-                                ]
-                                [ Element.el [] (Element.text player.name)
-                                , Element.el
-                                    [ Element.alignRight ]
-                                    (troopCount |> TroopCount.toString |> Element.text)
-                                ]
-
-                        Nothing ->
-                            Element.none
-                )
-        )
-
-
-viewCountryInfo : Game -> CountryBorderHelperOutlineStatus -> Element.Element Msg
-viewCountryInfo activeGame countryBorderHelperOutlineStatus =
-    case countryBorderHelperOutlineStatus of
-        CountryBorderHelperOutlineActive countryToShowInfoForId ->
-            case findCountryOwner countryToShowInfoForId activeGame.players of
-                Just playerId ->
-                    case Player.getPlayer playerId activeGame.players of
-                        Just player ->
-                            Element.column
-                                [ Element.width Element.fill, Element.spacing 5 ]
-                                [ Element.el
-                                    [ Element.Background.color (player.color |> ViewHelpers.colorToElementColor)
-                                    , Element.Font.size 14
-                                    , Element.width Element.fill
-                                    , Element.padding 3
-                                    ]
-                                    (Element.text "Country Information")
-                                , Element.row
-                                    [ Element.width Element.fill
-                                    , Element.Font.size 14
-                                    , Element.padding 3
-                                    , Element.Border.color (Colors.lightGreen |> ViewHelpers.colorToElementColor)
-                                    , Element.Border.solid
-                                    , Element.Border.width 3
-                                    ]
-                                    [ Element.el [] (Element.text "Defense")
-                                    , Element.el
-                                        [ Element.alignRight ]
-                                        (getCountryDefenseStrength activeGame.map activeGame.players countryToShowInfoForId |> TroopCount.toString |> Element.text)
-                                    ]
-                                , Element.column
-                                    [ Element.width Element.fill
-                                    , Element.Font.size 14
-                                    , Element.padding 3
-                                    , Element.spacing 3
-                                    , Element.Border.color (Colors.red |> ViewHelpers.colorToElementColor)
-                                    , Element.Border.solid
-                                    , Element.Border.width 3
-                                    ]
-                                    [ Element.el
-                                        [ Element.width Element.fill ]
-                                        (Element.text "Opponent attack")
-                                    , getAttackStrengthPerPlayer activeGame.map activeGame.players countryToShowInfoForId
-                                        |> attackerInfo playerId activeGame
-                                    ]
-                                ]
-
-                        Nothing ->
-                            Element.none
-
-                Nothing ->
-                    Element.none
-
-        _ ->
-            Element.none
-
-
-viewPlayerTroopCount :
-    Player.Id
-    -> Player.Players
-    -> { playerId : Player.Id, countryCount : Int, troopCount : TroopCount.TroopCount, isAlive : Bool }
-    -> Element.Element Msg
-viewPlayerTroopCount currentPlayerId players status =
+infoPanelModel : Model -> Game.InfoPanel.Model
+infoPanelModel model =
     let
-        fontColor =
-            if status.isAlive then
-                black
+        canPass =
+            False
 
-            else
-                Colors.darkGray |> ViewHelpers.colorToElementColor
+        troopMovement : Game.InfoPanel.TroopMovement
+        troopMovement =
+            Game.InfoPanel.NotMovingTroops
+
+        troopCounts : Game.InfoPanel.PlayerCountryAndTroopCounts
+        troopCounts =
+            getPlayerCountryAndTroopCounts { players = model.activeGame.players, currentPlayerTurn = model.activeGame.currentPlayerTurn }
     in
-    case Player.getPlayer status.playerId players of
-        Just player ->
-            Element.el
-                (playerAndTroopCountBorder currentPlayerId status.playerId)
-                (Element.column
-                    [ Element.spacing 1
-                    , Element.width Element.fill
-                    , Element.Background.color (Colors.white |> Colors.toElementColor)
-                    , Element.Border.color (Colors.white |> Colors.toElementColor)
-                    , Element.Border.rounded 5
-                    , Element.paddingXY 2 5
-                    , Element.Font.color fontColor
-                    , Element.Background.color (player.color |> ViewHelpers.colorToElementColor)
-                    ]
-                    [ Element.el
-                        [ Element.width Element.fill
-                        , Element.Font.size 14
-                        , Element.Font.bold
-                        , Element.centerX
-                        ]
-                        (Element.el [ Element.centerX, Element.padding 2 ] (Element.text <| player.name))
-                    , Element.column
-                        [ Element.Background.color (Colors.lightGray |> ViewHelpers.colorToElementColor)
-                        , Element.width Element.fill
-                        , Element.Border.rounded 2
-                        ]
-                        [ Element.row [ Element.spacing 20, Element.Font.size 16 ]
-                            [ Element.el
-                                [ Element.width (Element.px 80)
-                                , Element.alignRight
-                                , Element.padding 3
-                                ]
-                                (Element.el [ Element.alignRight ] (Element.text "Countries"))
-                            , Element.el
-                                []
-                                (Element.text (String.fromInt status.countryCount))
-                            ]
-                        , Element.row [ Element.spacing 20, Element.Font.size 16 ]
-                            [ Element.el
-                                [ Element.width (Element.px 80)
-                                , Element.padding 3
-                                ]
-                                (Element.el [ Element.alignRight ] (Element.text "Troops"))
-                            , Element.el
-                                []
-                                (Element.text (TroopCount.toString status.troopCount))
-                            ]
-                        ]
-                    ]
-                )
-
-        Nothing ->
-            Element.none
-
-
-playerAndTroopCountBorder : Player.Id -> Player.Id -> List (Element.Attribute Msg)
-playerAndTroopCountBorder currentPlayerId playerIdToDisplay =
-    if currentPlayerId == playerIdToDisplay then
-        [ Element.Border.solid
-        , Element.width Element.fill
-        , Element.Border.width 2
-        , Element.Border.rounded 10
-        , Element.Border.color (Colors.white |> Colors.toElementColor)
-        , Element.padding 4
-        ]
-
-    else
-        [ Element.Border.solid
-        , Element.width Element.fill
-        , Element.Border.width 2
-        , Element.Border.color (Colors.darkCharcoal |> Colors.toElementColor)
-        , Element.padding 4
-        ]
+    { canPass = canPass
+    , troopMovement = troopMovement
+    , showAvailableMoves = model.showAvailableMoves
+    , troopCounts = troopCounts
+    , countryInfo = Nothing
+    }
 
 
 black : Element.Color
@@ -548,49 +365,42 @@ black =
     Element.rgb255 0 0 0
 
 
-defaultLabelAttributes : List (Element.Attribute msg)
-defaultLabelAttributes =
-    [ Element.Font.size 12
-    ]
 
-
-viewConfigureTroopCountIfNecessary : PlayerTurn.PlayerTurn -> Bool -> Element.Element Msg
-viewConfigureTroopCountIfNecessary currentPlayerTurn isCurrentUsersTurn =
-    Element.el
-        [ Element.width Element.fill
-        ]
-        (if isCurrentUsersTurn then
-            case currentPlayerTurn |> PlayerTurn.troopsToMove of
-                Just numberOfTroopsToMove ->
-                    Element.column
-                        [ Element.width Element.fill
-                        , Element.padding 10
-                        ]
-                        [ Element.Input.text
-                            (ViewHelpers.defaultTextInputAttributes ++ [ Element.alignLeft ])
-                            { onChange = UpdateNumberOfTroopsToMove
-                            , placeholder = Nothing
-                            , label = Element.Input.labelAbove (defaultLabelAttributes ++ [ Element.alignLeft ]) (Element.text "Number of troops to move")
-                            , text = numberOfTroopsToMove
-                            }
-                        , Element.Input.button
-                            (ViewHelpers.defaultButtonAttributes
-                                ++ [ Element.width Element.fill
-                                   , Element.centerX
-                                   , Element.Font.color (Element.rgb255 255 255 255)
-                                   , Element.Background.color (Element.rgb255 255 63 63)
-                                   , Element.moveDown 10
-                                   ]
-                            )
-                            { onPress = Just CancelMovingTroops, label = ViewHelpers.centerText "Cancel" }
-                        ]
-
-                Nothing ->
-                    Element.none
-
-         else
-            Element.none
-        )
+-- viewConfigureTroopCountIfNecessary : PlayerTurn.PlayerTurn -> Bool -> Element.Element Msg
+-- viewConfigureTroopCountIfNecessary currentPlayerTurn isCurrentUsersTurn =
+--     Element.el
+--         [ Element.width Element.fill
+--         ]
+--         (if isCurrentUsersTurn then
+--             case currentPlayerTurn |> PlayerTurn.troopsToMove of
+--                 Just numberOfTroopsToMove ->
+--                     Element.column
+--                         [ Element.width Element.fill
+--                         , Element.padding 10
+--                         ]
+--                         [ Element.Input.text
+--                             (ViewHelpers.defaultTextInputAttributes ++ [ Element.alignLeft ])
+--                             { onChange = UpdateNumberOfTroopsToMove
+--                             , placeholder = Nothing
+--                             , label = Element.Input.labelAbove (defaultLabelAttributes ++ [ Element.alignLeft ]) (Element.text "Number of troops to move")
+--                             , text = numberOfTroopsToMove
+--                             }
+--                         , Element.Input.button
+--                             (ViewHelpers.defaultButtonAttributes
+--                                 ++ [ Element.width Element.fill
+--                                    , Element.centerX
+--                                    , Element.Font.color (Element.rgb255 255 255 255)
+--                                    , Element.Background.color (Element.rgb255 255 63 63)
+--                                    , Element.moveDown 10
+--                                    ]
+--                             )
+--                             { onPress = Just CancelMovingTroops, label = ViewHelpers.centerText "Cancel" }
+--                         ]
+--                 Nothing ->
+--                     Element.none
+--          else
+--             Element.none
+--         )
 
 
 viewPlayerTurnStatus : Int -> Int -> PlayerTurn.PlayerTurn -> Dict.Dict String Player.Player -> Element.Element Msg
@@ -609,28 +419,6 @@ viewPlayerTurnStatus height fontSize playerTurn players =
                 ]
             )
         )
-
-
-getWaterCollage : Map.Map -> Collage.Collage Msg
-getWaterCollage gameMap =
-    let
-        background =
-            Collage.polygon
-                [ ( 0, 0 )
-                , ( 0, gameMap.dimensions |> Tuple.second |> toFloat )
-                , ( gameMap.dimensions |> Tuple.first |> toFloat, gameMap.dimensions |> Tuple.second |> toFloat )
-                , ( gameMap.dimensions |> Tuple.first |> toFloat, 0.0 )
-                ]
-
-        backgroundWater =
-            background
-                |> Collage.filled (Collage.uniform (Colors.blue |> Colors.toColor))
-
-        backgroundBorder =
-            background
-                |> Collage.outlined (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 8.0) (Collage.uniform (Colors.black |> Colors.toColor)))
-    in
-    Collage.group [ backgroundBorder, backgroundWater ]
 
 
 type alias CountryToRender =

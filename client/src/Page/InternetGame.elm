@@ -10,6 +10,7 @@ module Page.InternetGame exposing
 
 import Browser.Events
 import Game
+import Game.InfoPanel
 import GameController
 import Graphql.Document
 import Graphql.Http
@@ -117,6 +118,11 @@ update msg model =
                         _ ->
                             ( Loading { loadingModel | gameAndMaps = gameRemoteData }, Cmd.none )
 
+                WindowResized width height ->
+                    ( Loading { loadingModel | session = loadingModel.session |> Session.updateWindowSize { width = width, height = height } }
+                    , Cmd.none
+                    )
+
                 _ ->
                     ( model, Cmd.none )
 
@@ -132,7 +138,7 @@ update msg model =
                                 Game.CountryMouseUp _ ->
                                     saveIfChanged playingModel updatedGameModel
 
-                                Game.Pass ->
+                                Game.InfoPanelMsg Game.InfoPanel.Pass ->
                                     saveIfChanged playingModel updatedGameModel
 
                                 _ ->
@@ -167,6 +173,11 @@ update msg model =
                 NewSubscriptionStatus newStatus () ->
                     ( Playing { playingModel | subscriptionStatus = newStatus }, Cmd.none )
 
+                WindowResized width height ->
+                    ( Playing { playingModel | session = playingModel.session |> Session.updateWindowSize { width = width, height = height } }
+                    , Cmd.none
+                    )
+
                 _ ->
                     ( model, Cmd.none )
 
@@ -197,7 +208,7 @@ view model =
 
 viewPlaying : PlayingModel -> { title : String, content : Html.Html Msg }
 viewPlaying playingModel =
-    Game.view playingModel.gameModel { width = 800, height = 600 } GameMsg
+    Game.view playingModel.gameModel playingModel.session.windowSize GameMsg
 
 
 subscriptions : Model -> Sub Msg
