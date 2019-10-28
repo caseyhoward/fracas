@@ -341,66 +341,85 @@ getTotalTroopCountForPlayer player =
 infoPanelModel : Model -> Game.InfoPanel.Model
 infoPanelModel model =
     let
-        canPass =
-            False
-
         troopMovement : Game.InfoPanel.TroopMovement
         troopMovement =
-            Game.InfoPanel.NotMovingTroops
+            case model.activeGame.currentPlayerTurn |> PlayerTurn.troopsToMove of
+                Just numberOfTroopsToMove ->
+                    Game.InfoPanel.MovingTroops numberOfTroopsToMove
+
+                Nothing ->
+                    Game.InfoPanel.NotMovingTroops
 
         troopCounts : Game.InfoPanel.PlayerCountryAndTroopCounts
         troopCounts =
             getPlayerCountryAndTroopCounts { players = model.activeGame.players, currentPlayerTurn = model.activeGame.currentPlayerTurn }
+
+        attackers : List Game.InfoPanel.Attacker
+        attackers =
+            case model.countryBorderHelperOutlineStatus of
+                CountryBorderHelperOutlineActive countryId ->
+                    getAttackStrengthPerPlayer model.activeGame.map model.activeGame.players countryId
+                        |> Dict.map
+                            (\attackerPlayerId troopCount ->
+                                case Player.getPlayer (Player.Id attackerPlayerId) model.activeGame.players of
+                                    Just attacker ->
+                                        { troopCount = troopCount
+                                        , name = attacker.name
+                                        , color = attacker.color
+                                        }
+
+                                    Nothing ->
+                                        { troopCount = TroopCount.noTroops, name = "error", color = Colors.black }
+                            )
+                        |> Dict.filter
+                            (\playerId attacker ->
+                                case findCountryOwner countryId model.activeGame.players of
+                                    Just countryOwnerPlayerId ->
+                                        Player.Id playerId /= countryOwnerPlayerId && attacker.troopCount /= TroopCount.noTroops
+
+                                    Nothing ->
+                                        False
+                            )
+                        |> Dict.values
+
+                _ ->
+                    []
+
+  
+        countryInfo : Maybe Game.InfoPanel.CountryInfo
+        countryInfo =
+            case model.countryBorderHelperOutlineStatus of
+                CountryBorderHelperOutlineActive countryId ->
+                    case findCountryOwner countryId model.activeGame.players of
+                        Just playerId ->
+                            case Player.getPlayer playerId model.activeGame.players of
+                                Just player ->
+                                    Just
+                                        { playerColor = player.color
+                                        , defenseStrength = getCountryDefenseStrength model.activeGame.map model.activeGame.players countryId
+                                        , attackers = attackers
+                                        }
+
+                                Nothing ->
+                                    Nothing
+
+                        Nothing ->
+                            Nothing
+
+                _ ->
+                    Nothing
     in
-    { canPass = canPass
+    { canPass = PlayerTurn.canCurrentPlayerPass model.activeGame.currentPlayerTurn
     , troopMovement = troopMovement
     , showAvailableMoves = model.showAvailableMoves
     , troopCounts = troopCounts
-    , countryInfo = Nothing
+    , countryInfo = countryInfo
     }
 
 
 black : Element.Color
 black =
     Element.rgb255 0 0 0
-
-
-
--- viewConfigureTroopCountIfNecessary : PlayerTurn.PlayerTurn -> Bool -> Element.Element Msg
--- viewConfigureTroopCountIfNecessary currentPlayerTurn isCurrentUsersTurn =
---     Element.el
---         [ Element.width Element.fill
---         ]
---         (if isCurrentUsersTurn then
---             case currentPlayerTurn |> PlayerTurn.troopsToMove of
---                 Just numberOfTroopsToMove ->
---                     Element.column
---                         [ Element.width Element.fill
---                         , Element.padding 10
---                         ]
---                         [ Element.Input.text
---                             (ViewHelpers.defaultTextInputAttributes ++ [ Element.alignLeft ])
---                             { onChange = UpdateNumberOfTroopsToMove
---                             , placeholder = Nothing
---                             , label = Element.Input.labelAbove (defaultLabelAttributes ++ [ Element.alignLeft ]) (Element.text "Number of troops to move")
---                             , text = numberOfTroopsToMove
---                             }
---                         , Element.Input.button
---                             (ViewHelpers.defaultButtonAttributes
---                                 ++ [ Element.width Element.fill
---                                    , Element.centerX
---                                    , Element.Font.color (Element.rgb255 255 255 255)
---                                    , Element.Background.color (Element.rgb255 255 63 63)
---                                    , Element.moveDown 10
---                                    ]
---                             )
---                             { onPress = Just CancelMovingTroops, label = ViewHelpers.centerText "Cancel" }
---                         ]
---                 Nothing ->
---                     Element.none
---          else
---             Element.none
---         )
 
 
 viewPlayerTurnStatus : Int -> Int -> PlayerTurn.PlayerTurn -> Dict.Dict String Player.Player -> Element.Element Msg

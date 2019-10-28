@@ -1,5 +1,7 @@
 module Game.InfoPanel exposing
-    ( CurrentPlayerTurnCountryAndTroopCount
+    ( Attacker
+    , CountryInfo
+    , CurrentPlayerTurnCountryAndTroopCount
     , Model
     , Msg(..)
     , PlayerCountryAndTroopCount(..)
@@ -12,55 +14,13 @@ module Game.InfoPanel exposing
     )
 
 import Colors
-import Country
 import Element
 import Element.Background
 import Element.Border
 import Element.Font
 import Element.Input
-import Player
 import TroopCount
 import ViewHelpers
-
-
-
--- type alias Game =
---     { id : Id
---     , currentPlayerTurn : PlayerTurn.PlayerTurn
---     , map : Map.Map
---     , players : Player.Players
---     , currentUserPlayerId : Player.Id
---     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
---     }
-
-
-playerAndTroopCountBorderAttributes : Colors.Color -> List (Element.Attribute Msg)
-playerAndTroopCountBorderAttributes borderColor =
-    [ Element.Border.solid
-    , Element.width Element.fill
-    , Element.Border.width 2
-    , Element.Border.rounded 10
-    , Element.Border.color (borderColor |> Colors.toElementColor)
-    , Element.padding 4
-    ]
-
-
-
--- (attackerStrengthPerPlayer
---     |> Dict.toList
---     |> List.filter
---         (\( playerId, troopCount ) ->
---             Player.Id playerId /= countyOwnerPlayerId && troopCount /= TroopCount.noTroops
---         )
---     |> List.map
---         (\( playerId, troopCount ) ->
---             case Player.getPlayer (Player.Id playerId) activeGame.players of
---                 Just player ->
---
---                 Nothing ->
---                     Element.none
---         )
--- )
 
 
 type TroopMovement
@@ -134,18 +94,31 @@ type Msg
 
 viewInfoPanelPhone : Model -> Element.Element Msg
 viewInfoPanelPhone model =
-    Debug.todo ""
+    Element.column
+        (Element.width Element.fill :: infoPanelAttributes)
+        [ if model.canPass then
+            viewPassButton
 
+          else
+            Element.el
+                [ Element.height (Element.px 50)
+                ]
+                Element.none
+        , viewPlayerCountryAndTroopCounts model.troopCounts
+        , case model.troopMovement of
+            MovingTroops troopCountString ->
+                viewConfigureTroopCount troopCountString
 
+            NotMovingTroops ->
+                Element.none
+        , case model.countryInfo of
+            Just countryInfo ->
+                viewCountryInfo countryInfo
 
--- Element.column
---     (Element.width Element.fill :: infoPanelAttributes)
---     [ viewPassButtonIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
---     , viewPlayerCountryAndTroopCountsMobile activeGame.currentPlayerTurn activeGame.players
---     , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
---     , viewCountryInfo activeGame countryBorderHelperOutlineStatus
---     , viewShowAvailableMoves showAvailableMoves
---     ]
+            Nothing ->
+                Element.none
+        , viewShowAvailableMoves model.showAvailableMoves
+        ]
 
 
 viewInfoPanelDesktop : Model -> Element.Element Msg
@@ -156,14 +129,17 @@ viewInfoPanelDesktop model =
             viewPassButton
 
           else
-            Element.none
+            Element.el
+                [ Element.height (Element.px 50)
+                ]
+                Element.none
+        , viewPlayerCountryAndTroopCounts model.troopCounts
         , case model.troopMovement of
             MovingTroops troopCountString ->
                 viewConfigureTroopCount troopCountString
 
             NotMovingTroops ->
                 Element.none
-        , viewPlayerCountryAndTroopCounts model.troopCounts
         , case model.countryInfo of
             Just countryInfo ->
                 viewCountryInfo countryInfo
@@ -217,15 +193,10 @@ infoPanelAttributes : List (Element.Attribute Msg)
 infoPanelAttributes =
     [ Element.height Element.fill
     , Element.padding 20
-    , Element.spacing 20
+    , Element.spacing 40
     , Element.alignTop
     , Element.Background.color (Colors.darkCharcoal |> Colors.toElementColor)
     ]
-
-
-playerAndTroopCountBorderColor : Element.Color
-playerAndTroopCountBorderColor =
-    Colors.white |> ViewHelpers.colorToElementColor
 
 
 viewShowAvailableMoves : Bool -> Element.Element Msg
@@ -254,7 +225,10 @@ viewConfigureTroopCount numberOfTroopsToMove =
             (ViewHelpers.defaultTextInputAttributes ++ [ Element.alignLeft ])
             { onChange = TroopCountChanged
             , placeholder = Nothing
-            , label = Element.Input.labelAbove (ViewHelpers.defaultLabelAttributes ++ [ Element.alignLeft ]) (Element.text "Number of troops to move")
+            , label =
+                Element.Input.labelAbove
+                    (ViewHelpers.defaultLabelAttributes ++ [ Element.alignLeft, Element.Font.color (Colors.white |> Colors.toElementColor) ])
+                    (Element.text "Number of troops to move")
             , text = numberOfTroopsToMove
             }
         , Element.Input.button
@@ -320,58 +294,76 @@ viewPlayerTroopCount :
     -> TurnStage
     -> Element.Element Msg
 viewPlayerTroopCount playerName fontColor playerColor countryCount troopCount turnStage =
-    Element.el
-        (playerAndTroopCountBorderAttributes Colors.black)
-        (Element.row
-            [ Element.width Element.fill, Element.spacing 3 ]
-            [ Element.column
-                [ Element.spacing 1
-                , Element.width Element.fill
-                , Element.Background.color (Colors.white |> Colors.toElementColor)
-                , Element.Border.color (Colors.white |> Colors.toElementColor)
-                , Element.Border.rounded 5
-                , Element.paddingXY 2 5
-                , Element.Font.color (fontColor |> Colors.toElementColor)
-                , Element.Background.color (playerColor |> ViewHelpers.colorToElementColor)
-                ]
-                [ Element.el
-                    [ Element.width Element.fill
-                    , Element.Font.size 14
-                    , Element.Font.bold
-                    , Element.centerX
-                    ]
-                    (Element.el [ Element.centerX, Element.padding 2 ] (Element.text <| playerName))
-                , Element.column
-                    [ Element.Background.color (Colors.lightGray |> ViewHelpers.colorToElementColor)
-                    , Element.width Element.fill
-                    , Element.Border.rounded 2
-                    ]
-                    [ Element.row [ Element.spacing 20, Element.Font.size 16 ]
-                        [ Element.el
-                            [ Element.width (Element.px 80)
-                            , Element.alignRight
-                            , Element.padding 3
-                            ]
-                            (Element.el [ Element.alignRight ] (Element.text "Countries"))
-                        , Element.el
-                            []
-                            (Element.text (String.fromInt countryCount))
-                        ]
-                    , Element.row [ Element.spacing 20, Element.Font.size 16 ]
-                        [ Element.el
-                            [ Element.width (Element.px 80)
-                            , Element.padding 3
-                            ]
-                            (Element.el [ Element.alignRight ] (Element.text "Troops"))
-                        , Element.el
-                            []
-                            (Element.text (TroopCount.toString troopCount))
-                        ]
-                    ]
-                ]
-            , turnStageView turnStage
+    Element.row
+        [ Element.width Element.fill, Element.spacing 3 ]
+        [ Element.column
+            [ Element.spacing 1
+            , Element.width Element.fill
+            , Element.Background.color (Colors.white |> Colors.toElementColor)
+            , Element.Border.color (Colors.white |> Colors.toElementColor)
+            , Element.Border.rounded 5
+            , Element.paddingXY 2 5
+            , Element.Font.color (fontColor |> Colors.toElementColor)
+            , Element.Background.color (playerColor |> ViewHelpers.colorToElementColor)
             ]
-        )
+            [ Element.el
+                [ Element.width Element.fill
+                , Element.Font.size 14
+                , Element.Font.bold
+                , Element.centerX
+                ]
+                (Element.el [ Element.centerX, Element.padding 2 ] (Element.text <| playerName))
+            , Element.column
+                [ Element.Background.color (Colors.lightGray |> ViewHelpers.colorToElementColor)
+                , Element.width Element.fill
+                , Element.Border.rounded 2
+                ]
+                [ Element.row [ Element.spacing 20, Element.Font.size 16 ]
+                    [ Element.el
+                        [ Element.width (Element.px 80)
+                        , Element.alignRight
+                        , Element.padding 3
+                        ]
+                        (Element.el [ Element.alignRight ] (Element.text "Countries"))
+                    , Element.el
+                        []
+                        (Element.text (String.fromInt countryCount))
+                    ]
+                , Element.row [ Element.spacing 20, Element.Font.size 16 ]
+                    [ Element.el
+                        [ Element.width (Element.px 80)
+                        , Element.padding 3
+                        ]
+                        (Element.el [ Element.alignRight ] (Element.text "Troops"))
+                    , Element.el
+                        []
+                        (Element.text (TroopCount.toString troopCount))
+                    ]
+                ]
+            ]
+        , turnStageView turnStage
+        ]
+
+
+turnIndicatorWidth : Element.Attribute msg
+turnIndicatorWidth =
+    Element.width (Element.px 26)
+
+
+viewTurnIndicator : Element.Element msg
+viewTurnIndicator =
+    Element.column
+        [ Element.height Element.fill
+        , Element.Background.color (Colors.white |> Colors.toElementColor)
+        , turnIndicatorWidth
+        , Element.Border.rounded 2
+        , Element.padding 3
+        , Element.spacing 8
+        ]
+        [ Element.el [] (ViewHelpers.fontawesomeIcon "fas" "parachute-box" "xs")
+        , Element.el [] (ViewHelpers.fontawesomeIcon "fas" "fighter-jet" "xs")
+        , Element.el [] (ViewHelpers.fontawesomeIcon "fas" "plane" "xs")
+        ]
 
 
 turnStageView : TurnStage -> Element.Element msg
@@ -380,15 +372,30 @@ turnStageView turnStage =
         CapitolPlacement ->
             Element.el
                 [ Element.height Element.fill
-                , Element.width (Element.px 16)
+                , turnIndicatorWidth
                 , Element.Background.color (Colors.white |> Colors.toElementColor)
                 , Element.Border.rounded 2
                 , Element.padding 2
                 ]
-                (ViewHelpers.fontawesomeIcon "fort-awesome")
+                (ViewHelpers.fontawesomeIcon "fab" "fort-awesome" "xs")
 
-        _ ->
-            Element.none
+        TroopPlacement ->
+            viewTurnIndicator
+
+        AttackPassOrBuildPort ->
+            viewTurnIndicator
+
+        TroopMovement ->
+            viewTurnIndicator
+
+        WaitingForTurn ->
+            Element.el
+                [ Element.height Element.fill
+                , turnIndicatorWidth
+                , Element.Border.rounded 2
+                , Element.padding 2
+                ]
+                Element.none
 
 
 viewPlayerCountryAndTroopCounts : PlayerCountryAndTroopCounts -> Element.Element Msg

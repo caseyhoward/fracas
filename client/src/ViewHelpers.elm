@@ -238,6 +238,10 @@ title =
         (Map.view 100 titleMap.countries titleMap.dimensions |> Element.html)
 
 
-fontawesomeIcon name =
-    Html.i [ Html.Attributes.classList [ ( "fab", True ), ( "fa-" ++ name, True ) ] ] []
+fontawesomeIcon prefix name size =
+    Html.i
+        [ Html.Attributes.classList
+            [ ( prefix, True ), ( "fa-" ++ name, True ), ( "fa-" ++ size, True ) ]
+        ]
+        []
         |> Element.html
