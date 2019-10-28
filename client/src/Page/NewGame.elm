@@ -491,7 +491,7 @@ layout overlay body =
             , Element.spacingXY 0 20
             , Element.Background.color (Colors.blue |> Colors.toElementColor)
             ]
-            [ Element.el [ Element.width Element.fill, Element.centerX ] NewGame.title
+            [ Element.el [ Element.width Element.fill, Element.centerX ] ViewHelpers.title
             , body
             ]
         )

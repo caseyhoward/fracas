@@ -140,11 +140,21 @@ countryBorderColor =
 
 viewPlayingGameMobile : Game -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
 viewPlayingGameMobile activeGame showAvailableMoves countryBorderHelperOutlineStatus maybeError device =
-    Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
+    Element.layout
+        [ Element.width Element.fill
+        , Element.height Element.fill
+        , Element.Events.onMouseUp MouseUp
+        , Element.Background.color (Colors.darkCharcoal |> Colors.toElementColor)
+        ]
         (Element.column
-            [ Element.centerX, Element.width Element.fill ]
+            [ Element.centerX
+            , Element.width Element.fill
+            , Element.height Element.fill
+            , Element.Background.color (Colors.darkCharcoal |> Colors.toElementColor)
+            ]
             [ Element.column
                 [ Element.centerX
+                , Element.height Element.fill
                 , Element.width Element.fill
                 , Element.alignTop
                 ]
@@ -176,52 +186,68 @@ viewPlayingGameMobile activeGame showAvailableMoves countryBorderHelperOutlineSt
 
 viewPlayingGameDesktop : Game -> Bool -> CountryBorderHelperOutlineStatus -> Maybe String -> Element.Device -> Html.Html Msg
 viewPlayingGameDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus maybeError device =
-    Element.layout [ Element.width Element.fill, Element.Events.onMouseUp MouseUp ]
-        (Element.row
-            [ Element.centerX, Element.width Element.fill ]
-            [ viewInfoPanelDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus
-            , Element.column
+    Element.layout
+        [ Element.width Element.fill
+        , Element.height Element.fill
+        , Element.Events.onMouseUp MouseUp
+        ]
+        (Element.el
+            [ Element.width Element.fill
+            , Element.height Element.fill
+            , Element.Background.color (Colors.darkCharcoal |> Colors.toElementColor)
+            ]
+            (Element.row
                 [ Element.centerX
                 , Element.width Element.fill
-                , Element.alignTop
+                , Element.Background.color (Colors.darkCharcoal |> Colors.toElementColor)
                 ]
-                [ Element.el
-                    [ Element.width Element.fill
-                    , Element.height Element.fill
-                    ]
-                    (getGameBoardHtml 100 activeGame showAvailableMoves countryBorderHelperOutlineStatus device |> Element.html)
+                [ viewInfoPanelDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus
                 , Element.column
-                    [ Element.width Element.fill
-                    , Element.Border.width 1
-                    , Element.Border.color black
-                    , Element.Border.solid
+                    [ Element.centerX
+                    , Element.width Element.fill
+                    , Element.alignTop
+                    , Element.padding 10
                     ]
-                    ((case maybeError of
-                        Just error ->
-                            [ Element.paragraph [] [ Element.text error ] ]
+                    [ Element.el
+                        [ Element.width Element.fill
+                        , Element.height Element.fill
+                        ]
+                        (getGameBoardHtml 100 activeGame showAvailableMoves countryBorderHelperOutlineStatus device |> Element.html)
+                    , Element.column
+                        [ Element.width Element.fill
+                        , Element.Border.width 1
+                        , Element.Border.color black
+                        , Element.Border.solid
+                        ]
+                        ((case maybeError of
+                            Just error ->
+                                [ Element.paragraph [] [ Element.text error ] ]
 
-                        Nothing ->
-                            []
-                     )
-                        ++ [ viewPlayerTurnStatus 55 20 activeGame.currentPlayerTurn activeGame.players ]
-                    )
+                            Nothing ->
+                                []
+                         )
+                            ++ [ viewPlayerTurnStatus 55 20 activeGame.currentPlayerTurn activeGame.players ]
+                        )
+                    ]
                 ]
-            ]
+            )
         )
+
+
+infoPanelAttributes : List (Element.Attribute Msg)
+infoPanelAttributes =
+    [ Element.height Element.fill
+    , Element.padding 20
+    , Element.spacing 20
+    , Element.alignTop
+    , Element.Background.color (Colors.darkCharcoal |> Colors.toElementColor)
+    ]
 
 
 viewInfoPanelPhone : Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Element Msg
 viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatus =
     Element.column
-        [ Element.width Element.fill
-        , Element.height Element.fill
-        , Element.padding 20
-        , Element.spacing 20
-        , Element.alignTop
-        , Element.Border.width 1
-        , Element.Border.color black
-        , Element.Border.solid
-        ]
+        (Element.width Element.fill :: infoPanelAttributes)
         [ viewPassButtonIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
         , viewPlayerCountryAndTroopCountsMobile activeGame.currentPlayerTurn activeGame.players
         , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
@@ -233,15 +259,7 @@ viewInfoPanelPhone activeGame showAvailableMoves countryBorderHelperOutlineStatu
 viewInfoPanelDesktop : Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Element Msg
 viewInfoPanelDesktop activeGame showAvailableMoves countryBorderHelperOutlineStatus =
     Element.column
-        [ Element.width (Element.px 200)
-        , Element.height Element.fill
-        , Element.padding 20
-        , Element.spacing 20
-        , Element.alignTop
-        , Element.Border.width 1
-        , Element.Border.color black
-        , Element.Border.solid
-        ]
+        (Element.width (Element.px 200) :: infoPanelAttributes)
         [ viewPassButtonIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
         , viewPlayerCountryAndTroopCounts activeGame.currentPlayerTurn activeGame.players
         , viewConfigureTroopCountIfNecessary activeGame.currentPlayerTurn (PlayerTurn.isPlayerTurn activeGame.currentPlayerTurn activeGame.currentUserPlayerId)
@@ -257,7 +275,7 @@ viewShowAvailableMoves showAvailableMoves =
         [ Element.Input.checkbox
             []
             { label =
-                Element.Input.labelRight [ Element.Font.size 12 ]
+                Element.Input.labelRight [ Element.Font.size 12, Element.Font.color (Colors.white |> Colors.toElementColor) ]
                     (Element.text "Show available moves")
             , icon = Element.Input.defaultCheckbox
             , checked = showAvailableMoves
@@ -290,7 +308,7 @@ viewPassButtonIfNecessary currentPlayerTurn isCurrentUserPlayerTurn =
 
 playerAndTroopCountBorderColor : Element.Color
 playerAndTroopCountBorderColor =
-    Colors.darkGray |> ViewHelpers.colorToElementColor
+    Colors.white |> ViewHelpers.colorToElementColor
 
 
 getPlayerCountryAndTroopCounts :
@@ -452,49 +470,54 @@ viewPlayerTroopCount currentPlayerId players status =
     in
     case Player.getPlayer status.playerId players of
         Just player ->
-            Element.column
-                ([ Element.spacing 1
-                 , Element.width Element.fill
-                 , Element.Background.color playerAndTroopCountBorderColor
-                 , Element.Font.color fontColor
-                 ]
-                    ++ playerAndTroopCountBorder currentPlayerId status.playerId
+            Element.el
+                (playerAndTroopCountBorder currentPlayerId status.playerId)
+                (Element.column
+                    [ Element.spacing 1
+                    , Element.width Element.fill
+                    , Element.Background.color (Colors.white |> Colors.toElementColor)
+                    , Element.Border.color (Colors.white |> Colors.toElementColor)
+                    , Element.Border.rounded 5
+                    , Element.paddingXY 2 5
+                    , Element.Font.color fontColor
+                    , Element.Background.color (player.color |> ViewHelpers.colorToElementColor)
+                    ]
+                    [ Element.el
+                        [ Element.width Element.fill
+                        , Element.Font.size 14
+                        , Element.Font.bold
+                        , Element.centerX
+                        ]
+                        (Element.el [ Element.centerX, Element.padding 2 ] (Element.text <| player.name))
+                    , Element.column
+                        [ Element.Background.color (Colors.lightGray |> ViewHelpers.colorToElementColor)
+                        , Element.width Element.fill
+                        , Element.Border.rounded 2
+                        ]
+                        [ Element.row [ Element.spacing 20, Element.Font.size 16 ]
+                            [ Element.el
+                                [ Element.width (Element.px 80)
+                                , Element.alignRight
+                                , Element.padding 3
+                                ]
+                                (Element.el [ Element.alignRight ] (Element.text "Countries"))
+                            , Element.el
+                                []
+                                (Element.text (String.fromInt status.countryCount))
+                            ]
+                        , Element.row [ Element.spacing 20, Element.Font.size 16 ]
+                            [ Element.el
+                                [ Element.width (Element.px 80)
+                                , Element.padding 3
+                                ]
+                                (Element.el [ Element.alignRight ] (Element.text "Troops"))
+                            , Element.el
+                                []
+                                (Element.text (TroopCount.toString status.troopCount))
+                            ]
+                        ]
+                    ]
                 )
-                [ Element.el
-                    [ Element.Background.color (player.color |> ViewHelpers.colorToElementColor)
-                    , Element.padding 5
-                    , Element.width Element.fill
-                    , Element.Font.size 14
-                    , Element.Font.bold
-                    ]
-                    (Element.text <| player.name)
-                , Element.column
-                    [ Element.Background.color (Colors.lightGray |> ViewHelpers.colorToElementColor)
-                    , Element.width Element.fill
-                    ]
-                    [ Element.row [ Element.spacing 20, Element.Font.size 16 ]
-                        [ Element.el
-                            [ Element.width (Element.px 80)
-                            , Element.alignRight
-                            , Element.padding 3
-                            ]
-                            (Element.el [ Element.alignRight ] (Element.text "Countries"))
-                        , Element.el
-                            []
-                            (Element.text (String.fromInt status.countryCount))
-                        ]
-                    , Element.row [ Element.spacing 20, Element.Font.size 16 ]
-                        [ Element.el
-                            [ Element.width (Element.px 80)
-                            , Element.padding 3
-                            ]
-                            (Element.el [ Element.alignRight ] (Element.text "Troops"))
-                        , Element.el
-                            []
-                            (Element.text (TroopCount.toString status.troopCount))
-                        ]
-                    ]
-                ]
 
         Nothing ->
             Element.none
@@ -504,14 +527,19 @@ playerAndTroopCountBorder : Player.Id -> Player.Id -> List (Element.Attribute Ms
 playerAndTroopCountBorder currentPlayerId playerIdToDisplay =
     if currentPlayerId == playerIdToDisplay then
         [ Element.Border.solid
-        , Element.Border.width 3
-        , Element.Border.color black
+        , Element.width Element.fill
+        , Element.Border.width 2
+        , Element.Border.rounded 10
+        , Element.Border.color (Colors.white |> Colors.toElementColor)
+        , Element.padding 4
         ]
 
     else
         [ Element.Border.solid
-        , Element.Border.width 1
-        , Element.Border.color playerAndTroopCountBorderColor
+        , Element.width Element.fill
+        , Element.Border.width 2
+        , Element.Border.color (Colors.darkCharcoal |> Colors.toElementColor)
+        , Element.padding 4
         ]
 
 

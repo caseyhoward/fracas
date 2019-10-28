@@ -6,9 +6,12 @@ module ViewHelpers exposing
     , defaultTextInputAttributes
     , dialog
     , errorToString
-    ,  pixelsPerMapSquare
+    , layoutAttributes
+    ,  loadingLayout
        -- , selectButton
 
+    , pixelsPerMapSquare
+    , title
     )
 
 import Color
@@ -20,6 +23,39 @@ import Element.Events
 import Element.Font
 import Graphql.Http
 import Graphql.Http.GraphqlError
+import Html
+import Map
+import Maps.FracasTitle
+
+
+layoutAttributes : List (Element.Attribute msg)
+layoutAttributes =
+    [ Element.centerX
+    , Element.padding 30
+    , Element.Background.color (Colors.blue |> Colors.toElementColor)
+    , Element.width Element.fill
+    , Element.height Element.fill
+    ]
+
+
+loadingLayout : Html.Html msg
+loadingLayout =
+    Element.layout
+        layoutAttributes
+        (Element.column
+            [ Element.width Element.fill
+            , Element.centerX
+            , Element.Background.color (Colors.blue |> Colors.toElementColor)
+            , Element.spacing 100
+            ]
+            [ title
+            , Element.image
+                [ Element.centerX
+                , Element.centerY
+                ]
+                { src = "/loading.gif", description = "Loading" }
+            ]
+        )
 
 
 centerText : String -> Element.Element msg
@@ -179,3 +215,16 @@ errorToString errorData =
 graphqlErrorToString : Graphql.Http.GraphqlError.GraphqlError -> String
 graphqlErrorToString error =
     error.message
+
+
+title : Element.Element msg
+title =
+    let
+        titleMap =
+            Map.parse "title" Maps.FracasTitle.map
+    in
+    Element.el
+        [ Element.width (Element.px 400)
+        , Element.centerX
+        ]
+        (Map.view 100 titleMap.countries titleMap.dimensions |> Element.html)

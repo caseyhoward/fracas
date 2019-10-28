@@ -294,7 +294,7 @@ view : Model -> { title : String, content : Html.Html Msg }
 view model =
     case model of
         Loading _ ->
-            { title = "Loading", content = Html.div [] [ Html.text "Loading" ] }
+            { title = "Loading", content = ViewHelpers.loadingLayout }
 
         Configuring configuringModel ->
             viewConfiguring configuringModel
@@ -531,18 +531,13 @@ playerColorSelect players (Player.Id playerId) isConfiguringColor =
 layout : Element.Element Msg -> Element.Element Msg -> Html.Html Msg
 layout overlay body =
     Element.layout
-        [ Element.centerX
-        , Element.inFront overlay
-        , Element.padding 30
-        , Element.Background.color (Colors.blue |> Colors.toElementColor)
-        , Element.width Element.fill
-        ]
+        (Element.inFront overlay :: ViewHelpers.layoutAttributes)
         (Element.column
             [ Element.width Element.fill
             , Element.spacingXY 0 20
             , Element.Background.color (Colors.blue |> Colors.toElementColor)
             ]
-            [ Element.el [ Element.width Element.fill, Element.centerX ] NewGame.title
+            [ Element.el [ Element.width Element.fill, Element.centerX ] ViewHelpers.title
             , body
             ]
         )

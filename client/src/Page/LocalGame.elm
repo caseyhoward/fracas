@@ -472,7 +472,7 @@ viewShowAvailableMoves showAvailableMoves =
         [ Element.Input.checkbox
             []
             { label =
-                Element.Input.labelRight [ Element.Font.size 12 ]
+                Element.Input.labelRight [ Element.Font.size 12, Element.Font.color (Colors.white |> Colors.toElementColor) ]
                     (Element.text "Show available moves")
             , icon = Element.Input.defaultCheckbox
             , checked = showAvailableMoves

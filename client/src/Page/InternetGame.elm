@@ -9,9 +9,6 @@ module Page.InternetGame exposing
     )
 
 import Browser.Events
-import Colors
-import Element
-import Element.Background
 import Game
 import GameController
 import Graphql.Document
@@ -19,11 +16,11 @@ import Graphql.Http
 import Html
 import InternetGame
 import Json.Decode
-import NewGame
 import Ports
 import RemoteData
 import Session
 import Time
+import ViewHelpers
 
 
 type Msg
@@ -192,7 +189,7 @@ view : Model -> { title : String, content : Html.Html Msg }
 view model =
     case model of
         Loading _ ->
-            { title = "Loading", content = Html.div [] [ Html.text "Loading" ] }
+            { title = "Loading", content = ViewHelpers.loadingLayout }
 
         Playing playingModel ->
             viewPlaying playingModel
@@ -201,26 +198,6 @@ view model =
 viewPlaying : PlayingModel -> { title : String, content : Html.Html Msg }
 viewPlaying playingModel =
     Game.view playingModel.gameModel { width = 800, height = 600 } GameMsg
-
-
-layout : Element.Element Msg -> Element.Element Msg -> Html.Html Msg
-layout overlay body =
-    Element.layout
-        [ Element.centerX
-        , Element.inFront overlay
-        , Element.padding 30
-        , Element.Background.color (Colors.blue |> Colors.toElementColor)
-        , Element.width Element.fill
-        ]
-        (Element.column
-            [ Element.width Element.fill
-            , Element.spacingXY 0 20
-            , Element.Background.color (Colors.blue |> Colors.toElementColor)
-            ]
-            [ Element.el [ Element.width Element.fill, Element.centerX ] NewGame.title
-            , body
-            ]
-        )
 
 
 subscriptions : Model -> Sub Msg

@@ -8,7 +8,6 @@ module NewGame exposing
     , removePlayerButton
     , removePlayerButtonWidth
     , startGameButton
-    , title
     )
 
 import Colors
@@ -214,16 +213,3 @@ startGameButton message =
             )
             { onPress = Just message, label = ViewHelpers.centerText "Start Game" }
         )
-
-
-title : Element.Element msg
-title =
-    let
-        titleMap =
-            Map.parse "title" Maps.FracasTitle.map
-    in
-    Element.el
-        [ Element.width (Element.px 400)
-        , Element.centerX
-        ]
-        (Map.view 100 titleMap.countries titleMap.dimensions |> Element.html)
