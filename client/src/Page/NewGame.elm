@@ -480,16 +480,13 @@ viewLocalGame model =
 layout : Element.Element Msg -> Element.Element Msg -> Html.Html Msg
 layout overlay body =
     Element.layout
-        [ Element.centerX
-        , Element.inFront overlay
-        , Element.padding 30
-        , Element.Background.color (Colors.blue |> Colors.toElementColor)
-        , Element.width Element.fill
-        ]
+        (ViewHelpers.layoutAttributes
+            ++ [ Element.inFront overlay
+               ]
+        )
         (Element.column
             [ Element.width Element.fill
             , Element.spacingXY 0 20
-            , Element.Background.color (Colors.blue |> Colors.toElementColor)
             ]
             [ Element.el [ Element.width Element.fill, Element.centerX ] ViewHelpers.title
             , body

@@ -34,7 +34,8 @@ layoutAttributes =
     , Element.padding 30
     , Element.Background.color (Colors.blue |> Colors.toElementColor)
     , Element.width Element.fill
-    , Element.height Element.fill
+
+    -- , Element.height Element.fill
     ]
 
 
@@ -52,6 +53,7 @@ loadingLayout =
             , Element.image
                 [ Element.centerX
                 , Element.centerY
+                , Element.width (Element.px 64)
                 ]
                 { src = "/loading.gif", description = "Loading" }
             ]

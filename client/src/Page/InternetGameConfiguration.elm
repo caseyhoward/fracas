@@ -323,9 +323,11 @@ viewConfiguring configuringModel =
             (Element.el [ Element.width Element.fill ]
                 (Element.column
                     [ Element.spacingXY 20 20
-                    , Element.Background.color (Colors.blue |> Colors.toElementColor)
+
+                    -- , Element.Background.color (Colors.blue |> Colors.toElementColor)
                     , Element.centerX
                     , Element.width (Element.fill |> Element.maximum 1200)
+                    , Element.height Element.shrink
                     ]
                     ([ joinUrlView configuringModel.session.origin configuringModel.configuration.joinToken
                      , Element.el
@@ -452,7 +454,7 @@ playerFieldsView playerName fields =
         currentPlayerField ( playerId, player ) =
             Element.row [ Element.width Element.fill ]
                 [ Element.Input.text
-                    [ Element.width Element.fill
+                    [ Element.width (Element.px 200)
                     , Html.Attributes.id ("player-name-" ++ (playerId |> Player.idToString)) |> Element.htmlAttribute
                     ]
                     { onChange = UpdatePlayerName
@@ -510,7 +512,6 @@ playerColorSelect players (Player.Id playerId) isConfiguringColor =
                         , Element.Background.color (Colors.white |> Colors.toElementColor)
                         , Element.spacing 20
                         , Element.width (Element.px 300)
-                        , Element.height Element.fill
                         ]
                         [ Element.text ("Select color for " ++ player.name)
                         , Element.wrappedRow [ Element.width Element.fill ]
@@ -535,9 +536,14 @@ layout overlay body =
         (Element.column
             [ Element.width Element.fill
             , Element.spacingXY 0 20
-            , Element.Background.color (Colors.blue |> Colors.toElementColor)
+
+            -- , Element.Background.color (Colors.blue |> Colors.toElementColor)
             ]
-            [ Element.el [ Element.width Element.fill, Element.centerX ] ViewHelpers.title
+            [ Element.el
+                [ Element.width Element.fill
+                , Element.centerX
+                ]
+                ViewHelpers.title
             , body
             ]
         )
