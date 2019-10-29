@@ -15,3 +15,14 @@ svg text {
   -ms-user-select: none;
   user-select: none;
 }
+
+/* https://github.com/mdgriffith/elm-ui/issues/57 */
+.s.r > s:first-of-type.accx {
+  flex-grow: 0 !important;
+}
+.s.r > s:last-of-type.accx {
+  flex-grow: 0 !important;
+}
+.cx > .wrp {
+  justify-content: center !important;
+}

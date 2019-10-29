@@ -220,6 +220,7 @@ selectionSet =
                     , players = players |> Player.playerSelectionSetsToPlayers
                     , neutralCountryTroops = neutralCountryTroops |> Dict.fromList
                     , currentUserPlayerId = currentUserPlayerId |> Player.Id
+                    , lastPlayerTurn = Nothing
                     }
             in
             activeGame

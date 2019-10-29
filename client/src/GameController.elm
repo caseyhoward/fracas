@@ -162,10 +162,19 @@ pass : Game.Game -> Result Error Game.Game
 pass activeGame =
     case activeGame.currentPlayerTurn of
         PlayerTurn.PlayerTurn (PlayerTurn.TroopMovementFromSelected _ _) playerId ->
-            Ok { activeGame | currentPlayerTurn = PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement (playerId |> nextPlayerCheckForDeadPlayers activeGame.players) }
+            Ok
+                { activeGame
+                    | currentPlayerTurn =
+                        PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement (playerId |> nextPlayerCheckForDeadPlayers activeGame.players)
+                    , lastPlayerTurn = Just activeGame.currentPlayerTurn
+                }
 
         PlayerTurn.PlayerTurn PlayerTurn.TroopMovement playerId ->
-            Ok { activeGame | currentPlayerTurn = PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement (playerId |> nextPlayerCheckForDeadPlayers activeGame.players) }
+            Ok
+                { activeGame
+                    | currentPlayerTurn = PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement (playerId |> nextPlayerCheckForDeadPlayers activeGame.players)
+                    , lastPlayerTurn = Just activeGame.currentPlayerTurn
+                }
 
         PlayerTurn.PlayerTurn PlayerTurn.AttackAnnexOrPort playerId ->
             Ok
@@ -176,6 +185,7 @@ pass activeGame =
 
                         else
                             PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement (playerId |> nextPlayerCheckForDeadPlayers activeGame.players)
+                    , lastPlayerTurn = Just activeGame.currentPlayerTurn
                 }
 
         _ ->
@@ -245,7 +255,12 @@ attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString a
                             |> Result.map
                                 (\updatedGame ->
                                     { updatedGame
-                                        | currentPlayerTurn = PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement (PlayerTurn.getCurrentPlayer activeGame.currentPlayerTurn |> nextPlayerCheckForDeadPlayers activeGame.players)
+                                        | currentPlayerTurn =
+                                            PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement
+                                                (PlayerTurn.getCurrentPlayer activeGame.currentPlayerTurn
+                                                    |> nextPlayerCheckForDeadPlayers activeGame.players
+                                                )
+                                        , lastPlayerTurn = Just activeGame.currentPlayerTurn
                                     }
                                 )
 
@@ -297,6 +312,7 @@ attemptToPlaceCapitol clickedCountryId currentPlayerId activeGame =
                     Ok
                         { activeGame
                             | players = updatedPlayers
+                            , lastPlayerTurn = Just activeGame.currentPlayerTurn
                             , neutralCountryTroops = destroyTroops clickedCountryId activeGame.neutralCountryTroops
                             , currentPlayerTurn = nextPlayerTurn
                         }
@@ -354,7 +370,11 @@ attemptTroopPlacement clickedCountryId currentPlayerId troopsToPlace activeGame 
             updatedGameResult
                 |> Result.map
                     (\updatedGame ->
-                        { updatedGame | currentPlayerTurn = PlayerTurn.PlayerTurn PlayerTurn.AttackAnnexOrPort currentPlayerId }
+                        { updatedGame
+                            | currentPlayerTurn =
+                                PlayerTurn.PlayerTurn PlayerTurn.AttackAnnexOrPort currentPlayerId
+                            , lastPlayerTurn = Just activeGame.currentPlayerTurn
+                        }
                     )
 
         Game.OccupiedByOpponent _ ->
@@ -407,6 +427,7 @@ attemptToAnnexCountry currentPlayerId clickedCountryId activeGame =
                 (\updatedGame ->
                     { updatedGame
                         | currentPlayerTurn = PlayerTurn.PlayerTurn PlayerTurn.TroopMovement currentPlayerId
+                        , lastPlayerTurn = Just activeGame.currentPlayerTurn
                         , neutralCountryTroops = removeTroopCount clickedCountryId activeGame.neutralCountryTroops
                     }
                 )
@@ -468,7 +489,13 @@ buildPort playerId countryId activeGame =
                                         PlayerTurn.PlayerTurn PlayerTurn.TroopPlacement (playerId |> nextPlayerCheckForDeadPlayers activeGame.players)
                             in
                             updatedGameResult
-                                |> Result.map (\updated -> { updated | currentPlayerTurn = nextPlayerTurn })
+                                |> Result.map
+                                    (\updated ->
+                                        { updated
+                                            | currentPlayerTurn = nextPlayerTurn
+                                            , lastPlayerTurn = Just activeGame.currentPlayerTurn
+                                        }
+                                    )
 
                     Nothing ->
                         "Error while building port" |> Error |> Err

@@ -111,9 +111,6 @@ availablePlayerColors players =
     , Colors.green
     , Colors.darkGreen
     , Colors.lightBlue
-    , Colors.lightGray
-    , Colors.gray
-    , Colors.darkGray
     , Colors.charcoal
     , Colors.darkCharcoal
     , Colors.lightOrange
@@ -128,7 +125,6 @@ availablePlayerColors players =
     , Colors.lightYellow
     , Colors.darkYellow
     , Colors.yellow
-    , Colors.white
     ]
         |> List.filter (\color -> not (List.member color takenColors))
 

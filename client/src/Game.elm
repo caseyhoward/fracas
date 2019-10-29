@@ -35,7 +35,6 @@ import Element.Background
 import Element.Border
 import Element.Events
 import Element.Font
-import Element.Input
 import Game.InfoPanel
 import Html
 import Html.Attributes
@@ -63,6 +62,7 @@ type alias Model =
 type alias Game =
     { id : Id
     , currentPlayerTurn : PlayerTurn.PlayerTurn
+    , lastPlayerTurn : Maybe PlayerTurn.PlayerTurn
     , map : Map.Map
     , players : Player.Players
     , currentUserPlayerId : Player.Id
@@ -112,9 +112,13 @@ viewGame model windowSize =
             device =
                 Element.classifyDevice windowSize
         in
-        case Element.classifyDevice windowSize |> .class of
+        case device.class of
             Element.Phone ->
-                viewPlayingGameMobile model device
+                if device.orientation == Element.Portrait then
+                    viewPlayingGameMobileVertical model device
+
+                else
+                    viewPlayingGameDesktop model device
 
             _ ->
                 viewPlayingGameDesktop model device
@@ -136,8 +140,8 @@ countryBorderColor =
     Colors.rgb255 100 100 100
 
 
-viewPlayingGameMobile : Model -> Element.Device -> Html.Html Msg
-viewPlayingGameMobile model device =
+viewPlayingGameMobileVertical : Model -> Element.Device -> Html.Html Msg
+viewPlayingGameMobileVertical model device =
     Element.layout
         [ Element.width Element.fill
         , Element.height Element.fill
@@ -176,7 +180,7 @@ viewPlayingGameMobile model device =
                     , Element.height Element.fill
                     ]
                     (getGameBoardHtml 100 model.activeGame model.showAvailableMoves model.countryBorderHelperOutlineStatus device |> Element.html)
-                , Game.InfoPanel.viewInfoPanelPhone (infoPanelModel model) |> Element.map InfoPanelMsg
+                , Game.InfoPanel.viewInfoPanelPhoneVertical (infoPanelModel model) |> Element.map InfoPanelMsg
                 ]
             ]
         )
@@ -262,6 +266,28 @@ playerToPlayerAndTroopCounts player currentPlayerTurn isCurrentUser =
                     }
 
 
+playerTurnToTurnStage : PlayerTurn.PlayerTurn -> Game.InfoPanel.TurnStage
+playerTurnToTurnStage playerTurn =
+    case PlayerTurn.getPlayerTurnStageFromPlayerTurn playerTurn of
+        PlayerTurn.TroopMovement ->
+            Game.InfoPanel.TroopMovement
+
+        PlayerTurn.CapitolPlacement ->
+            Game.InfoPanel.CapitolPlacement
+
+        PlayerTurn.TroopPlacement ->
+            Game.InfoPanel.TroopPlacement
+
+        PlayerTurn.AttackAnnexOrPort ->
+            Game.InfoPanel.AttackPassOrBuildPort
+
+        PlayerTurn.TroopMovementFromSelected _ _ ->
+            Game.InfoPanel.TroopMovement
+
+        PlayerTurn.GameOver ->
+            Game.InfoPanel.WaitingForTurn
+
+
 getPlayerCountryAndTroopCounts :
     { players : Player.Players, currentPlayerTurn : PlayerTurn.PlayerTurn, currentUserPlayerId : Player.Id }
     -> Game.InfoPanel.PlayerCountryAndTroopCounts
@@ -300,24 +326,7 @@ getPlayerCountryAndTroopCounts { players, currentPlayerTurn, currentUserPlayerId
                                                     , isCurrentUser = PlayerTurn.isPlayerTurn currentPlayerTurn currentUserPlayerId
                                                     }
                                                 , turnStage =
-                                                    case PlayerTurn.getPlayerTurnStageFromPlayerTurn currentPlayerTurn of
-                                                        PlayerTurn.TroopMovement ->
-                                                            Game.InfoPanel.TroopMovement
-
-                                                        PlayerTurn.CapitolPlacement ->
-                                                            Game.InfoPanel.CapitolPlacement
-
-                                                        PlayerTurn.TroopPlacement ->
-                                                            Game.InfoPanel.TroopPlacement
-
-                                                        PlayerTurn.AttackAnnexOrPort ->
-                                                            Game.InfoPanel.AttackPassOrBuildPort
-
-                                                        PlayerTurn.TroopMovementFromSelected _ _ ->
-                                                            Game.InfoPanel.TroopMovement
-
-                                                        PlayerTurn.GameOver ->
-                                                            Game.InfoPanel.WaitingForTurn
+                                                    currentPlayerTurn |> playerTurnToTurnStage
                                                 }
                                     }
 
@@ -378,7 +387,11 @@ infoPanelModel model =
 
         troopCounts : Game.InfoPanel.PlayerCountryAndTroopCounts
         troopCounts =
-            getPlayerCountryAndTroopCounts { players = model.activeGame.players, currentPlayerTurn = model.activeGame.currentPlayerTurn, currentUserPlayerId = model.activeGame.currentUserPlayerId }
+            getPlayerCountryAndTroopCounts
+                { players = model.activeGame.players
+                , currentPlayerTurn = model.activeGame.currentPlayerTurn
+                , currentUserPlayerId = model.activeGame.currentUserPlayerId
+                }
 
         attackers : List Game.InfoPanel.Attacker
         attackers =
@@ -439,6 +452,7 @@ infoPanelModel model =
     , showAvailableMoves = model.showAvailableMoves
     , troopCounts = troopCounts
     , countryInfo = countryInfo
+    , priorTurnStage = model.activeGame.lastPlayerTurn |> Maybe.map playerTurnToTurnStage
     }
 
 
@@ -925,9 +939,32 @@ getGameBoardHtml scaleFactor activeGame showAvailableMoves countryBorderHelperOu
                     countriesToRender
                         |> List.map (getCountryInfoPolygonBorder activeGame.map activeGame.players countryBorderHelperOutlineStatus)
                         |> Collage.group
+
+                troopMovementFromCountryBorder =
+                    case PlayerTurn.getPlayerTurnStageFromPlayerTurn activeGame.currentPlayerTurn of
+                        PlayerTurn.TroopMovementFromSelected countryBeingMovedFromId _ ->
+                            case
+                                countriesToRender
+                                    |> List.filter (\countryToRender -> countryToRender.id == countryBeingMovedFromId)
+                                    |> List.head
+                            of
+                                Just countryToRender ->
+                                    countryToRender.polygonPoints
+                                        |> Collage.polygon
+                                        |> Collage.outlined
+                                            (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 6.0)
+                                                (Collage.uniform (Colors.darkBlue |> Colors.toColor))
+                                            )
+
+                                Nothing ->
+                                    Collage.group []
+
+                        _ ->
+                            Collage.group []
             in
             Collage.group
                 [ countryEventHandlers
+                , troopMovementFromCountryBorder
                 , countryInfoHighlights
                 , availableMoves
                 , troopCountsCollage
