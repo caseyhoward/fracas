@@ -112,16 +112,11 @@ viewGame model windowSize =
             device =
                 Element.classifyDevice windowSize
         in
-        case device.class of
-            Element.Phone ->
-                if device.orientation == Element.Portrait then
-                    viewPlayingGameMobileVertical model device
+        if device.orientation == Element.Portrait then
+            viewPlayingGameMobileVertical model device
 
-                else
-                    viewPlayingGameDesktop model device
-
-            _ ->
-                viewPlayingGameDesktop model device
+        else
+            viewPlayingGameDesktop model device
     , title = "Fracas"
     }
 
@@ -895,6 +890,9 @@ getGameBoardHtml scaleFactor activeGame showAvailableMoves countryBorderHelperOu
                 troopCountFontSize =
                     case device.class of
                         Element.Phone ->
+                            scaleFactor * 2
+
+                        Element.Tablet ->
                             scaleFactor * 2
 
                         _ ->

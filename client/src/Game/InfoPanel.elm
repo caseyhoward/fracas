@@ -260,14 +260,14 @@ playerTroopCountView maybePriorTurnStage viewModel =
                 deadPlayerTroopCount.isCurrentUser
 
 
-turnStageView : TurnStage -> Colors.Color -> Maybe TurnStage -> Element.Element msg
-turnStageView turnStage playerColor maybePriorTurnStage =
+turnStageView : TurnStage -> Colors.Color -> Element.Element msg
+turnStageView turnStage playerColor =
     Element.el
         [ Element.height Element.fill
         , turnIndicatorWidth
         , Element.inFront (backgroundTurnIndicator turnStage playerColor)
-        , Element.inFront (capitolPlacementIndicator turnStage maybePriorTurnStage playerColor)
-        , Element.inFront (troopPlacementIndicator turnStage playerColor)
+        , Element.inFront (capitolPlacementIndicator turnStage)
+        , Element.inFront (troopPlacementIndicator turnStage)
         , Element.inFront (attackPassOrBuildPortIndicator turnStage playerColor)
         , Element.inFront (troopMovementIndicator turnStage playerColor)
         ]
@@ -287,8 +287,8 @@ turnIndicatorWidth =
     Element.width (Element.px 26)
 
 
-troopPlacementIndicator : TurnStage -> Colors.Color -> Element.Element msg
-troopPlacementIndicator turnStage playerColor =
+troopPlacementIndicator : TurnStage -> Element.Element msg
+troopPlacementIndicator turnStage =
     viewTurnIndicator
         activeColor
         inactiveColor
@@ -351,8 +351,8 @@ backgroundTurnIndicator turnStage playerColor =
         Element.none
 
 
-capitolPlacementIndicator : TurnStage -> Maybe TurnStage -> Colors.Color -> Element.Element msg
-capitolPlacementIndicator turnStage maybePriorTurnStage playerColor =
+capitolPlacementIndicator : TurnStage -> Element.Element msg
+capitolPlacementIndicator turnStage =
     Element.el
         ([ Element.height Element.fill
          , turnIndicatorWidth
@@ -374,18 +374,14 @@ capitolPlacementIndicator turnStage maybePriorTurnStage playerColor =
 fadeOutAttributes : List (Element.Attribute msg)
 fadeOutAttributes =
     [ Html.Attributes.style "opacity" "0" |> Element.htmlAttribute
-
-    -- , Html.Attributes.style "visibility" "hidden" |> Element.htmlAttribute
-    , Html.Attributes.style "transition" "opacity 1.5s linear" |> Element.htmlAttribute
+    , Html.Attributes.style "transition" "opacity 2s linear" |> Element.htmlAttribute
     ]
 
 
 fadeInAttributes : List (Element.Attribute msg)
 fadeInAttributes =
     [ Html.Attributes.style "opacity" "1" |> Element.htmlAttribute
-
-    -- , Html.Attributes.style "visibility" "visible" |> Element.htmlAttribute
-    , Html.Attributes.style "transition" "opacity 1.5s linear" |> Element.htmlAttribute
+    , Html.Attributes.style "transition" "opacity 2s linear" |> Element.htmlAttribute
     ]
 
 
@@ -560,14 +556,14 @@ viewPlayerTroopCount playerName fontColor playerColor countryCount troopCount tu
                 , playerTroopAndCountryCountRow "Troops" (TroopCount.toString troopCount)
                 ]
             ]
-        , turnStageView turnStage playerColor maybePriorTurnStage
+        , turnStageView turnStage playerColor
         ]
 
 
 viewPlayerCountryAndTroopCounts : PlayerCountryAndTroopCounts -> Maybe TurnStage -> Element.Element Msg
 viewPlayerCountryAndTroopCounts viewModel maybePriorTurnStage =
     Element.wrappedRow
-        [ Element.spacingXY 10 20
+        [ Element.spacingXY 20 20
         , Element.centerX
         , Element.width Element.fill
         ]
