@@ -265,7 +265,7 @@ turnStageView turnStage playerColor maybePriorTurnStage =
     Element.el
         [ Element.height Element.fill
         , turnIndicatorWidth
-        , Element.inFront (waitingTurnIndicator turnStage playerColor)
+        , Element.inFront (backgroundTurnIndicator turnStage playerColor)
         , Element.inFront (capitolPlacementIndicator turnStage maybePriorTurnStage playerColor)
         , Element.inFront (troopPlacementIndicator turnStage playerColor)
         , Element.inFront (attackPassOrBuildPortIndicator turnStage playerColor)
@@ -332,23 +332,22 @@ troopMovementIndicator turnStage playerColor =
         )
 
 
-waitingTurnIndicator : TurnStage -> Colors.Color -> Element.Element msg
-waitingTurnIndicator turnStage playerColor =
+backgroundTurnIndicator : TurnStage -> Colors.Color -> Element.Element msg
+backgroundTurnIndicator turnStage playerColor =
     Element.el
-        ([ Element.height Element.fill
-         , turnIndicatorWidth
-         , Element.Border.roundEach { bottomLeft = 0, topLeft = 0, topRight = 5, bottomRight = 5 }
-         , Element.Background.color (playerColor |> Colors.toElementColor)
-         , Element.padding 2
-         ]
-            ++ (case turnStage of
-                    WaitingForTurn ->
-                        [ Html.Attributes.style "opacity" "1" |> Element.htmlAttribute ]
+        [ Element.height Element.fill
+        , turnIndicatorWidth
+        , Element.Border.roundEach { bottomLeft = 0, topLeft = 0, topRight = 5, bottomRight = 5 }
+        , Element.Background.color
+            (case turnStage of
+                WaitingForTurn ->
+                    playerColor |> Colors.toElementColor
 
-                    _ ->
-                        [ Html.Attributes.style "opacity" "1" |> Element.htmlAttribute ]
-               )
-        )
+                _ ->
+                    Colors.white |> Colors.toElementColor
+            )
+        , Element.padding 2
+        ]
         Element.none
 
 
