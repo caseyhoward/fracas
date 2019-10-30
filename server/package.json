@@ -6,7 +6,6 @@
   "scripts": {
     "test": "jest --coverage",
     "test-watch": "jest --watchAll",
-    "graphql-codegen": "graphql-codegen --config codegen.yml",
     "start": "ts-node index.ts",
     "start-watch": "nodemon index.ts",
     "ts-node": "ts-node"
@@ -22,10 +21,6 @@
     "subscriptions-transport-ws": "^0.9.16"
   },
   "devDependencies": {
-    "@graphql-codegen/cli": "^1.8.1",
-    "@graphql-codegen/introspection": "^1.8.1",
-    "@graphql-codegen/typescript": "1.8.1",
-    "@graphql-codegen/typescript-resolvers": "1.8.1",
     "@types/jest": "^24.0.19",
     "@types/pg": "^7.11.2",
     "@types/ws": "^6.0.3",

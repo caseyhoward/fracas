@@ -17,7 +17,6 @@ RUN mv elm /usr/local/bin/
 RUN npm install --global --unsafe-perm create-elm-app@4.0.0
 COPY package.json .
 COPY package-lock.json .
-RUN cat package.json
 RUN npm install
 EXPOSE 3000
 CMD [ "elm-app", "start" ]

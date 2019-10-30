@@ -79,6 +79,17 @@ type Segment {
 
 ### GAME INPUT ###
 
+union MapId = DefaultMapId | UserMapId
+
+type DefaultMapId {
+  id: String!
+}
+
+type UserMapId {
+  id: String!
+  test: Int
+}
+
 input NewGameInput {
   mapId: String!
   players: [PlayerInput!]!
@@ -89,6 +100,7 @@ input NewGameInput {
 input GameInput {
   id: String!
   mapId: String!
+  realMapId: String!
   players: [PlayerInput!]!
   neutralCountryTroops: [CountryTroopCountsInput!]!
   playerTurn: PlayerTurnInput!

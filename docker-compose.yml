@@ -64,10 +64,19 @@ services:
       - postgres
     volumes:
       - ./server/db/migrations:/flyway/sql
-    command:
-      -url=jdbc:postgresql://postgres:5432/fracas_test -user=fracas -password=abc123 -connectRetries=20 migrate
-      # -url=jdbc:postgresql://`ip addr show docker0 | grep -Po 'inet \K[\d.]+'`:5432/fracas_test -user=fracas -password=abc123 migrate
+    command: -url=jdbc:postgresql://postgres:5432/fracas_test -user=fracas -password=abc123 -connectRetries=20 migrate
 
+  graphql:
+    build:
+      context: ./graphql
+    volumes:
+      - ./graphql/codegen.yml:/usr/src/app/codegen.yml
+      - ./server/schema.graphql:/usr/src/app/server/schema.graphql
+      - ./server/src/api/graphql.ts:/usr/src/app/server/src/api/graphql.ts
+      - ./client/src:/usr/src/app/src
+      - ./client/elm.json:/usr/src/app/elm.json
+
+  # TODO: Evaluate if this is useful and get rid of it if not
   adminer:
     image: adminer
     restart: always
