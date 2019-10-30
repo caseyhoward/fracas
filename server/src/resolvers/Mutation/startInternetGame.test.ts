@@ -4,7 +4,7 @@ import * as InternetGameConfigurationRepository from "../../repositories/Interne
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import startInternetGame from "./startInternetGame";
 import * as TestDatabase from "../../test/TestDatabase";
-import * as GraphqlYoga from "graphql-subscriptions";
+import * as PubSub from "../../PubSub";
 
 describe("Mutation.startInternetGame", () => {
   it("starts a game when host", async () => {
@@ -17,7 +17,7 @@ describe("Mutation.startInternetGame", () => {
       configuration.id,
       { ...Builders.playerConfiguration, playerId: host.id }
     );
-    await startInternetGame(TestDatabase.query, new GraphqlYoga.PubSub(), {
+    await startInternetGame(TestDatabase.query, PubSub.inMemory(), {
       playerToken: host.playerToken
     });
     const game = await InternetGameRepository.findById(TestDatabase.query)(
@@ -44,7 +44,7 @@ describe("Mutation.startInternetGame", () => {
       configuration.id,
       { ...Builders.playerConfiguration, playerId: notHost.id }
     );
-    await startInternetGame(TestDatabase.query, new GraphqlYoga.PubSub(), {
+    await startInternetGame(TestDatabase.query, PubSub.inMemory(), {
       playerToken: notHost.playerToken
     });
     const game = await InternetGameConfigurationRepository.findById(

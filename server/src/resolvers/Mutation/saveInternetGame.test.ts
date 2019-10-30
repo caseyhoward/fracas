@@ -3,11 +3,11 @@ import * as InternetGameRepository from "../../repositories/InternetGameReposito
 import saveInternetGame from "./saveInternetGame";
 import * as Models from "../../repositories/Models";
 import * as TestDatabase from "../../test/TestDatabase";
-import { PubSub } from "graphql-subscriptions";
+import * as PubSub from "../../PubSub";
 
 describe("Mutation.saveInternetGame", () => {
   it("starts a game", async () => {
-    const pubSub = new PubSub();
+    const pubSub = PubSub.inMemory();
     const configuration = await Factories.createInternetGameConfiguration({});
 
     const player = await Factories.createInternetGamePlayer({
