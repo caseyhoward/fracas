@@ -1,0 +1,19 @@
+{
+  "name": "graphql-codegen",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "generate-typescript": "graphql-codegen --config codegen.yml",
+    "generate-elm": "elm-graphql --introspection-file ../server/graphql.schema.json --base Api"
+  },
+  "dependencies": {
+    "@dillonkearns/elm-graphql": "^3.6.2",
+    "@graphql-codegen/cli": "^1.8.1",
+    "@graphql-codegen/introspection": "^1.8.1",
+    "@graphql-codegen/typescript": "1.8.1",
+    "@graphql-codegen/typescript-resolvers": "1.8.1"
+  },
+  "author": "",
+  "license": "ISC"
+}
