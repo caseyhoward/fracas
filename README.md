@@ -4,7 +4,7 @@
 
 An attempt to remake [this game](http://www.smozzie.com/fracas.html)
 
-Try the early terrible version [here](http://fracas.caseyhoward.net)
+Try the early terrible version [here](http://fracas.caseyhoward.net).
 
 ## Screenshot
 
@@ -12,62 +12,40 @@ Try the early terrible version [here](http://fracas.caseyhoward.net)
 
 ## Development
 
-### Server
+### Docker
 
-#### Tab 1
+The "easy" way to get everything running locally is to use docker-compose.
 
-```sh
-cd server && tsc -w
-# Another terminal
-cd server && nodemon build/index.js
-```
-OR
+From the project root directory run
 
 ```sh
-cd server && nodemon index.ts # Need ts-node installed
+docker-compose up -d
 ```
-
-### Tab 2
-
-```sh
-cd server && docker-compose up -d # For postgres
-```
-
-### Tab 3
-
-```sh
-cd server && npm run test -- --watch
-```
-
-### Client
-
-cd client && elm-app start
-
 
 ## Todo
 
+- Turn these todo's into Github issues
 - Mobile mouse events
-- Multiplayer via internet
+  - Hold down for country info doesn't work on mobile
 - Map builder
+  - It seems easier to do this then to create a random map generator 
 - Sound effects
 - Single player (AI)
 - Log
 - Stats
 - Random map generator
-- Allies
+  - https://news.ycombinator.com/item?id=21099344
+  - http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/
+  - https://www.redblobgames.com/maps/mapgen2/
+  - https://azgaar.github.io/Fantasy-Map-Generator/
 - Multiplayer chat
+- Allies
 - Troop count rendering (better centering and better font)
 - Use elm-svg instead of elm-collage (wish I knew about that before)
+  - This will allow use of lazy and keyed. It will also allow everything that svg is capable and not just what's implemented by elm-collage. This will allow filling polygons with patterns which will be nice for filling capitols. Won't need to store every single dot coordinate anymore.
 
 
 ## Bugs
 - Don't show available moves when showing country info
 - Make sure there are more countries on a map than players when starting game
 - Hide "Add Player" Button when colors are used up
-
-## Maps ideas
-
-- https://news.ycombinator.com/item?id=21099344
-- http://www-cs-students.stanford.edu/~amitp/game-programming/polygon-map-generation/
-- https://www.redblobgames.com/maps/mapgen2/
-- https://azgaar.github.io/Fantasy-Map-Generator/

@@ -12,7 +12,9 @@ RUN apk --update add tzdata \
   && apk del tzdata
 WORKDIR /usr/src/app
 COPY package.json .
+COPY package-lock.json .
 RUN npm install
 EXPOSE 4000
 # ADD . /usr/src/app
-CMD [ "npm", "start" ]
+ENTRYPOINT [ "npm" ]
+CMD [ "run", "start-watch" ]

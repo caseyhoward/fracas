@@ -1,0 +1,78 @@
+version: "3"
+
+services:
+  client:
+    build:
+      context: ./client
+    environment:
+      API_URL: "${API_URL}"
+    volumes:
+      - ./client:/usr/src/app
+    ports:
+      - 3000:3000
+
+  server:
+    build:
+      context: ./server
+    environment:
+      API_URL: "${API_URL}"
+      PGHOST: "${PGHOST}"
+      PGDATABASE: "${PGDATABASE}"
+      PGUSER: "${PGUSER}"
+      PGPASSWORD: "${PGPASSWORD}"
+    volumes:
+      - ./server:/usr/src/app
+    ports:
+      - 4000:4000
+
+  server-unit-tests:
+    build:
+      context: ./server
+    command: ["run", "test-watch"]
+    environment:
+      PGHOST: "${PGHOST}"
+    volumes:
+      - ./server:/usr/src/app
+
+  postgres:
+    image: postgres:11.5-alpine
+    environment:
+      POSTGRES_PASSWORD: abc123
+      POSTGRES_USER: fracas
+    volumes:
+      - fracas-postgres:/var/lib/postgresql/data
+      - ./server/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - 5432:5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-migration-development:
+    image: flyway/flyway:6.0.4
+    depends_on:
+      - postgres
+    volumes:
+      - ./server/db/migrations:/flyway/sql
+    command: -url=jdbc:postgresql://postgres:5432/fracas -user=fracas -password=abc123 -connectRetries=20 migrate
+
+  postgres-migration-test:
+    image: flyway/flyway:6.0.4
+    depends_on:
+      - postgres
+    volumes:
+      - ./server/db/migrations:/flyway/sql
+    command:
+      -url=jdbc:postgresql://postgres:5432/fracas_test -user=fracas -password=abc123 -connectRetries=20 migrate
+      # -url=jdbc:postgresql://`ip addr show docker0 | grep -Po 'inet \K[\d.]+'`:5432/fracas_test -user=fracas -password=abc123 migrate
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - 8080:8080
+
+volumes:
+  fracas-postgres:
