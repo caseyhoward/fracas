@@ -8,9 +8,13 @@ export function mapToGraphql(map: Models.Map): Graphql.Map {
 
 export async function findFirstId(
   executeQuery: Database.ExecuteQuery
-): Promise<string> {
+): Promise<string | null> {
   const result = await executeQuery("SELECT * FROM maps LIMIT 1");
-  return result.rows[0].id;
+  if (result.rows) {
+    return result.rows[0].id;
+  } else {
+    return null;
+  }
 }
 
 export async function findById(

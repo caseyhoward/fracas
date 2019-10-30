@@ -40,7 +40,7 @@ export const findByToken: FindByTokenConstructor = (
     if (row) {
       return rowToInternetGamePlayer(row);
     } else {
-      throw "Count not find game player by token";
+      throw "Could not find game player by token";
     }
   };
 };

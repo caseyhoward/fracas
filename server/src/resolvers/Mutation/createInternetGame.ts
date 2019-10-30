@@ -10,30 +10,35 @@ export async function createInternetGame(
   executeQuery: ExecuteQuery
 ): Promise<string> {
   const mapId = await Map.findFirstId(executeQuery);
-  const hostToken = Uuid.generate();
-  const joinToken = Uuid.generate();
 
-  const internetGameId = await InternetGameConfigurationRepository.create(
-    executeQuery,
-    {
-      __typename: "NewInternetGameConfiguration",
-      joinToken: joinToken,
-      mapId: mapId,
-      players: []
-    }
-  );
+  if (mapId) {
+    const hostToken = Uuid.generate();
+    const joinToken = Uuid.generate();
 
-  const hostGamePlayer: Models.InternetGamePlayer = await InternetGamePlayerRepository.create(
-    executeQuery,
-    internetGameId,
-    hostToken
-  );
+    const internetGameId = await InternetGameConfigurationRepository.create(
+      executeQuery,
+      {
+        __typename: "NewInternetGameConfiguration",
+        joinToken: joinToken,
+        mapId: mapId,
+        players: []
+      }
+    );
 
-  await InternetGameConfigurationRepository.addPlayer(
-    executeQuery,
-    internetGameId,
-    Player.createHost(hostGamePlayer.id)
-  );
+    const hostGamePlayer: Models.InternetGamePlayer = await InternetGamePlayerRepository.create(
+      executeQuery,
+      internetGameId,
+      hostToken
+    );
 
-  return hostToken;
+    await InternetGameConfigurationRepository.addPlayer(
+      executeQuery,
+      internetGameId,
+      Player.createHost(hostGamePlayer.id)
+    );
+
+    return hostToken;
+  } else {
+    throw "No maps in the database";
+  }
 }
