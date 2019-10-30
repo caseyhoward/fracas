@@ -280,7 +280,7 @@ playerTurnToTurnStage playerTurn =
             Game.InfoPanel.TroopMovement
 
         PlayerTurn.GameOver ->
-            Game.InfoPanel.WaitingForTurn
+            Game.InfoPanel.Dead
 
 
 getPlayerCountryAndTroopCounts :
@@ -447,7 +447,6 @@ infoPanelModel model =
     , showAvailableMoves = model.showAvailableMoves
     , troopCounts = troopCounts
     , countryInfo = countryInfo
-    , priorTurnStage = model.activeGame.lastPlayerTurn |> Maybe.map playerTurnToTurnStage
     }
 
 
