@@ -6,18 +6,12 @@ import * as Database from "./src/Database";
 import { Client, ClientConfig } from "pg";
 import { PubSub as PS } from "graphql-subscriptions";
 
-// PGHOST='localhost'
-// PGUSER=process.env.USER
-// PGDATABASE=process.env.USER
-// PGPASSWORD=null
-// PGPORT=5432
-
 const postgresConfiguration: ClientConfig = {
-  user: "fracas",
-  host: "localhost",
-  database: "fracas",
-  password: "abc123",
-  port: 5432
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE,
+  user: process.env.PGUSER,
+  password: process.env.PGPASSWORD,
+  port: parseInt(process.env.PGPORT || "5432", 10)
 };
 
 async function startServer() {

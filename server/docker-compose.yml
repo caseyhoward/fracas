@@ -1,6 +1,18 @@
 version: "3"
 
 services:
+  server:
+    build: .
+    environment:
+      API_URL: "${API_URL}"
+      PGHOST: "${PGHOST}"
+      PGDATABASE: "${PGDATABASE}"
+      PGUSER: "${PGUSER}"
+      PGPASSWORD: "${PGPASSWORD}"
+    volumes:
+      - ./:/usr/src/app
+    ports:
+      - 4000:4000
   postgres:
     image: postgres:11.5-alpine
     environment:
