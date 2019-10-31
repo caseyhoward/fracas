@@ -23,11 +23,11 @@ export function inMemory(): PubSub {
 
 export function internetGameChanged(
   pubSub: PubSub.PubSub,
-  internetGame: Models.InternetGame,
+  internetGame: Models.InternetGameWithoutMap,
   playerId: string
 ) {
   const message = {
-    internetGame: Models.internetGameToGraphql(internetGame, playerId)
+    internetGame: Models.internetGameWithoutMapToGraphql(internetGame, playerId)
   };
   pubSub.publish(INTERNET_GAME_CHANGED, message);
 }

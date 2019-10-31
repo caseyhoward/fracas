@@ -7,20 +7,24 @@ import * as Models from "../repositories/Models";
 import * as Uuid from "../Uuid";
 
 interface CreateInternetGameConfigurationOptions {
-  mapOrMapId?: string | Models.Map;
+  mapOrMapId?: Models.MapId | Models.Map;
 }
 
 export async function createInternetGameConfiguration(
   options: CreateInternetGameConfigurationOptions
 ): Promise<Models.InternetGameConfiguration> {
-  let mapId: string;
-  if (typeof options.mapOrMapId === "string") {
-    mapId = options.mapOrMapId;
-  } else if (typeof options.mapOrMapId === "undefined") {
+  let mapId: Models.MapId;
+  if (typeof options.mapOrMapId === "undefined") {
     const map = await createMap();
     mapId = map.id;
   } else {
-    mapId = options.mapOrMapId.id;
+    if (options.mapOrMapId.__typename === "SystemMapId") {
+      mapId = options.mapOrMapId;
+    } else if (options.mapOrMapId.__typename === "UserMapId") {
+      mapId = options.mapOrMapId;
+    } else {
+      mapId = Models.mapId(Uuid.generate(), "user");
+    }
   }
   const newInternetGameConfiguration = Builders.internetGameConfiguration({
     mapId: mapId

@@ -79,19 +79,9 @@ type Segment {
 
 ### GAME INPUT ###
 
-union MapId = DefaultMapId | UserMapId
-
-type DefaultMapId {
-  id: String!
-}
-
-type UserMapId {
-  id: String!
-  test: Int
-}
-
 input NewGameInput {
   mapId: String!
+  mapIdType: String!
   players: [PlayerInput!]!
   neutralCountryTroops: [CountryTroopCountsInput!]!
   playerTurn: PlayerTurnInput!
@@ -99,8 +89,6 @@ input NewGameInput {
 
 input GameInput {
   id: String!
-  mapId: String!
-  realMapId: String!
   players: [PlayerInput!]!
   neutralCountryTroops: [CountryTroopCountsInput!]!
   playerTurn: PlayerTurnInput!
@@ -138,6 +126,14 @@ input CountryTroopCountsInput {
 type Game {
   id: String!
   map: Map!
+  players: [Player!]!
+  neutralCountryTroops: [CountryTroopCounts!]!
+  playerTurn: PlayerTurn!
+  currentUserPlayerId: String!
+}
+
+type GameWithoutMap {
+  id: String!
   players: [Player!]!
   neutralCountryTroops: [CountryTroopCounts!]!
   playerTurn: PlayerTurn!
@@ -192,6 +188,7 @@ type InternetGameConfiguration {
   id: String!
   players: [InternetGamePlayerConfiguration!]!
   mapId: String!
+  mapIdType: String!
   joinToken: String!
   currentUserPlayerId: String!
   isCurrentUserHost: Boolean!
@@ -225,7 +222,7 @@ type Mutation {
 }
 
 type Subscription {
-  internetGame(playerToken: String!): Game!
+  internetGame(playerToken: String!): GameWithoutMap!
   internetGameOrConfiguration(
     playerToken: String!
   ): InternetGameOrConfiguration!

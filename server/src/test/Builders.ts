@@ -4,7 +4,7 @@ import * as Color from "../models/Color";
 import * as Player from "../models/Player";
 
 export interface InternetGameConfigurationOptions {
-  mapId: string;
+  mapId: Models.MapId;
   joinToken?: string;
   players?: Player.PlayerConfiguration[];
 }
@@ -27,8 +27,9 @@ export function internetGameConfiguration(
   };
 }
 
-export function map(options: MapOptions): Models.NewMap {
+export function map(options: MapOptions): Models.Map {
   return {
+    id: Models.userMapId(Uuid.generate()),
     name: options.name || "Map " + Uuid.generate(),
     countries: [],
     bodiesOfWater: [],
@@ -47,7 +48,23 @@ export function internetGame(id: string): Models.InternetGame {
   return {
     __typename: "InternetGame",
     players: [],
-    mapId: "1",
+    mapId: Models.mapId("1", "user"),
+    id,
+    playerTurn: {
+      __typename: "PlayerTurn",
+      playerId: "1",
+      playerTurnStage: Models.PlayerTurnStage.CapitolPlacement
+    },
+    neutralCountryTroops: []
+  };
+}
+
+export function internetGameWithoutMap(
+  id: string
+): Models.InternetGameWithoutMap {
+  return {
+    __typename: "InternetGameWithoutMap",
+    players: [],
     id,
     playerTurn: {
       __typename: "PlayerTurn",

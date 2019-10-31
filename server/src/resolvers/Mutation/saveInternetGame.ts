@@ -24,11 +24,10 @@ export default async function saveInternetGame(
     fromCountryId: input.game.playerTurn.fromCountryId || undefined,
     troopCount: input.game.playerTurn.troopCount || undefined
   };
-  const internetGame: Models.InternetGame = {
+  const internetGame: Models.InternetGameWithoutMap = {
     ...input.game,
-    __typename: "InternetGame",
+    __typename: "InternetGameWithoutMap",
     id: input.game.id,
-    mapId: input.game.mapId,
     playerTurn: playerTurn,
     neutralCountryTroops: input.game.neutralCountryTroops.map(
       neutralCountryTroops => {

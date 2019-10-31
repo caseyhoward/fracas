@@ -17,10 +17,11 @@ export async function create(
     players: newInternetGame.players
   };
   const internetGameResult = await executeQuery(
-    "INSERT INTO internet_games(join_token, map_id, game_json) VALUES ($1, $2, $3) RETURNING *",
+    "INSERT INTO internet_games(join_token, map_id, map_id_type, game_json) VALUES ($1, $2, $3, $4) RETURNING *",
     [
       newInternetGame.joinToken,
-      newInternetGame.mapId,
+      newInternetGame.mapId.value,
+      Models.mapIdTypeString(newInternetGame.mapId),
       JSON.stringify(configurationJson)
     ]
   );
@@ -51,10 +52,11 @@ export async function save(
     players: internetGame.players
   };
   await executeQuery(
-    "UPDATE internet_games SET join_token = $1, map_id = $2, game_json = $3 WHERE id = $4",
+    "UPDATE internet_games SET join_token = $1, map_id = $2, map_id_type = $3, game_json = $4 WHERE id = $5",
     [
       internetGame.joinToken,
-      internetGame.mapId,
+      internetGame.mapId.value,
+      Models.mapIdTypeString(internetGame.mapId),
       configurationJson,
       internetGame.id
     ]
@@ -109,7 +111,10 @@ export function rowToInternetGameConfiguration(
       const configuration: Models.InternetGameConfiguration = {
         __typename: "InternetGameConfiguration",
         id: row.id.toString(),
-        mapId: row.map_id.toString(),
+        mapId: Models.mapId(
+          row.map_id.toString(),
+          stringToMapIdType(row.map_id_type)
+        ),
         players: json.players,
         joinToken: row.join_token || ""
       };
@@ -126,5 +131,17 @@ export interface Row {
   id: number;
   join_token?: string;
   map_id: number;
+  map_id_type: string;
   game_json: string;
+}
+
+function stringToMapIdType(str: string): "user" | "default" {
+  switch (str) {
+    case "user":
+      return "user";
+    case "default":
+      return "default";
+    default:
+      throw "Invalid map id type";
+  }
 }

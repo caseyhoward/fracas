@@ -31,7 +31,7 @@ export type Dimensions = {
 
 export type Map = {
   __typename?: "Map";
-  id: string;
+  id: UserMapId;
   name: string;
   countries: Array<Country>;
   bodiesOfWater: Array<BodyOfWater>;
@@ -83,14 +83,14 @@ export type InternetGameConfiguration = {
   __typename: "InternetGameConfiguration";
   id: string;
   players: Array<Player.PlayerConfiguration>;
-  mapId: string;
+  mapId: MapId;
   joinToken: string;
 };
 
 export type NewInternetGameConfiguration = {
   __typename: "NewInternetGameConfiguration";
   players: Array<Player.PlayerConfiguration>;
-  mapId: string;
+  mapId: MapId;
   joinToken: string;
 };
 
@@ -112,16 +112,59 @@ export type Player = {
 
 export type NewGame = {
   __typename: "NewGame";
-  mapId: string;
+  mapId: MapId;
   players: Array<Player>;
   neutralCountryTroops: Array<CountryTroopCounts>;
   playerTurn: PlayerTurn;
 };
 
+export type UserMapId = {
+  __typename: "UserMapId";
+  value: string;
+};
+
+export function mapId(id: string, typeName: "user" | "default"): MapId {
+  switch (typeName) {
+    case "user":
+      return {
+        __typename: "UserMapId",
+        value: id
+      };
+      break;
+    case "default":
+      return {
+        __typename: "SystemMapId",
+        value: id
+      };
+  }
+}
+
+export function userMapId(id: string): UserMapId {
+  return {
+    __typename: "UserMapId",
+    value: id
+  };
+}
+
+export type SystemMapId = {
+  __typename: "SystemMapId";
+  value: string;
+};
+
+export type MapId = UserMapId | SystemMapId;
+
 export type InternetGame = {
   __typename: "InternetGame";
   id: string;
-  mapId: string;
+  mapId: MapId;
+  players: Array<Player>;
+  neutralCountryTroops: Array<CountryTroopCounts>;
+  playerTurn: PlayerTurn;
+};
+
+export type InternetGameWithoutMap = {
+  __typename: "InternetGameWithoutMap";
+  id: string;
   players: Array<Player>;
   neutralCountryTroops: Array<CountryTroopCounts>;
   playerTurn: PlayerTurn;
@@ -158,7 +201,30 @@ export function internetGameToGraphql(
     __typename: "Game",
     id: internetGame.id.toString(),
     currentUserPlayerId: currentUserPlayerId,
-    map: <any>{ id: internetGame.mapId.toString() },
+    map: <any>{ id: internetGame.mapId.value },
+    neutralCountryTroops: internetGame.neutralCountryTroops,
+    playerTurn: {
+      ...internetGame.playerTurn,
+      playerId: internetGame.playerTurn.playerId.toString()
+    },
+    players: internetGame.players.map(player => {
+      return {
+        ...player,
+        id: player.id.toString(),
+        __typename: "Player"
+      };
+    })
+  };
+}
+
+export function internetGameWithoutMapToGraphql(
+  internetGame: InternetGameWithoutMap,
+  currentUserPlayerId: string
+): Graphql.GameWithoutMap {
+  return {
+    __typename: "GameWithoutMap",
+    id: internetGame.id.toString(),
+    currentUserPlayerId: currentUserPlayerId,
     neutralCountryTroops: internetGame.neutralCountryTroops,
     playerTurn: {
       ...internetGame.playerTurn,
@@ -191,7 +257,8 @@ export function internetGameConfigurationToGraphQl(
     __typename: "InternetGameConfiguration",
     id: configuration.id,
     players: players,
-    mapId: configuration.mapId.toString(),
+    mapId: configuration.mapId.value,
+    mapIdType: mapIdTypeString(configuration.mapId),
     joinToken: configuration.joinToken,
     currentUserPlayerId: currentUserPlayer.id,
     isCurrentUserHost: Player.isCurrentUserHost(
@@ -199,4 +266,13 @@ export function internetGameConfigurationToGraphQl(
       configuration.players
     )
   };
+}
+
+export function mapIdTypeString(mapId: MapId): string {
+  switch (mapId.__typename) {
+    case "UserMapId":
+      return "user";
+    case "SystemMapId":
+      return "system";
+  }
 }

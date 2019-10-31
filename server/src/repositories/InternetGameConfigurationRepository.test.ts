@@ -11,7 +11,7 @@ describe("InternetGameConfigurationRepository.addPlayer", () => {
     const newConfiguration: Models.NewInternetGameConfiguration = {
       __typename: "NewInternetGameConfiguration",
       players: [],
-      mapId: "1",
+      mapId: Models.userMapId("1"),
       joinToken: "blah"
     };
     const configurationId = await InternetGameConfigurationRepository.create(
@@ -43,7 +43,7 @@ describe("InternetGameConfigurationRepository.create", () => {
     const newConfiguration: Models.NewInternetGameConfiguration = {
       __typename: "NewInternetGameConfiguration",
       players: [],
-      mapId: "1",
+      mapId: Models.userMapId("1"),
       joinToken: joinToken
     };
     const configurationId = await InternetGameConfigurationRepository.create(
@@ -53,7 +53,7 @@ describe("InternetGameConfigurationRepository.create", () => {
     const savedConfiguration = await InternetGameConfigurationRepository.findById(
       TestDatabase.query
     )(configurationId);
-    expect(savedConfiguration.mapId).toEqual("1");
+    expect(savedConfiguration.mapId.value).toEqual("1");
   });
 });
 
@@ -63,7 +63,7 @@ describe("InternetGameConfigurationRepository.findByJoinToken", () => {
     const newConfiguration: Models.NewInternetGameConfiguration = {
       __typename: "NewInternetGameConfiguration",
       players: [],
-      mapId: "1",
+      mapId: Models.userMapId("1"),
       joinToken: joinToken
     };
     const configurationId = await InternetGameConfigurationRepository.create(

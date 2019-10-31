@@ -23,7 +23,6 @@ export default async function internetGame(
     const internetGame = await InternetGameRepository.findById(executeQuery)(
       player.gameId
     );
-
     return Models.internetGameToGraphql(internetGame, player.id);
   }
 }

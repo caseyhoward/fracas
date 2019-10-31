@@ -14,6 +14,7 @@ CREATE TABLE internet_games (
   id SERIAL PRIMARY KEY,
   join_token VARCHAR(100) NOT NULL,
   map_id INTEGER NOT NULL,
+  map_id_type VARCHAR(10) NOT NULL,
   game_json TEXT
 );
 

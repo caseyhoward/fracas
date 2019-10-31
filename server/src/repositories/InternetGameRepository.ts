@@ -3,7 +3,7 @@ import * as Models from "./Models";
 
 export async function save(
   executeQuery: ExecuteQuery,
-  internetGame: Models.InternetGame
+  internetGame: Models.InternetGameWithoutMap
 ): Promise<void> {
   const gameJson: Models.GameJson = {
     __typename: "GameJson",
@@ -11,10 +11,10 @@ export async function save(
     neutralCountryTroops: internetGame.neutralCountryTroops,
     playerTurn: internetGame.playerTurn
   };
-  await executeQuery(
-    "UPDATE internet_games SET map_id = $1, game_json = $2 WHERE id = $3",
-    [internetGame.mapId, JSON.stringify(gameJson), internetGame.id]
-  );
+  await executeQuery("UPDATE internet_games SET game_json = $1 WHERE id = $2", [
+    JSON.stringify(gameJson),
+    internetGame.id
+  ]);
 }
 
 export type FindById = (id: string) => Promise<Models.InternetGame>;
@@ -40,7 +40,7 @@ export function rowToInternetGame(row: Row | undefined): Models.InternetGame {
         __typename: "InternetGame",
         players: json.players,
         id: row.id.toString(),
-        mapId: row.map_id.toString(),
+        mapId: Models.mapId(row.map_id.toString(), row.map_id_type),
         neutralCountryTroops: json.neutralCountryTroops,
         playerTurn: json.playerTurn
       };
@@ -59,5 +59,6 @@ export interface Row {
   id: number;
   join_token?: string;
   map_id: number;
+  map_id_type: "user" | "default";
   game_json: string;
 }

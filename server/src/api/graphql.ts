@@ -89,10 +89,18 @@ export type Game = {
 
 export type GameInput = {
   id: Scalars['String'],
-  mapId: Scalars['String'],
   players: Array<PlayerInput>,
   neutralCountryTroops: Array<CountryTroopCountsInput>,
   playerTurn: PlayerTurnInput,
+};
+
+export type GameWithoutMap = {
+   __typename?: 'GameWithoutMap',
+  id: Scalars['String'],
+  players: Array<Player>,
+  neutralCountryTroops: Array<CountryTroopCounts>,
+  playerTurn: PlayerTurn,
+  currentUserPlayerId: Scalars['String'],
 };
 
 export type InternetGameConfiguration = {
@@ -100,6 +108,7 @@ export type InternetGameConfiguration = {
   id: Scalars['String'],
   players: Array<InternetGamePlayerConfiguration>,
   mapId: Scalars['String'],
+  mapIdType: Scalars['String'],
   joinToken: Scalars['String'],
   currentUserPlayerId: Scalars['String'],
   isCurrentUserHost: Scalars['Boolean'],
@@ -202,6 +211,7 @@ export type MutationUpdatePlayerColorForInternetGameArgs = {
 
 export type NewGameInput = {
   mapId: Scalars['String'],
+  mapIdType: Scalars['String'],
   players: Array<PlayerInput>,
   neutralCountryTroops: Array<CountryTroopCountsInput>,
   playerTurn: PlayerTurnInput,
@@ -303,7 +313,7 @@ export type SegmentInput = {
 
 export type Subscription = {
    __typename?: 'Subscription',
-  internetGame: Game,
+  internetGame: GameWithoutMap,
   internetGameOrConfiguration: InternetGameOrConfiguration,
 };
 
@@ -421,6 +431,7 @@ export type ResolversTypes = {
   DimensionsInput: DimensionsInput,
   GameInput: GameInput,
   Subscription: ResolverTypeWrapper<{}>,
+  GameWithoutMap: ResolverTypeWrapper<GameWithoutMap>,
 };
 
 /** Mapping between all available schema types and the resolvers parents */
@@ -458,6 +469,7 @@ export type ResolversParentTypes = {
   DimensionsInput: DimensionsInput,
   GameInput: GameInput,
   Subscription: {},
+  GameWithoutMap: GameWithoutMap,
 };
 
 export type BodyOfWaterResolvers<ContextType = any, ParentType extends ResolversParentTypes['BodyOfWater'] = ResolversParentTypes['BodyOfWater']> = {
@@ -500,10 +512,19 @@ export type GameResolvers<ContextType = any, ParentType extends ResolversParentT
   currentUserPlayerId?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
 };
 
+export type GameWithoutMapResolvers<ContextType = any, ParentType extends ResolversParentTypes['GameWithoutMap'] = ResolversParentTypes['GameWithoutMap']> = {
+  id?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
+  players?: Resolver<Array<ResolversTypes['Player']>, ParentType, ContextType>,
+  neutralCountryTroops?: Resolver<Array<ResolversTypes['CountryTroopCounts']>, ParentType, ContextType>,
+  playerTurn?: Resolver<ResolversTypes['PlayerTurn'], ParentType, ContextType>,
+  currentUserPlayerId?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
+};
+
 export type InternetGameConfigurationResolvers<ContextType = any, ParentType extends ResolversParentTypes['InternetGameConfiguration'] = ResolversParentTypes['InternetGameConfiguration']> = {
   id?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
   players?: Resolver<Array<ResolversTypes['InternetGamePlayerConfiguration']>, ParentType, ContextType>,
   mapId?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
+  mapIdType?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
   joinToken?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
   currentUserPlayerId?: Resolver<ResolversTypes['String'], ParentType, ContextType>,
   isCurrentUserHost?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType>,
@@ -576,7 +597,7 @@ export type SegmentResolvers<ContextType = any, ParentType extends ResolversPare
 };
 
 export type SubscriptionResolvers<ContextType = any, ParentType extends ResolversParentTypes['Subscription'] = ResolversParentTypes['Subscription']> = {
-  internetGame?: SubscriptionResolver<ResolversTypes['Game'], "internetGame", ParentType, ContextType, RequireFields<SubscriptionInternetGameArgs, 'playerToken'>>,
+  internetGame?: SubscriptionResolver<ResolversTypes['GameWithoutMap'], "internetGame", ParentType, ContextType, RequireFields<SubscriptionInternetGameArgs, 'playerToken'>>,
   internetGameOrConfiguration?: SubscriptionResolver<ResolversTypes['InternetGameOrConfiguration'], "internetGameOrConfiguration", ParentType, ContextType, RequireFields<SubscriptionInternetGameOrConfigurationArgs, 'playerToken'>>,
 };
 
@@ -587,6 +608,7 @@ export type Resolvers<ContextType = any> = {
   CountryTroopCounts?: CountryTroopCountsResolvers<ContextType>,
   Dimensions?: DimensionsResolvers<ContextType>,
   Game?: GameResolvers<ContextType>,
+  GameWithoutMap?: GameWithoutMapResolvers<ContextType>,
   InternetGameConfiguration?: InternetGameConfigurationResolvers<ContextType>,
   InternetGameOrConfiguration?: InternetGameOrConfigurationResolvers,
   InternetGamePlayerConfiguration?: InternetGamePlayerConfigurationResolvers<ContextType>,

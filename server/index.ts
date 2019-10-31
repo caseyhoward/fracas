@@ -3,8 +3,7 @@ import * as fs from "fs";
 import { resolvers } from "./src/resolvers";
 import * as PubSub from "./src/PubSub";
 import * as Database from "./src/Database";
-import { Client, ClientConfig } from "pg";
-import { PubSub as PS } from "graphql-subscriptions";
+import { ClientConfig } from "pg";
 
 const postgresConfiguration: ClientConfig = {
   host: process.env.PGHOST,

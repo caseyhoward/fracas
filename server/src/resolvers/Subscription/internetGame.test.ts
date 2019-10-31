@@ -1,7 +1,9 @@
 import * as InternetGameRepository from "../../repositories/InternetGameRepository";
 import * as InternetGamePlayerRepository from "../../repositories/InternetGamePlayerRepository";
 import * as InternetGame from "./internetGame";
+import * as Graphql from "../../api/graphql";
 import * as Builders from "../../test/Builders";
+import * as Models from "../../repositories/Models";
 import * as GraphqlYoga from "graphql-yoga";
 
 describe("Subscription.internetGame", () => {
@@ -21,25 +23,27 @@ describe("Subscription.internetGame", () => {
     it("returns internet game", async () => {
       const playerToken = "asdfasdf";
       const { findGameById, findPlayerByToken } = mocks();
-      const result = await InternetGame.buildResolve(
-        findPlayerByToken,
-        findGameById
-      )(null, { playerToken: playerToken }, null, <any>{});
-      expect(result).toEqual({
+      const expectedGame: Graphql.Game = {
         __typename: "Game",
         id: "2",
-        map: {
+        map: <any>{
           id: "1"
         },
         neutralCountryTroops: [],
         playerTurn: {
           __typename: "PlayerTurn",
           playerId: "1",
-          playerTurnStage: "CapitolPlacement"
+          playerTurnStage: Models.PlayerTurnStage.CapitolPlacement
         },
         players: [],
         currentUserPlayerId: "1"
-      });
+      };
+
+      const result = await InternetGame.buildResolve(
+        findPlayerByToken,
+        findGameById
+      )(null, { playerToken: playerToken }, null, <any>{});
+      expect(result).toEqual(expectedGame);
     });
   });
 });

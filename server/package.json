@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "test": "jest --coverage",
-    "test-watch": "jest --watchAll",
+    "test-watch": "jest --watch",
     "start": "ts-node index.ts",
-    "start-watch": "nodemon index.ts",
+    "start-watch": "nodemon --ignore 'src/**/*.spec.ts' index.ts",
     "ts-node": "ts-node"
   },
   "author": "",

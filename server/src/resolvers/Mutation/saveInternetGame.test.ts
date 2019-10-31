@@ -3,6 +3,7 @@ import * as InternetGameRepository from "../../repositories/InternetGameReposito
 import saveInternetGame from "./saveInternetGame";
 import * as Models from "../../repositories/Models";
 import * as TestDatabase from "../../test/TestDatabase";
+import * as Builders from "../../test/Builders";
 import * as PubSub from "../../PubSub";
 
 describe("Mutation.saveInternetGame", () => {
@@ -14,18 +15,9 @@ describe("Mutation.saveInternetGame", () => {
       gameId: configuration.id
     });
 
-    const internetGameToSave: Models.InternetGame = {
-      __typename: "InternetGame",
-      id: configuration.id,
-      mapId: "1234",
-      players: [],
-      neutralCountryTroops: [],
-      playerTurn: {
-        __typename: "PlayerTurn",
-        playerId: "1",
-        playerTurnStage: Models.PlayerTurnStage.CapitolPlacement
-      }
-    };
+    const internetGameToSave: Models.InternetGameWithoutMap = Builders.internetGameWithoutMap(
+      configuration.id
+    );
 
     await saveInternetGame(TestDatabase.query, pubSub, {
       playerToken: player.playerToken,
@@ -36,6 +28,6 @@ describe("Mutation.saveInternetGame", () => {
       configuration.id
     );
 
-    expect(game.mapId).toEqual("1234");
+    expect(game.id).toEqual(configuration.id);
   });
 });

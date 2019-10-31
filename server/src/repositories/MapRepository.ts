@@ -3,15 +3,15 @@ import * as Models from "./Models";
 import * as Graphql from "../api/graphql";
 
 export function mapToGraphql(map: Models.Map): Graphql.Map {
-  return { ...map, id: map.id.toString() };
+  return { ...map, id: map.id.value };
 }
 
 export async function findFirstId(
   executeQuery: Database.ExecuteQuery
-): Promise<string | null> {
+): Promise<Models.UserMapId | null> {
   const result = await executeQuery("SELECT * FROM maps LIMIT 1");
   if (result.rows) {
-    return result.rows[0].id;
+    return Models.userMapId(result.rows[0].id);
   } else {
     return null;
   }
@@ -19,9 +19,11 @@ export async function findFirstId(
 
 export async function findById(
   executeQuery: Database.ExecuteQuery,
-  id: string
+  id: Models.UserMapId
 ): Promise<Models.Map> {
-  const result = await executeQuery("SELECT * FROM maps WHERE id = $1", [id]);
+  const result = await executeQuery("SELECT * FROM maps WHERE id = $1", [
+    id.value
+  ]);
   return mapsRowToMap(result.rows[0]);
 }
 
@@ -59,7 +61,7 @@ function mapsRowToMap(mapsRow: MapsRow | undefined): Models.Map {
   if (mapsRow) {
     const parsedJson = JSON.parse(mapsRow.map_json);
     const map = {
-      id: mapsRow.id.toString(),
+      id: Models.userMapId(mapsRow.id.toString()),
       name: parsedJson.name,
       countries: parsedJson.countries,
       bodiesOfWater: parsedJson.bodiesOfWater,
