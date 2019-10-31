@@ -9,8 +9,8 @@ ENV NODE_ENV development
 ENV NODE_CONFIG_ENV development
 ENV NPM_CONFIG_PREFIX=/usr/src/app/.npm-global
 
-RUN apt-get update -y
-RUN apt-get upgrade
+RUN apt-get update
+RUN apt-get upgrade -y
 RUN apt-get install -y curl inotify-tools
 
 WORKDIR /usr/src/app
@@ -26,5 +26,6 @@ COPY package.json .
 RUN npm install
 
 COPY ./watch.sh watch.sh 
+COPY ./generate.sh generate.sh 
 CMD [ "watch.sh" ]
 ENTRYPOINT [ "sh" ]

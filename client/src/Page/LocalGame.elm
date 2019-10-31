@@ -590,7 +590,7 @@ viewCountryInfo activeGame countryBorderHelperOutlineStatus =
                                     [ Element.el [] (Element.text "Defense")
                                     , Element.el
                                         [ Element.alignRight ]
-                                        (LocalGame.getCountryDefenseStrength activeGame.map activeGame.players countryToShowInfoForId |> TroopCount.toString |> Element.text)
+                                        (LocalGame.getCountryDefenseStrength activeGame.map.map activeGame.players countryToShowInfoForId |> TroopCount.toString |> Element.text)
                                     ]
                                 , Element.column
                                     [ Element.width Element.fill
@@ -604,7 +604,7 @@ viewCountryInfo activeGame countryBorderHelperOutlineStatus =
                                     [ Element.el
                                         [ Element.width Element.fill ]
                                         (Element.text "Opponent attack")
-                                    , LocalGame.getAttackStrengthPerPlayer activeGame.map activeGame.players countryToShowInfoForId
+                                    , LocalGame.getAttackStrengthPerPlayer activeGame.map.map activeGame.players countryToShowInfoForId
                                         |> attackerInfo playerId activeGame
                                     ]
                                 ]
@@ -786,12 +786,12 @@ getWaterCollage gameMap =
 
 getGameBoardHtml : Int -> LocalGame.Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Device -> Html.Html Msg
 getGameBoardHtml scaleFactor activeGame showAvailableMoves countryBorderHelperOutlineStatus device =
-    case LocalGame.getCountriesToRender activeGame.map activeGame.players activeGame.currentPlayerTurn activeGame.neutralCountryTroops of
+    case LocalGame.getCountriesToRender activeGame.map.map activeGame.players activeGame.currentPlayerTurn activeGame.neutralCountryTroops of
         Just countriesToRender ->
             let
                 waterCollage : Collage.Collage Msg
                 waterCollage =
-                    Map.getWaterCollage scaleFactor activeGame.map.dimensions
+                    Map.getWaterCollage scaleFactor activeGame.map.map.dimensions
 
                 countriesCollage =
                     countriesToRender
@@ -843,7 +843,7 @@ getGameBoardHtml scaleFactor activeGame showAvailableMoves countryBorderHelperOu
 
                 countryInfoHighlights =
                     countriesToRender
-                        |> List.map (getCountryInfoPolygonBorder activeGame.map activeGame.players countryBorderHelperOutlineStatus)
+                        |> List.map (getCountryInfoPolygonBorder activeGame.map.map activeGame.players countryBorderHelperOutlineStatus)
                         |> Collage.group
             in
             Collage.group

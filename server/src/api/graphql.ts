@@ -194,7 +194,8 @@ export type MutationStartInternetGameArgs = {
 
 export type MutationUpdateMapForInternetGameArgs = {
   playerToken: Scalars['String'],
-  mapId: Scalars['String']
+  mapId: Scalars['String'],
+  mapIdType: Scalars['String']
 };
 
 
@@ -557,7 +558,7 @@ export type MutationResolvers<ContextType = any, ParentType extends ResolversPar
   saveGame?: Resolver<ResolversTypes['Game'], ParentType, ContextType, RequireFields<MutationSaveGameArgs, 'game'>>,
   saveInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationSaveInternetGameArgs, 'playerToken' | 'game'>>,
   startInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationStartInternetGameArgs, 'playerToken'>>,
-  updateMapForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdateMapForInternetGameArgs, 'playerToken' | 'mapId'>>,
+  updateMapForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdateMapForInternetGameArgs, 'playerToken' | 'mapId' | 'mapIdType'>>,
   updatePlayerNameForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdatePlayerNameForInternetGameArgs, 'name' | 'playerToken'>>,
   updatePlayerColorForInternetGame?: Resolver<ResolversTypes['Boolean'], ParentType, ContextType, RequireFields<MutationUpdatePlayerColorForInternetGameArgs, 'color' | 'playerToken'>>,
 };

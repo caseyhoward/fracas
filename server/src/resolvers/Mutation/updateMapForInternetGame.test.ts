@@ -11,6 +11,7 @@ describe("Mutation.updateMapForInternetGame", () => {
     const playerToken = "some token";
     const gameId = "some game id";
     const mapId = "some map id";
+    const mapIdType = "user";
     const playerId = "some player id";
     const internetGamePlayer: Models.InternetGamePlayer = {
       ...Builders.internetGamePlayer(playerId, gameId)
@@ -27,7 +28,7 @@ describe("Mutation.updateMapForInternetGame", () => {
       actualMapId
     ) => {
       expect(actualGameId).toEqual(gameId);
-      expect(actualMapId).toEqual(mapId);
+      expect(actualMapId).toEqual(Models.userMapId(mapId));
       return Promise.resolve(true);
     };
 
@@ -35,8 +36,8 @@ describe("Mutation.updateMapForInternetGame", () => {
       findInternetGamePlayerByToken,
       updateMap,
       pubSub,
-      { mapId, playerToken }
-    )();
+      { mapId, mapIdType, playerToken }
+    );
 
     expect(result).toEqual(true);
   });
@@ -45,6 +46,7 @@ describe("Mutation.updateMapForInternetGame", () => {
     const playerToken = "some token";
     const gameId = "some game id";
     const mapId = "some map id";
+    const mapIdType = "user";
     const playerId = "some player id";
     const internetGamePlayer: Models.InternetGamePlayer = {
       ...Builders.internetGamePlayer(playerId, gameId)
@@ -71,8 +73,8 @@ describe("Mutation.updateMapForInternetGame", () => {
         findInternetGamePlayerByToken,
         updateMap,
         pubSub,
-        { mapId, playerToken }
-      )();
+        { mapId, mapIdType, playerToken }
+      );
 
       expect(result).toEqual(true);
     });

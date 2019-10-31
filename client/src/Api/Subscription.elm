@@ -23,7 +23,7 @@ type alias InternetGameRequiredArguments =
     { playerToken : String }
 
 
-internetGame : InternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.Game -> SelectionSet decodesTo RootSubscription
+internetGame : InternetGameRequiredArguments -> SelectionSet decodesTo Api.Object.GameWithoutMap -> SelectionSet decodesTo RootSubscription
 internetGame requiredArgs object_ =
     Object.selectionForCompositeField "internetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string ] object_ identity
 

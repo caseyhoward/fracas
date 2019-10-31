@@ -18,7 +18,7 @@ export async function createInternetGameConfiguration(
     const map = await createMap();
     mapId = map.id;
   } else {
-    if (options.mapOrMapId.__typename === "SystemMapId") {
+    if (options.mapOrMapId.__typename === "DefaultMapId") {
       mapId = options.mapOrMapId;
     } else if (options.mapOrMapId.__typename === "UserMapId") {
       mapId = options.mapOrMapId;

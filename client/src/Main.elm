@@ -22,7 +22,7 @@ import Url
 type Model
     = NewGame Page.NewGame.Model
     | LocalGame Page.LocalGame.Model
-    | NewMap Page.NewMap.Model
+    | Map Page.NewMap.Model
     | InternetGame Page.InternetGame.Model
     | InternetGameConfiguration Page.InternetGameConfiguration.Model
     | JoinInternetGame Page.JoinInternetGame.Model
@@ -81,7 +81,7 @@ type
     | ClickedLink Browser.UrlRequest
     | GotGameMsg Page.LocalGame.Msg
     | GotNewGameMsg Page.NewGame.Msg
-    | GotNewMapMsg Page.NewMap.Msg
+    | GotMapMsg Page.NewMap.Msg
     | GotInternetGameMsg Page.InternetGame.Msg
     | GotInternetGameConfigurationMsg Page.InternetGameConfiguration.Msg
     | GotJoinInternetGameMsg Page.JoinInternetGame.Msg
@@ -109,9 +109,9 @@ update msg model =
             Page.LocalGame.update subMsg activeGame
                 |> updateWith LocalGame GotGameMsg
 
-        ( GotNewMapMsg subMsg, NewMap newMap ) ->
+        ( GotMapMsg subMsg, Map newMap ) ->
             Page.NewMap.update subMsg newMap
-                |> updateWith NewMap GotNewMapMsg
+                |> updateWith Map GotMapMsg
 
         ( GotNewGameMsg subMsg, NewGame newGame ) ->
             Page.NewGame.update subMsg newGame
@@ -156,9 +156,9 @@ changeRouteTo maybeRoute model =
             Page.LocalGame.init session gameId playerId
                 |> updateWith LocalGame GotGameMsg
 
-        Just Route.NewMap ->
+        Just Route.Map ->
             Page.NewMap.init session
-                |> updateWith NewMap GotNewMapMsg
+                |> updateWith Map GotMapMsg
 
         Just (Route.InternetGame playerToken) ->
             Page.InternetGame.init session playerToken
@@ -194,7 +194,7 @@ toSession model =
         JoinInternetGame internetGame ->
             internetGame |> Page.JoinInternetGame.toSession
 
-        NewMap newMap ->
+        Map newMap ->
             newMap |> Page.NewMap.toSession
 
         Redirect session ->
@@ -233,8 +233,8 @@ view model =
         JoinInternetGame joinInternetGame ->
             viewPage Page.JoinInternetGame GotJoinInternetGameMsg (Page.JoinInternetGame.view joinInternetGame)
 
-        NewMap newMap ->
-            viewPage Page.NewMap GotNewMapMsg (Page.NewMap.view newMap)
+        Map newMap ->
+            viewPage Page.NewMap GotMapMsg (Page.NewMap.view newMap)
 
         Redirect _ ->
             { title = "Redirecting", body = [ Html.div [] [] ] }
@@ -262,8 +262,8 @@ subscriptions model =
         JoinInternetGame _ ->
             Sub.none
 
-        NewMap newMap ->
-            Sub.map GotNewMapMsg (Page.NewMap.subscriptions newMap)
+        Map newMap ->
+            Sub.map GotMapMsg (Page.NewMap.subscriptions newMap)
 
         Redirect _ ->
             Sub.none

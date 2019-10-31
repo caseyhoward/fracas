@@ -31,14 +31,14 @@ export async function create(
 
 type UpdateMapConstructor = (executeQuery: ExecuteQuery) => UpdateMap;
 
-export type UpdateMap = (id: string, mapId: string) => Promise<boolean>;
+export type UpdateMap = (id: string, mapId: Models.MapId) => Promise<boolean>;
 
 export const updateMap: UpdateMapConstructor = (executeQuery: ExecuteQuery) => {
-  return async (id: string, mapId: string): Promise<boolean> => {
-    await executeQuery("UPDATE internet_games SET map_id = $1 WHERE id = $2", [
-      mapId,
-      id
-    ]);
+  return async (id: string, mapId: Models.MapId): Promise<boolean> => {
+    await executeQuery(
+      "UPDATE internet_games SET map_id = $1, map_id_type = $2 WHERE id = $3",
+      [mapId, Models.mapIdTypeString(mapId), id]
+    );
     return true;
   };
 };

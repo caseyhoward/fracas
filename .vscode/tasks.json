@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "tests - server",
+      "type": "shell",
+      "problemMatcher": ["$tsc"],
+      "command": "docker-compose logs -f server-unit-tests",
+      "options": {
+        "cwd": "server"
+      }
+    },
+    {
+      "label": "compile - client",
+      "type": "shell",
+      "command": "docker-compose logs -f client",
+      "options": {
+        "cwd": "client"
+      },
+      "problemMatcher": ["$tsc"]
+    }
+  ]
+}

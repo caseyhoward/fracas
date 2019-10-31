@@ -2,8 +2,9 @@ import * as InternetGamePlayerRepository from "../../repositories/InternetGamePl
 import * as InternetGameConfigurationRepository from "../../repositories/InternetGameConfigurationRepository";
 import * as Graphql from "../../api/graphql";
 import * as PubSub from "../../PubSub";
+import * as Models from "../../repositories/Models";
 
-export type UpdateMapForInternetGame = () => Promise<boolean>;
+export type UpdateMapForInternetGame = Promise<boolean>;
 
 export type UpdateMapForInternetGameConstructor = (
   findInternetGamePlayerByToken: InternetGamePlayerRepository.FindByToken,
@@ -11,7 +12,7 @@ export type UpdateMapForInternetGameConstructor = (
   pubsub: PubSub.PubSub,
   input: Graphql.RequireFields<
     Graphql.MutationUpdateMapForInternetGameArgs,
-    "mapId" | "playerToken"
+    "mapId" | "mapIdType" | "playerToken"
   >
 ) => UpdateMapForInternetGame;
 
@@ -20,7 +21,8 @@ type UpdateMapForInternetGameExecutor = (
   updateMapForInternetGame: InternetGameConfigurationRepository.UpdateMap,
   pubSub: PubSub.PubSub,
   playerToken: string,
-  mapId: string
+  mapId: string,
+  mapIdType: string
 ) => Promise<boolean>;
 
 export const updateMapForInternetGame: UpdateMapForInternetGameConstructor = (
@@ -29,18 +31,17 @@ export const updateMapForInternetGame: UpdateMapForInternetGameConstructor = (
   pubSub: PubSub.PubSub,
   input: Graphql.RequireFields<
     Graphql.MutationUpdateMapForInternetGameArgs,
-    "mapId" | "playerToken"
+    "mapId" | "mapIdType" | "playerToken"
   >
 ) => {
-  return () => {
-    return executUpdateMapForInternetGame(
-      findInternetGamePlayerByToken,
-      updateMapForInternetGame,
-      pubSub,
-      input.playerToken,
-      input.mapId
-    );
-  };
+  return executUpdateMapForInternetGame(
+    findInternetGamePlayerByToken,
+    updateMapForInternetGame,
+    pubSub,
+    input.playerToken,
+    input.mapId,
+    input.mapIdType
+  );
 };
 
 const executUpdateMapForInternetGame: UpdateMapForInternetGameExecutor = async (
@@ -48,8 +49,19 @@ const executUpdateMapForInternetGame: UpdateMapForInternetGameExecutor = async (
   updateMapForInternetGame,
   pubSub,
   playerToken,
-  mapId
+  mapIdString,
+  mapIdTypeString
 ) => {
+  let mapIdType: "user" | "default";
+
+  if (mapIdTypeString === "user") {
+    mapIdType = "user";
+  } else if (mapIdTypeString === "default") {
+    mapIdType = "default";
+  } else {
+    throw "Unknown map id type";
+  }
+  const mapId: Models.MapId = Models.mapId(mapIdString, mapIdType);
   const player = await findInternetGamePlayerByToken(playerToken);
   await updateMapForInternetGame(player.gameId.toString(), mapId);
   PubSub.internetGameConfigurationChanged(pubSub);

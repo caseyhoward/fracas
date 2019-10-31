@@ -1,19 +1,10 @@
 #!/usr/bin/env sh
 
-generate_elm()
-{
-  rm -rf src/Api
-  npx elm-graphql --introspection-file graphql.schema.json --base Api
-}
+# This must be ran through docker-compose otherwise files won't be in the right place
 
-generate_typescript()
-{
-  npx graphql-codegen -- --config codegen.yml
-}
-
-generate_typescript && generate_elm
+./generate.sh
 
 inotifywait -q -m -e close_write ./server/schema.graphql |
 while read -r filename event; do
-  generate_typescript && generate_elm
+  ./generate.sh
 done

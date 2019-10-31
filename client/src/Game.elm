@@ -3,9 +3,11 @@ module Game exposing
     , CountryBorderHelperOutlineStatus(..)
     , CountryStatus(..)
     , Game
+    , GameWithoutMap
     , Id(..)
     , Model
     , Msg(..)
+    , UserMapOrDefaultMap(..)
     , attackResult
     , canAnnexCountry
     , filterCountriesWithPort
@@ -17,7 +19,8 @@ module Game exposing
     , idToString
     , isCountryAttacking
     , isCountryDefending
-    , isCountryReachableFromOtherCountry
+    , isCountryReachableFromOtherCountry,gameWithoutMapAndMapToGame
+    , toMap
     , view
     , viewGameWrapMessage
     )
@@ -29,6 +32,7 @@ import Collage.Render
 import Collage.Text
 import Colors
 import Country
+import DefaultMap
 import Dict
 import Element
 import Element.Background
@@ -43,12 +47,18 @@ import Player
 import PlayerTurn
 import Set
 import TroopCount
+import UserMap
 import ViewHelpers
 
 
 idToString : Id -> String
 idToString (Id id) =
     id
+
+
+type UserMapOrDefaultMap
+    = UserMapCase UserMap.UserMap
+    | DefaultMapCase DefaultMap.DefaultMap
 
 
 type alias Model =
@@ -62,12 +72,41 @@ type alias Model =
 type alias Game =
     { id : Id
     , currentPlayerTurn : PlayerTurn.PlayerTurn
-    , lastPlayerTurn : Maybe PlayerTurn.PlayerTurn
-    , map : Map.Map
+    , map : UserMapOrDefaultMap
     , players : Player.Players
     , currentUserPlayerId : Player.Id
     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
     }
+
+
+type alias GameWithoutMap =
+    { id : Id
+    , currentPlayerTurn : PlayerTurn.PlayerTurn
+    , players : Player.Players
+    , currentUserPlayerId : Player.Id
+    , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
+    }
+
+
+gameWithoutMapAndMapToGame : GameWithoutMap -> UserMapOrDefaultMap -> Game
+gameWithoutMapAndMapToGame gameWithoutMap map =
+    { id = gameWithoutMap.id
+    , currentPlayerTurn = gameWithoutMap.currentPlayerTurn
+    , currentUserPlayerId = gameWithoutMap.currentUserPlayerId
+    , map = map
+    , neutralCountryTroops = gameWithoutMap.neutralCountryTroops
+    , players = gameWithoutMap.players
+    }
+
+
+toMap : Game -> Map.Map
+toMap game =
+    case game.map of
+        UserMapCase userMap ->
+            userMap.map
+
+        DefaultMapCase defaultMap ->
+            defaultMap.map
 
 
 type Id
@@ -392,7 +431,7 @@ infoPanelModel model =
         attackers =
             case model.countryBorderHelperOutlineStatus of
                 CountryBorderHelperOutlineActive countryId ->
-                    getAttackStrengthPerPlayer model.activeGame.map model.activeGame.players countryId
+                    getAttackStrengthPerPlayer (model.activeGame |> toMap) model.activeGame.players countryId
                         |> Dict.map
                             (\attackerPlayerId troopCount ->
                                 case Player.getPlayer (Player.Id attackerPlayerId) model.activeGame.players of
@@ -429,7 +468,7 @@ infoPanelModel model =
                                 Just player ->
                                     Just
                                         { playerColor = player.color
-                                        , defenseStrength = getCountryDefenseStrength model.activeGame.map model.activeGame.players countryId
+                                        , defenseStrength = getCountryDefenseStrength (model.activeGame |> toMap) model.activeGame.players countryId
                                         , attackers = attackers
                                         }
 
@@ -874,12 +913,12 @@ getCountryCanBeClicked currentPlayerTurn players gameMap countryId =
 
 getGameBoardHtml : Int -> Game -> Bool -> CountryBorderHelperOutlineStatus -> Element.Device -> Html.Html Msg
 getGameBoardHtml scaleFactor activeGame showAvailableMoves countryBorderHelperOutlineStatus device =
-    case getCountriesToRender activeGame.map activeGame.players activeGame.currentPlayerTurn activeGame.neutralCountryTroops of
+    case getCountriesToRender (activeGame |> toMap) activeGame.players activeGame.currentPlayerTurn activeGame.neutralCountryTroops of
         Just countriesToRender ->
             let
                 waterCollage : Collage.Collage Msg
                 waterCollage =
-                    Map.getWaterCollage scaleFactor activeGame.map.dimensions
+                    Map.getWaterCollage scaleFactor (activeGame |> toMap |> .dimensions)
 
                 countriesCollage =
                     countriesToRender
@@ -934,7 +973,7 @@ getGameBoardHtml scaleFactor activeGame showAvailableMoves countryBorderHelperOu
 
                 countryInfoHighlights =
                     countriesToRender
-                        |> List.map (getCountryInfoPolygonBorder activeGame.map activeGame.players countryBorderHelperOutlineStatus)
+                        |> List.map (getCountryInfoPolygonBorder (activeGame |> toMap) activeGame.players countryBorderHelperOutlineStatus)
                         |> Collage.group
 
                 troopMovementFromCountryBorder =

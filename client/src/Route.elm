@@ -22,7 +22,7 @@ import Url.Parser as Parser exposing ((</>), Parser, oneOf, s)
 
 type Route
     = ConfiguringGame
-    | NewMap
+    | Map
     | LocalGame LocalGame.Id Player.Id
     | InternetGame InternetGame.PlayerToken
     | InternetGameConfiguration InternetGame.PlayerToken
@@ -62,7 +62,7 @@ parser =
         , Parser.map InternetGameConfiguration (s "games" </> s "internet" </> InternetGame.playerTokenUrlParser </> s "configure")
         , Parser.map InternetGame (s "games" </> s "internet" </> InternetGame.playerTokenUrlParser)
         , Parser.map JoinInternetGame (s "games" </> s "internet" </> s "join" </> InternetGame.joinTokenUrlParser)
-        , Parser.map NewMap (s "maps" </> s "new")
+        , Parser.map Map (s "maps" </> s "new")
         ]
 
 
@@ -86,7 +86,7 @@ routeToString page =
                 LocalGame gameId playerId ->
                     [ "games", "local", LocalGame.idToString gameId, "players", Player.idToString playerId ]
 
-                NewMap ->
+                Map ->
                     [ "maps", "new" ]
     in
     "/" ++ String.join "/" pieces

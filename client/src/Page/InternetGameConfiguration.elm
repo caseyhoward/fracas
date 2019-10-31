@@ -31,6 +31,7 @@ import Ports
 import RemoteData
 import Route
 import Session
+import UserMap
 import ViewHelpers
 
 
@@ -68,7 +69,7 @@ type alias LoadingModel =
 type alias ConfiguringModel =
     { session : Session.Session
     , configuration : InternetGame.Configuration
-    , maps : List Map.Map
+    , maps : List UserMap.UserMap
     , subscriptionStatus : SubscriptionStatus
     , configureColor : Bool
     , playerToken : InternetGame.PlayerToken
@@ -85,7 +86,7 @@ type SubscriptionStatus
 
 type alias SelectionSet =
     { gameOrConfiguration : InternetGame.GameOrConfiguration
-    , maps : List Map.Map
+    , maps : List UserMap.UserMap
     }
 
 
@@ -93,7 +94,7 @@ selectionSet : InternetGame.PlayerToken -> Graphql.SelectionSet.SelectionSet Sel
 selectionSet playerToken =
     Graphql.SelectionSet.map2 SelectionSet
         (Api.Query.internetGameOrConfiguration { playerToken = playerToken |> InternetGame.playerTokenToString } InternetGame.gameOrConfigurationSelectionSet)
-        (Api.Query.maps Map.mapSelection)
+        (Api.Query.maps UserMap.selectionSet)
 
 
 getGameAndMaps : String -> InternetGame.PlayerToken -> (RemoteData.RemoteData (Graphql.Http.Error SelectionSet) SelectionSet -> msg) -> Cmd msg
@@ -227,10 +228,10 @@ update msg model =
 
                         updatedConfiguringModel : InternetGame.Configuration
                         updatedConfiguringModel =
-                            { configuration | mapId = mapId |> Map.Id }
+                            { configuration | mapId = mapId |> UserMap.Id }
                     in
                     ( Configuring { configuringModel | configuration = updatedConfiguringModel }
-                    , InternetGame.updateMap configuringModel.session.apiUrl configuringModel.playerToken (Map.Id mapId) MapUpdated
+                    , InternetGame.updateMap configuringModel.session.apiUrl configuringModel.playerToken mapId MapUpdated
                     )
 
                 StartGameClicked ->
@@ -343,10 +344,10 @@ viewConfiguring configuringModel =
                         ]
                         [ playerConfiguration (p |> Dict.toList) configuringModel.configuration.currentUserPlayerId configuringModel.playerName
                         , if configuringModel.isCurrentUserHost then
-                            NewGame.mapConfigurationFields configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId)) SelectMap
+                            NewGame.mapConfigurationFields configuringModel.maps (Just (configuringModel.configuration.mapId |> UserMap.idToString)) SelectMap
 
                           else
-                            NewGame.mapConfiguration configuringModel.maps (Just (Map.idToString configuringModel.configuration.mapId))
+                            NewGame.mapConfiguration configuringModel.maps (Just configuringModel.configuration.mapId)
                         ]
                      ]
                         ++ (if configuringModel.isCurrentUserHost then

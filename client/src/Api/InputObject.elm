@@ -76,7 +76,7 @@ encodeColorInput input =
 
 buildCountryInput : CountryInputRequiredFields -> CountryInput
 buildCountryInput required =
-    CountryInput { id = required.id, coordinates = required.coordinates, polygon = required.polygon, waterEdges = required.waterEdges, center = required.center, neighboringCountries = required.neighboringCountries, neighboringBodiesOfWater = required.neighboringBodiesOfWater }
+    { id = required.id, coordinates = required.coordinates, polygon = required.polygon, waterEdges = required.waterEdges, center = required.center, neighboringCountries = required.neighboringCountries, neighboringBodiesOfWater = required.neighboringBodiesOfWater }
 
 
 type alias CountryInputRequiredFields =
@@ -90,12 +90,9 @@ type alias CountryInputRequiredFields =
     }
 
 
-{-| Type alias for the `CountryInput` attributes. Note that this type
-needs to use the `CountryInput` type (not just a plain type alias) because it has
-references to itself either directly (recursive) or indirectly (circular). See
-<https://github.com/dillonkearns/elm-graphql/issues/33>.
+{-| Type for the CountryInput input object.
 -}
-type alias CountryInputRaw =
+type alias CountryInput =
     { id : String
     , coordinates : List PointInput
     , polygon : List PointInput
@@ -106,16 +103,10 @@ type alias CountryInputRaw =
     }
 
 
-{-| Type for the CountryInput input object.
--}
-type CountryInput
-    = CountryInput CountryInputRaw
-
-
 {-| Encode a CountryInput into a value that can be used as an argument.
 -}
 encodeCountryInput : CountryInput -> Value
-encodeCountryInput (CountryInput input) =
+encodeCountryInput input =
     Encode.maybeObject
         [ ( "id", Encode.string input.id |> Just ), ( "coordinates", (encodePointInput |> Encode.list) input.coordinates |> Just ), ( "polygon", (encodePointInput |> Encode.list) input.polygon |> Just ), ( "waterEdges", (encodeSegmentInput |> Encode.list) input.waterEdges |> Just ), ( "center", encodePointInput input.center |> Just ), ( "neighboringCountries", (Encode.string |> Encode.list) input.neighboringCountries |> Just ), ( "neighboringBodiesOfWater", (Encode.string |> Encode.list) input.neighboringBodiesOfWater |> Just ) ]
 
@@ -176,26 +167,11 @@ encodeDimensionsInput input =
 
 buildGameInput : GameInputRequiredFields -> GameInput
 buildGameInput required =
-    GameInput { id = required.id, mapId = required.mapId, players = required.players, neutralCountryTroops = required.neutralCountryTroops, playerTurn = required.playerTurn }
+    { id = required.id, players = required.players, neutralCountryTroops = required.neutralCountryTroops, playerTurn = required.playerTurn }
 
 
 type alias GameInputRequiredFields =
     { id : String
-    , mapId : String
-    , players : List PlayerInput
-    , neutralCountryTroops : List CountryTroopCountsInput
-    , playerTurn : PlayerTurnInput
-    }
-
-
-{-| Type alias for the `GameInput` attributes. Note that this type
-needs to use the `GameInput` type (not just a plain type alias) because it has
-references to itself either directly (recursive) or indirectly (circular). See
-<https://github.com/dillonkearns/elm-graphql/issues/33>.
--}
-type alias GameInputRaw =
-    { id : String
-    , mapId : String
     , players : List PlayerInput
     , neutralCountryTroops : List CountryTroopCountsInput
     , playerTurn : PlayerTurnInput
@@ -204,16 +180,20 @@ type alias GameInputRaw =
 
 {-| Type for the GameInput input object.
 -}
-type GameInput
-    = GameInput GameInputRaw
+type alias GameInput =
+    { id : String
+    , players : List PlayerInput
+    , neutralCountryTroops : List CountryTroopCountsInput
+    , playerTurn : PlayerTurnInput
+    }
 
 
 {-| Encode a GameInput into a value that can be used as an argument.
 -}
 encodeGameInput : GameInput -> Value
-encodeGameInput (GameInput input) =
+encodeGameInput input =
     Encode.maybeObject
-        [ ( "id", Encode.string input.id |> Just ), ( "mapId", Encode.string input.mapId |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
+        [ ( "id", Encode.string input.id |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
 
 
 buildMapInput : MapInputRequiredFields -> MapInput
@@ -258,24 +238,12 @@ encodeMapInput (MapInput input) =
 
 buildNewGameInput : NewGameInputRequiredFields -> NewGameInput
 buildNewGameInput required =
-    NewGameInput { mapId = required.mapId, players = required.players, neutralCountryTroops = required.neutralCountryTroops, playerTurn = required.playerTurn }
+    { mapId = required.mapId, mapIdType = required.mapIdType, players = required.players, neutralCountryTroops = required.neutralCountryTroops, playerTurn = required.playerTurn }
 
 
 type alias NewGameInputRequiredFields =
     { mapId : String
-    , players : List PlayerInput
-    , neutralCountryTroops : List CountryTroopCountsInput
-    , playerTurn : PlayerTurnInput
-    }
-
-
-{-| Type alias for the `NewGameInput` attributes. Note that this type
-needs to use the `NewGameInput` type (not just a plain type alias) because it has
-references to itself either directly (recursive) or indirectly (circular). See
-<https://github.com/dillonkearns/elm-graphql/issues/33>.
--}
-type alias NewGameInputRaw =
-    { mapId : String
+    , mapIdType : String
     , players : List PlayerInput
     , neutralCountryTroops : List CountryTroopCountsInput
     , playerTurn : PlayerTurnInput
@@ -284,16 +252,21 @@ type alias NewGameInputRaw =
 
 {-| Type for the NewGameInput input object.
 -}
-type NewGameInput
-    = NewGameInput NewGameInputRaw
+type alias NewGameInput =
+    { mapId : String
+    , mapIdType : String
+    , players : List PlayerInput
+    , neutralCountryTroops : List CountryTroopCountsInput
+    , playerTurn : PlayerTurnInput
+    }
 
 
 {-| Encode a NewGameInput into a value that can be used as an argument.
 -}
 encodeNewGameInput : NewGameInput -> Value
-encodeNewGameInput (NewGameInput input) =
+encodeNewGameInput input =
     Encode.maybeObject
-        [ ( "mapId", Encode.string input.mapId |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
+        [ ( "mapId", Encode.string input.mapId |> Just ), ( "mapIdType", Encode.string input.mapIdType |> Just ), ( "players", (encodePlayerInput |> Encode.list) input.players |> Just ), ( "neutralCountryTroops", (encodeCountryTroopCountsInput |> Encode.list) input.neutralCountryTroops |> Just ), ( "playerTurn", encodePlayerTurnInput input.playerTurn |> Just ) ]
 
 
 buildPlayerInput : PlayerInputRequiredFields -> (PlayerInputOptionalFields -> PlayerInputOptionalFields) -> PlayerInput

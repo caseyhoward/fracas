@@ -213,7 +213,11 @@ type Mutation {
   saveGame(game: GameInput!): Game! # Local only
   saveInternetGame(playerToken: String!, game: GameInput!): Boolean!
   startInternetGame(playerToken: String!): Boolean! # Must be host
-  updateMapForInternetGame(playerToken: String!, mapId: String!): Boolean!
+  updateMapForInternetGame(
+    playerToken: String!
+    mapId: String!
+    mapIdType: String!
+  ): Boolean!
   updatePlayerNameForInternetGame(name: String!, playerToken: String!): Boolean!
   updatePlayerColorForInternetGame(
     color: ColorInput!

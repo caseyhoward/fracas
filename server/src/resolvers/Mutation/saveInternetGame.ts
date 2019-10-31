@@ -50,7 +50,7 @@ export default async function saveInternetGame(
     })
   };
 
-  await InternetGameRepository.save(executeQuery, internetGame);
+  await InternetGameRepository.saveWithoutMap(executeQuery, internetGame);
 
   PubSub.internetGameChanged(pubSub, internetGame, player.id);
 

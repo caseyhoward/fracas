@@ -19,6 +19,7 @@ import Element.Font
 import Element.Input
 import Element.Lazy
 import Map
+import UserMap
 import ViewHelpers
 
 
@@ -57,18 +58,18 @@ configurationSectionAttributes =
     ]
 
 
-mapConfigurationFields : List Map.Map -> Maybe String -> (String -> msg) -> Element.Element msg
+mapConfigurationFields : List UserMap.UserMap -> Maybe String -> (String -> msg) -> Element.Element msg
 mapConfigurationFields maps selectedMapId toMessage =
     Element.Lazy.lazy3 mapSelect maps selectedMapId toMessage
 
 
-mapConfiguration : List Map.Map -> Maybe String -> Element.Element msg
+mapConfiguration : List UserMap.UserMap -> Maybe UserMap.Id -> Element.Element msg
 mapConfiguration maps selectedMapId =
     Element.Lazy.lazy2 mapConfigurationInner maps selectedMapId
 
 
-mapConfigurationInner : List Map.Map -> Maybe String -> Element.Element msg
-mapConfigurationInner maps selectedMapId =
+mapConfigurationInner : List UserMap.UserMap -> Maybe UserMap.Id -> Element.Element msg
+mapConfigurationInner userMaps selectedMapId =
     Element.el
         configurationSectionAttributes
         (Element.column
@@ -77,12 +78,12 @@ mapConfigurationInner maps selectedMapId =
             , Element.width Element.fill
             ]
             (Element.el [ Element.Font.bold, Element.width Element.fill ] (Element.text "Map")
-                :: (maps
+                :: (userMaps
                         |> List.map
-                            (\map ->
+                            (\userMap ->
                                 let
                                     border =
-                                        if Just (map.id |> Map.idToString) == selectedMapId then
+                                        if Just userMap.id == selectedMapId then
                                             [ Element.Border.color (Colors.blue |> Colors.toElementColor)
                                             , Element.Border.solid
                                             , Element.Border.width 2
@@ -101,8 +102,8 @@ mapConfigurationInner maps selectedMapId =
                                     (Element.width Element.fill :: Element.spacing 10 :: Element.padding 10 :: border)
                                     [ Element.el
                                         [ Element.width (Element.px 50) ]
-                                        (Element.Lazy.lazy2 mapView map.countries map.dimensions)
-                                    , Element.text map.name
+                                        (Element.Lazy.lazy2 mapView userMap.map.countries userMap.map.dimensions)
+                                    , Element.text userMap.map.name
                                     ]
                             )
                    )
@@ -110,7 +111,7 @@ mapConfigurationInner maps selectedMapId =
         )
 
 
-mapSelect : List Map.Map -> Maybe String -> (String -> msg) -> Element.Element msg
+mapSelect : List UserMap.UserMap -> Maybe String -> (String -> msg) -> Element.Element msg
 mapSelect maps selectedMapId toMsg =
     Element.el
         configurationSectionAttributes
@@ -125,9 +126,9 @@ mapSelect maps selectedMapId toMsg =
             , options =
                 maps
                     |> List.map
-                        (\map ->
+                        (\userMap ->
                             Element.Input.optionWith
-                                (map.id |> Map.idToString)
+                                (userMap.id |> UserMap.idToString)
                                 (\optionState ->
                                     let
                                         border =
@@ -160,8 +161,8 @@ mapSelect maps selectedMapId toMsg =
                                         (Element.spacing 10 :: Element.padding 10 :: Element.width Element.fill :: border)
                                         [ Element.el
                                             [ Element.width (Element.px 50) ]
-                                            (Element.Lazy.lazy2 mapView map.countries map.dimensions)
-                                        , Element.text map.name
+                                            (Element.Lazy.lazy2 mapView userMap.map.countries userMap.map.dimensions)
+                                        , Element.text userMap.map.name
                                         ]
                                 )
                         )

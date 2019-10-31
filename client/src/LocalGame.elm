@@ -48,6 +48,7 @@ import RemoteData
 import Set
 import TroopCount
 import Url.Parser
+import UserMap
 import ViewHelpers
 
 
@@ -64,7 +65,7 @@ idToString (Id id) =
 type alias Game =
     { id : Id
     , currentPlayerTurn : PlayerTurn.PlayerTurn
-    , map : Map.Map
+    , map : UserMap.UserMap
     , players : Player.Players
     , neutralCountryTroops : Dict.Dict String TroopCount.TroopCount
     }
@@ -107,6 +108,7 @@ create apiUrl selectedMapId newPlayers neutralTroopCounts toMsg =
             { newGame =
                 Api.InputObject.buildNewGameInput
                     { mapId = selectedMapId
+                    , mapIdType = "user"
                     , players = newPlayers |> Dict.values |> Player.newPlayersInput
                     , neutralCountryTroops = neutralCountryTroops
                     , playerTurn = playerTurnInput
@@ -130,7 +132,6 @@ save apiUrl game toMsg =
             { game =
                 Api.InputObject.buildGameInput
                     { id = game.id |> idToString
-                    , mapId = game.map.id |> Map.idToString
                     , players = game.players |> Player.input
                     , neutralCountryTroops = game.neutralCountryTroops |> TroopCount.troopCountsInput
                     , playerTurn = game.currentPlayerTurn |> PlayerTurn.input
@@ -171,7 +172,7 @@ selectionSet =
             activeGame
         )
         Api.Object.Game.id
-        (Api.Object.Game.map Map.mapSelection)
+        (Api.Object.Game.map UserMap.selectionSet)
         (Api.Object.Game.playerTurn PlayerTurn.selectionSet)
         (Api.Object.Game.players Player.playerSelection)
         (Api.Object.Game.neutralCountryTroops TroopCount.troopCountsSelection)
@@ -738,7 +739,7 @@ attemptTroopMovement fromCountryId clickedCountryId numberOfTroopsToMoveString a
         OccupiedByCurrentPlayer playerCountryToTroopCount ->
             case String.toInt numberOfTroopsToMoveString of
                 Just numberOfTroopsToMove ->
-                    if isCountryReachableFromOtherCountry fromCountryId clickedCountryId activeGame.map.countries activeGame.players then
+                    if isCountryReachableFromOtherCountry fromCountryId clickedCountryId activeGame.map.map.countries activeGame.players then
                         let
                             fromCountryTroopCount =
                                 case Player.getPlayer (PlayerTurn.getCurrentPlayer activeGame.currentPlayerTurn) activeGame.players of
@@ -945,7 +946,7 @@ attemptSelectTroopMovementFromCountry clickedCountryId currentPlayerId activeGam
 
 attemptToAnnexCountry : Player.Id -> Country.Id -> Game -> Result Error Game
 attemptToAnnexCountry currentPlayerId clickedCountryId activeGame =
-    if canAnnexCountry activeGame.map currentPlayerId activeGame.players clickedCountryId then
+    if canAnnexCountry activeGame.map.map currentPlayerId activeGame.players clickedCountryId then
         let
             neutralTroopCount =
                 getTroopCount clickedCountryId activeGame.neutralCountryTroops |> Maybe.withDefault TroopCount.noTroops
@@ -968,7 +969,7 @@ attemptToAnnexCountry currentPlayerId clickedCountryId activeGame =
 
 attemptToAttackCountry : Player.Id -> Country.Id -> Game -> Result Error Game
 attemptToAttackCountry opponentPlayerId clickedCountryId activeGame =
-    case attackResult clickedCountryId activeGame.map activeGame.players activeGame.currentPlayerTurn of
+    case attackResult clickedCountryId activeGame.map.map activeGame.players activeGame.currentPlayerTurn of
         OpponentCountryLosesTroops remainingTroops ->
             activeGame
                 |> updatePlayerTroopCountForCountry opponentPlayerId clickedCountryId remainingTroops
@@ -1021,7 +1022,7 @@ filterCountriesOwnedBy players playerId countryIds =
 buildPort : Player.Id -> Country.Id -> Game -> Result Error Game
 buildPort playerId countryId activeGame =
     -- We already had to check that the player owned this country before so no need to do that here
-    case Map.isCountryNeighboringWater countryId activeGame.map.countries of
+    case Map.isCountryNeighboringWater countryId activeGame.map.map.countries of
         Just isNeighboringWater ->
             if isNeighboringWater then
                 case getCountryHasPort countryId activeGame.players of

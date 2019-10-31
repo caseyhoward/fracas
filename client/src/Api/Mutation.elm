@@ -94,12 +94,13 @@ startInternetGame requiredArgs =
 type alias UpdateMapForInternetGameRequiredArguments =
     { playerToken : String
     , mapId : String
+    , mapIdType : String
     }
 
 
 updateMapForInternetGame : UpdateMapForInternetGameRequiredArguments -> SelectionSet Bool RootMutation
 updateMapForInternetGame requiredArgs =
-    Object.selectionForField "Bool" "updateMapForInternetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string, Argument.required "mapId" requiredArgs.mapId Encode.string ] Decode.bool
+    Object.selectionForField "Bool" "updateMapForInternetGame" [ Argument.required "playerToken" requiredArgs.playerToken Encode.string, Argument.required "mapId" requiredArgs.mapId Encode.string, Argument.required "mapIdType" requiredArgs.mapIdType Encode.string ] Decode.bool
 
 
 type alias UpdatePlayerNameForInternetGameRequiredArguments =

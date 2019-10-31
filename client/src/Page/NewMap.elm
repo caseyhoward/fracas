@@ -17,14 +17,15 @@ import Html
 import Map
 import RemoteData
 import Session
+import UserMap
 import ViewHelpers
 
 
 type alias Model =
     { session : Session.Session
     , rawMap : String
-    , newMap : Map.NewMap
-    , savingMap : RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map
+    , newMap : Map.Map
+    , savingMap : RemoteData.RemoteData (Graphql.Http.Error UserMap.UserMap) UserMap.UserMap
     }
 
 
@@ -41,7 +42,7 @@ init session =
 
 type Msg
     = CreateMap
-    | CreatedMap (RemoteData.RemoteData (Graphql.Http.Error Map.Map) Map.Map)
+    | CreatedMap (RemoteData.RemoteData (Graphql.Http.Error UserMap.UserMap) UserMap.UserMap)
     | UpdateRawMap String
     | UpdateName String
     | WindowResized Int Int
@@ -55,7 +56,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         CreateMap ->
-            ( model, Map.create model.session.apiUrl model.newMap CreatedMap )
+            ( model, UserMap.create model.session.apiUrl model.newMap CreatedMap )
 
         CreatedMap savingMap ->
             ( { model | savingMap = savingMap }, Cmd.none )

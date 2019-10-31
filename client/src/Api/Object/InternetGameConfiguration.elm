@@ -34,6 +34,11 @@ mapId =
     Object.selectionForField "String" "mapId" [] Decode.string
 
 
+mapIdType : SelectionSet String Api.Object.InternetGameConfiguration
+mapIdType =
+    Object.selectionForField "String" "mapIdType" [] Decode.string
+
+
 joinToken : SelectionSet String Api.Object.InternetGameConfiguration
 joinToken =
     Object.selectionForField "String" "joinToken" [] Decode.string

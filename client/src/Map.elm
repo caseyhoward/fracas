@@ -1,54 +1,35 @@
 module Map exposing
-    ( Id(..)
-    , Map
-    , NewMap
-    , RawMap
-    , create
-    , errorToString
-    , get
-    , getAll
+    (  --Id(..)
+       Map
+       -- , Map
+
+    ,  RawMap
+       -- , create
+       -- ,  errorToString
+       -- , get
+       -- , getAll
+
     , getCountriesThatCanReachCountryThroughWater
     , getMapDimensions
     , getWaterCollage
-    , idToString
     , isCountryNeighboringWater
-    , mapSelection
     , newMapWithName
     , parse
     , parseRawMap
     , view
     )
 
-import Api.InputObject
-import Api.Mutation
-import Api.Object as ApiObject
-import Api.Object.BodyOfWater
-import Api.Object.Dimensions
-import Api.Object.Map
-import Api.Query
 import Collage
 import Collage.Render
 import Color
 import Country
 import Dict
-import Graphql.Http
-import Graphql.SelectionSet exposing (SelectionSet)
 import Html
 import Html.Attributes
-import RemoteData
 import Set
 
 
 type alias Map =
-    { id : Id
-    , name : String
-    , countries : Country.Countries
-    , bodiesOfWater : Dict.Dict String (Set.Set String)
-    , dimensions : ( Int, Int )
-    }
-
-
-type alias NewMap =
     { name : String
     , countries : Country.Countries
     , bodiesOfWater : Dict.Dict String (Set.Set String)
@@ -56,159 +37,8 @@ type alias NewMap =
     }
 
 
-type Id
-    = Id String
-
-
 type alias RawMap =
     Dict.Dict ( Int, Int ) String
-
-
-type Error
-    = Error String
-
-
-type alias MapSelectionSet =
-    { id : String
-    , name : String
-    , countries : List Country.SelectionSet
-    , bodiesOfWater : List ( String, Set.Set String )
-    , dimensions : ( Int, Int )
-    }
-
-
-idToString : Id -> String
-idToString (Id id) =
-    id
-
-
-getAll :String ->  (RemoteData.RemoteData (Graphql.Http.Error (List Map)) (List Map) -> msg) -> Cmd msg
-getAll apiUrl toMsg =
-    Api.Query.maps mapSelection
-        |> Graphql.Http.queryRequest apiUrl
-        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
-
-
-mapSelectionSet : SelectionSet MapSelectionSet ApiObject.Map
-mapSelectionSet =
-    let
-        bodyOfWaterSelection : SelectionSet ( String, Set.Set String ) ApiObject.BodyOfWater
-        bodyOfWaterSelection =
-            Graphql.SelectionSet.map2
-                (\id neighboringCountries ->
-                    ( id, neighboringCountries |> Set.fromList )
-                )
-                Api.Object.BodyOfWater.id
-                Api.Object.BodyOfWater.neighboringCountries
-
-        dimensionsSelection : SelectionSet ( Int, Int ) ApiObject.Dimensions
-        dimensionsSelection =
-            Graphql.SelectionSet.map2
-                (\width height ->
-                    ( width, height )
-                )
-                Api.Object.Dimensions.width
-                Api.Object.Dimensions.height
-    in
-    Graphql.SelectionSet.map5 MapSelectionSet
-        Api.Object.Map.id
-        Api.Object.Map.name
-        (Api.Object.Map.countries Country.selectionSet)
-        (Api.Object.Map.bodiesOfWater bodyOfWaterSelection)
-        (Api.Object.Map.dimensions dimensionsSelection)
-
-
-mapSelection : SelectionSet Map ApiObject.Map
-mapSelection =
-    mapSelectionSet
-        |> Graphql.SelectionSet.map mapSelectionSetToMap
-
-
-create : String -> NewMap-> (RemoteData.RemoteData (Graphql.Http.Error Map) Map -> msg) -> Cmd msg
-create apiUrl newMap toMsg =
-    let
-        countryInputs : List Api.InputObject.CountryInput
-        countryInputs =
-            newMap.countries
-                |> Country.countryInputs
-
-        bodiesOfWater : List Api.InputObject.BodyOfWaterInput
-        bodiesOfWater =
-            newMap.bodiesOfWater
-                |> Dict.map
-                    (\waterId countries ->
-                        { id = waterId, neighboringCountries = countries |> Set.toList }
-                    )
-                |> Dict.values
-
-        dimensionsInput : Api.InputObject.DimensionsInput
-        dimensionsInput =
-            case newMap.dimensions of
-                ( width, height ) ->
-                    { width = width, height = height }
-
-        requiredFields : Api.InputObject.MapInputRequiredFields
-        requiredFields =
-            { name = newMap.name
-            , countries = countryInputs
-            , bodiesOfWater = bodiesOfWater
-            , dimensions = dimensionsInput
-            }
-
-        input : Api.InputObject.MapInput
-        input =
-            requiredFields |> Api.InputObject.buildMapInput
-    in
-    Api.Mutation.createMap { map = input } mapSelection
-        |> Graphql.Http.mutationRequest apiUrl
-        |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
-
-
-mapSelectionSetToMap : MapSelectionSet -> Map
-mapSelectionSetToMap selectionSet =
-    let
-        countrySelectionSetsToCountries : List Country.SelectionSet -> Country.Countries
-        countrySelectionSetsToCountries countrySelectionSets =
-            countrySelectionSets
-                |> List.map
-                    (\countrySelectionSet ->
-                        ( countrySelectionSet.id
-                        , { coordinates = countrySelectionSet.coordinates
-                          , polygon = countrySelectionSet.polygon
-                          , waterEdges = countrySelectionSet.waterEdges
-                          , center = countrySelectionSet.center
-                          , neighboringCountries = countrySelectionSet.neighboringCountries
-                          , neighboringBodiesOfWater = countrySelectionSet.neighboringBodiesOfWater
-                          }
-                        )
-                    )
-                |> Dict.fromList
-
-        bodiesOfWaterSelectionToBodiesOfWater : List ( String, Set.Set String ) -> Dict.Dict String (Set.Set String)
-        bodiesOfWaterSelectionToBodiesOfWater waterSelectionSet =
-            waterSelectionSet |> Dict.fromList
-    in
-    { id = selectionSet.id |> Id
-    , name = selectionSet.name
-    , countries = selectionSet.countries |> countrySelectionSetsToCountries
-    , bodiesOfWater = selectionSet.bodiesOfWater |> bodiesOfWaterSelectionToBodiesOfWater
-    , dimensions = selectionSet.dimensions
-    }
-
-
-errorToString : Error -> String
-errorToString (Error error) =
-    error
-
-
-get : Id -> Dict.Dict String Map -> Result Error Map
-get (Id id) gameMaps =
-    case Dict.get id gameMaps of
-        Just gameMap ->
-            Ok gameMap
-
-        Nothing ->
-            Error "Game map not found" |> Err
 
 
 getCountriesThatCanReachCountryThroughWater : Country.Countries -> Dict.Dict String (Set.Set String) -> Country.Id -> List Country.Id
@@ -245,12 +75,12 @@ isCountryNeighboringWater countryId countries =
             )
 
 
-newMapWithName : String -> NewMap -> NewMap
+newMapWithName : String -> Map -> Map
 newMapWithName name newMap =
     { newMap | name = name }
 
 
-parse : String -> String -> NewMap
+parse : String -> String -> Map
 parse name text =
     let
         map =
@@ -652,4 +482,4 @@ getWaterCollage scale ( width, height ) =
         --         |> Collage.outlined (Collage.solid (toFloat ViewHelpers.pixelsPerMapSquare / 8.0) (Collage.uniform Color.black))
     in
     -- Collage.group [ backgroundBorder, backgroundWater ]
-    Collage.group [  backgroundWater ]
+    Collage.group [ backgroundWater ]

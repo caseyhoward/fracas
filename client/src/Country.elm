@@ -16,6 +16,7 @@ module Country exposing
     , idToString
     , scaledCountries
     , selectionSet
+    , selectionSetsToCountries
     )
 
 import Api.InputObject
@@ -241,6 +242,27 @@ selectionSet =
         (Api.Object.Country.center pointSelection)
         (Api.Object.Country.neighboringCountries |> Graphql.SelectionSet.map Set.fromList)
         (Api.Object.Country.neighboringBodiesOfWater |> Graphql.SelectionSet.map Set.fromList)
+
+
+selectionSetsToCountries : List SelectionSet -> Countries
+selectionSetsToCountries countrySelectionSets =
+    let
+        selectionSetToCountry : SelectionSet -> Country
+        selectionSetToCountry countrySelectionSet =
+            { coordinates = countrySelectionSet.coordinates
+            , polygon = countrySelectionSet.polygon
+            , waterEdges = countrySelectionSet.waterEdges
+            , center = countrySelectionSet.center
+            , neighboringCountries = countrySelectionSet.neighboringCountries
+            , neighboringBodiesOfWater = countrySelectionSet.neighboringBodiesOfWater
+            }
+    in
+    countrySelectionSets
+        |> List.map
+            (\countrySelectionSet ->
+                ( countrySelectionSet.id, selectionSetToCountry countrySelectionSet )
+            )
+        |> Dict.fromList
 
 
 segmentSelection : Graphql.SelectionSet.SelectionSet Segment ApiObject.Segment

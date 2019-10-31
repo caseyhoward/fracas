@@ -133,7 +133,7 @@ export function mapId(id: string, typeName: "user" | "default"): MapId {
       break;
     case "default":
       return {
-        __typename: "SystemMapId",
+        __typename: "DefaultMapId",
         value: id
       };
   }
@@ -146,12 +146,12 @@ export function userMapId(id: string): UserMapId {
   };
 }
 
-export type SystemMapId = {
-  __typename: "SystemMapId";
+export type DefaultMapId = {
+  __typename: "DefaultMapId";
   value: string;
 };
 
-export type MapId = UserMapId | SystemMapId;
+export type MapId = UserMapId | DefaultMapId;
 
 export type InternetGame = {
   __typename: "InternetGame";
@@ -272,7 +272,7 @@ export function mapIdTypeString(mapId: MapId): string {
   switch (mapId.__typename) {
     case "UserMapId":
       return "user";
-    case "SystemMapId":
-      return "system";
+    case "DefaultMapId":
+      return "default";
   }
 }

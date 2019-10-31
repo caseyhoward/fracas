@@ -9,36 +9,30 @@ import * as InternetGamePlayerRepository from "../../repositories/InternetGamePl
 export async function createInternetGame(
   executeQuery: ExecuteQuery
 ): Promise<string> {
-  const mapId = await Map.findFirstId(executeQuery);
+  const hostToken = Uuid.generate();
+  const joinToken = Uuid.generate();
 
-  if (mapId) {
-    const hostToken = Uuid.generate();
-    const joinToken = Uuid.generate();
+  const internetGameId = await InternetGameConfigurationRepository.create(
+    executeQuery,
+    {
+      __typename: "NewInternetGameConfiguration",
+      joinToken: joinToken,
+      mapId: Models.mapId("1", "default"),
+      players: []
+    }
+  );
 
-    const internetGameId = await InternetGameConfigurationRepository.create(
-      executeQuery,
-      {
-        __typename: "NewInternetGameConfiguration",
-        joinToken: joinToken,
-        mapId: mapId,
-        players: []
-      }
-    );
+  const hostGamePlayer: Models.InternetGamePlayer = await InternetGamePlayerRepository.create(
+    executeQuery,
+    internetGameId,
+    hostToken
+  );
 
-    const hostGamePlayer: Models.InternetGamePlayer = await InternetGamePlayerRepository.create(
-      executeQuery,
-      internetGameId,
-      hostToken
-    );
+  await InternetGameConfigurationRepository.addPlayer(
+    executeQuery,
+    internetGameId,
+    Player.createHost(hostGamePlayer.id)
+  );
 
-    await InternetGameConfigurationRepository.addPlayer(
-      executeQuery,
-      internetGameId,
-      Player.createHost(hostGamePlayer.id)
-    );
-
-    return hostToken;
-  } else {
-    throw "No maps in the database";
-  }
+  return hostToken;
 }

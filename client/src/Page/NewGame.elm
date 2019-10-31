@@ -11,6 +11,7 @@ module Page.NewGame exposing
 import Browser.Dom
 import Browser.Events
 import Colors
+import DefaultMap
 import Dict
 import Element
 import Element.Background
@@ -34,14 +35,16 @@ import Route
 import Session
 import Task
 import TroopCount
+import UserMap
 import ViewHelpers
 
 
 type alias NewGame =
     { players : Dict.Dict String Player.NewPlayer
     , error : Maybe String
-    , selectedMapId : Maybe String
-    , maps : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map)
+    , selectedMapId : Maybe UserMap.Id
+    , maps : RemoteData.RemoteData (Graphql.Http.Error (List UserMap.UserMap)) (List UserMap.UserMap)
+    , defaultMaps : List DefaultMap.DefaultMap
     , configureColor : Maybe String
     }
 
@@ -108,11 +111,11 @@ type Msg
     | StartGameClicked
     | ColorSelected String Colors.Color
     | ChangeColorButtonClicked String
-    | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map))
+    | GotMaps (RemoteData.RemoteData (Graphql.Http.Error (List UserMap.UserMap)) (List UserMap.UserMap))
     | GameCreated (RemoteData.RemoteData (Graphql.Http.Error LocalGame.Id) LocalGame.Id)
     | NeutralCountryTroopCountsGenerated (Dict.Dict String TroopCount.TroopCount)
     | WindowResized Int Int
-    | SelectMap String
+    | SelectMap UserMap.Id
     | UpdatePlayerName String String
 
 
@@ -131,6 +134,7 @@ update msg model =
                             , configureColor = Nothing
                             , error = Nothing
                             , maps = RemoteData.Loading
+                            , defaultMaps = DefaultMap.all
                             , selectedMapId = Nothing
                             }
                             session
@@ -146,7 +150,7 @@ update msg model =
                                         WindowResized 0 0
                             )
                             Browser.Dom.getViewport
-                        , Map.getAll session.apiUrl GotMaps
+                        , UserMap.getAll session.apiUrl GotMaps
                         ]
                     )
 
@@ -245,7 +249,7 @@ updateLocalGame msg model =
                             , selectedMapId =
                                 case maps of
                                     RemoteData.Success allMaps ->
-                                        allMaps |> List.head |> Maybe.map .id |> Maybe.map Map.idToString
+                                        allMaps |> List.head |> Maybe.map .id
 
                                     _ ->
                                         Nothing
@@ -282,7 +286,7 @@ updateLocalGame msg model =
                 NeutralCountryTroopCountsGenerated neutralCountryTroopCounts ->
                     case newGame.selectedMapId of
                         Just mapId ->
-                            ( model, LocalGame.create session.apiUrl mapId newGame.players neutralCountryTroopCounts GameCreated )
+                            ( model, LocalGame.create session.apiUrl (mapId |> UserMap.idToString) newGame.players neutralCountryTroopCounts GameCreated )
 
                         Nothing ->
                             ( model, Cmd.none )
@@ -358,10 +362,10 @@ startGame session newGame =
         RemoteData.Success maps ->
             case newGame.selectedMapId of
                 Just mapId ->
-                    case maps |> List.filter (\map -> map.id == Map.Id mapId) |> List.head of
+                    case maps |> List.filter (\map -> map.id == mapId) |> List.head of
                         Just map ->
                             ( GeneratingRandomTroopCounts newGame session
-                            , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.countries))
+                            , Random.generate NeutralCountryTroopCountsGenerated (randomTroopPlacementsGenerator (Dict.keys map.map.countries))
                             )
 
                         Nothing ->
@@ -526,7 +530,7 @@ playerColorSelect players maybePlayerId =
             Element.none
 
 
-mapConfiguration : RemoteData.RemoteData (Graphql.Http.Error (List Map.Map)) (List Map.Map) -> Maybe String -> Element.Element Msg
+mapConfiguration : RemoteData.RemoteData (Graphql.Http.Error (List UserMap.UserMap)) (List UserMap.UserMap) -> Maybe UserMap.Id -> Element.Element Msg
 mapConfiguration mapsRemoteData selectedMapId =
     case mapsRemoteData of
         RemoteData.Success maps ->
@@ -552,8 +556,8 @@ mapConfiguration mapsRemoteData selectedMapId =
             Element.text "not asked"
 
 
-mapSelect : List Map.Map -> Maybe String -> Element.Element Msg
-mapSelect maps selectedMapId =
+mapSelect : List UserMap.UserMap -> Maybe UserMap.Id -> Element.Element Msg
+mapSelect userMaps selectedMapId =
     Element.el
         [ Element.centerX
         , Element.Background.color (Colors.gray |> Colors.toElementColor)
@@ -568,11 +572,11 @@ mapSelect maps selectedMapId =
             , selected = selectedMapId
             , label = Element.Input.labelAbove [ Element.Font.bold ] (Element.text "Map")
             , options =
-                maps
+                userMaps
                     |> List.map
-                        (\map ->
+                        (\userMap ->
                             Element.Input.optionWith
-                                (map.id |> Map.idToString)
+                                userMap.id
                                 (\optionState ->
                                     let
                                         border =
@@ -602,8 +606,8 @@ mapSelect maps selectedMapId =
                                         (Element.spacing 10 :: Element.padding 10 :: Element.width (Element.px 300) :: border)
                                         [ Element.el
                                             [ Element.width (Element.px 50) ]
-                                            (Element.Lazy.lazy2 NewGame.mapView map.countries map.dimensions)
-                                        , Element.text map.name
+                                            (Element.Lazy.lazy2 NewGame.mapView userMap.map.countries userMap.map.dimensions)
+                                        , Element.text userMap.map.name
                                         ]
                                 )
                         )

@@ -59,7 +59,7 @@ export function resolvers(
           InternetGameConfigurationRepository.updateMap(executeQuery),
           pubsub,
           input
-        )(),
+        ),
       saveInternetGame: async (_, input) =>
         saveInternetGame(executeQuery, pubsub, input),
       saveGame: async (_, saveGame) => {

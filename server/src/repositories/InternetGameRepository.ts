@@ -3,6 +3,27 @@ import * as Models from "./Models";
 
 export async function save(
   executeQuery: ExecuteQuery,
+  internetGame: Models.InternetGame
+): Promise<void> {
+  const gameJson: Models.GameJson = {
+    __typename: "GameJson",
+    players: internetGame.players,
+    neutralCountryTroops: internetGame.neutralCountryTroops,
+    playerTurn: internetGame.playerTurn
+  };
+  await executeQuery(
+    "UPDATE internet_games SET map_id = $1, map_id_type = $2, game_json = $3 WHERE id = $4",
+    [
+      internetGame.mapId.value,
+      Models.mapIdTypeString(internetGame.mapId),
+      JSON.stringify(gameJson),
+      internetGame.id
+    ]
+  );
+}
+
+export async function saveWithoutMap(
+  executeQuery: ExecuteQuery,
   internetGame: Models.InternetGameWithoutMap
 ): Promise<void> {
   const gameJson: Models.GameJson = {

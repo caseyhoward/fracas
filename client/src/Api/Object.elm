@@ -29,6 +29,10 @@ type Game
     = Game
 
 
+type GameWithoutMap
+    = GameWithoutMap
+
+
 type InternetGameConfiguration
     = InternetGameConfiguration
 

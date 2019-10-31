@@ -3,6 +3,7 @@ module InternetGame exposing
     , GameOrConfiguration(..)
     , InternetGameTokens
     , JoinToken
+    , MapId(..)
     , PlayerToken
     , create
     , gameOrConfigurationSelectionSet
@@ -26,6 +27,7 @@ import Api.InputObject
 import Api.Mutation
 import Api.Object
 import Api.Object.Game
+import Api.Object.GameWithoutMap
 import Api.Object.InternetGameConfiguration
 import Api.Object.InternetGamePlayerConfiguration
 import Api.Query
@@ -33,17 +35,18 @@ import Api.Subscription
 import Api.Union
 import Api.Union.InternetGameOrConfiguration
 import Colors
+import DefaultMap
 import Dict
 import Game
 import Graphql.Http
 import Graphql.Operation
 import Graphql.SelectionSet
-import Map
 import Player
 import PlayerTurn
 import RemoteData
 import TroopCount
 import Url.Parser
+import UserMap
 
 
 type alias PlayerConfiguration =
@@ -53,9 +56,14 @@ type alias PlayerConfiguration =
     }
 
 
+type MapId
+    = UserMapIdCase UserMap.Id
+    | DefaultMapCase DefaultMap.Id
+
+
 type alias Configuration =
     { players : List PlayerConfiguration
-    , mapId : Map.Id
+    , mapId : UserMap.Id
     , joinToken : JoinToken
     , currentUserPlayerId : Player.Id
     , isCurrentUserHost : Bool
@@ -126,7 +134,6 @@ save apiUrl (PlayerToken playerToken) game toMsg =
         gameInput =
             Api.InputObject.buildGameInput
                 { id = game.id |> Game.idToString
-                , mapId = game.map.id |> Map.idToString
                 , players = game.players |> Player.input
                 , neutralCountryTroops = game.neutralCountryTroops |> TroopCount.troopCountsInput
                 , playerTurn = game.currentPlayerTurn |> PlayerTurn.input
@@ -153,17 +160,20 @@ updatePlayerName apiUrl playerToken name toMsg =
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-updateMap : String -> PlayerToken -> Map.Id -> (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool -> msg) -> Cmd msg
+updateMap : String -> PlayerToken -> String -> (RemoteData.RemoteData (Graphql.Http.Error Bool) Bool -> msg) -> Cmd msg
 updateMap apiUrl playerToken mapId toMsg =
     Api.Mutation.updateMapForInternetGame
-        { playerToken = playerToken |> playerTokenToString, mapId = mapId |> Map.idToString }
+        { playerToken = playerToken |> playerTokenToString
+        , mapId = mapId
+        , mapIdType = "user"
+        }
         |> Graphql.Http.mutationRequest apiUrl
         |> Graphql.Http.send (RemoteData.fromResult >> toMsg)
 
 
-subscriptionDocument : PlayerToken -> Graphql.SelectionSet.SelectionSet Game.Game Graphql.Operation.RootSubscription
+subscriptionDocument : PlayerToken -> Graphql.SelectionSet.SelectionSet Game.GameWithoutMap Graphql.Operation.RootSubscription
 subscriptionDocument (PlayerToken playerToken) =
-    Api.Subscription.internetGame { playerToken = playerToken } selectionSet
+    Api.Subscription.internetGame { playerToken = playerToken } gameWithoutMapSelectionSet
 
 
 internetGameOrConfigurationSubscriptionDocument : PlayerToken -> Graphql.SelectionSet.SelectionSet GameOrConfiguration Graphql.Operation.RootSubscription
@@ -196,7 +206,7 @@ configurationSelectionSet1 =
             }
         )
         (Api.Object.InternetGameConfiguration.players playerConfigurationSelectionSet)
-        (Graphql.SelectionSet.map Map.Id Api.Object.InternetGameConfiguration.mapId)
+        (Graphql.SelectionSet.map UserMap.Id Api.Object.InternetGameConfiguration.mapId)
         Api.Object.InternetGameConfiguration.joinToken
         Api.Object.InternetGameConfiguration.currentUserPlayerId
         Api.Object.InternetGameConfiguration.isCurrentUserHost
@@ -205,6 +215,12 @@ configurationSelectionSet1 =
 configurationSelectionSet : Graphql.SelectionSet.SelectionSet GameOrConfiguration Api.Object.InternetGameConfiguration
 configurationSelectionSet =
     Graphql.SelectionSet.map InternetGameConfiguration configurationSelectionSet1
+
+
+userMapOrDefaultMapSelectionSet : Graphql.SelectionSet.SelectionSet Game.UserMapOrDefaultMap Api.Object.Map
+userMapOrDefaultMapSelectionSet =
+    UserMap.selectionSet
+        |> Graphql.SelectionSet.map Game.UserMapCase
 
 
 selectionSet : Graphql.SelectionSet.SelectionSet Game.Game Api.Object.Game
@@ -220,17 +236,39 @@ selectionSet =
                     , players = players |> Player.playerSelectionSetsToPlayers
                     , neutralCountryTroops = neutralCountryTroops |> Dict.fromList
                     , currentUserPlayerId = currentUserPlayerId |> Player.Id
-                    , lastPlayerTurn = Nothing
                     }
             in
             activeGame
         )
         Api.Object.Game.id
-        (Api.Object.Game.map Map.mapSelection)
+        (Api.Object.Game.map userMapOrDefaultMapSelectionSet)
         (Api.Object.Game.playerTurn PlayerTurn.selectionSet)
         (Api.Object.Game.players Player.playerSelection)
         (Api.Object.Game.neutralCountryTroops TroopCount.troopCountsSelection)
         Api.Object.Game.currentUserPlayerId
+
+
+gameWithoutMapSelectionSet : Graphql.SelectionSet.SelectionSet Game.GameWithoutMap Api.Object.GameWithoutMap
+gameWithoutMapSelectionSet =
+    Graphql.SelectionSet.map5
+        (\id2 currentPlayerTurn players neutralCountryTroops currentUserPlayerId ->
+            let
+                game : Game.GameWithoutMap
+                game =
+                    { id = Game.Id id2
+                    , currentPlayerTurn = currentPlayerTurn
+                    , players = players |> Player.playerSelectionSetsToPlayers
+                    , neutralCountryTroops = neutralCountryTroops |> Dict.fromList
+                    , currentUserPlayerId = currentUserPlayerId |> Player.Id
+                    }
+            in
+            game
+        )
+        Api.Object.GameWithoutMap.id
+        (Api.Object.GameWithoutMap.playerTurn PlayerTurn.selectionSet)
+        (Api.Object.GameWithoutMap.players Player.playerSelection)
+        (Api.Object.GameWithoutMap.neutralCountryTroops TroopCount.troopCountsSelection)
+        Api.Object.GameWithoutMap.currentUserPlayerId
 
 
 playerTokenToString : PlayerToken -> String

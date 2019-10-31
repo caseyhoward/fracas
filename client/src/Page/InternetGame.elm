@@ -165,7 +165,7 @@ update msg model =
                                 gameModel =
                                     playingModel.gameModel
                             in
-                            ( Playing { playingModel | gameModel = { gameModel | activeGame = game } }, Cmd.none )
+                            ( Playing { playingModel | gameModel = { gameModel | activeGame = Game.gameWithoutMapAndMapToGame game gameModel.activeGame.map } }, Cmd.none )
 
                         Err _ ->
                             ( model, Cmd.none )
